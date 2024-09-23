@@ -9,6 +9,9 @@ import AmaniSDK
 import Combine
 import Foundation
 import UIKit
+#if canImport(AmaniLocalization)
+import AmaniLocalization
+#endif
 
 class QuestionnaireView: UIView {
   private var viewModel: QuestionnaireViewModel?
@@ -118,9 +121,15 @@ extension QuestionnaireView: UITableViewDelegate {
   func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
     let questionnaireHeader = QuestionnaireHeaderView()
       questionnaireHeader.genConfig = appConfig?.generalconfigs
+    #if canImport(AmaniLocalization)
+    let descriptionText = AmaniLocalization.localizedString(forKey: "questionnaire_captureDescription")
+    questionnaireHeader.setDescriptionLabelText(descriptionText)
+    return questionnaireHeader
+    #else
     let descriptionText = self.step?.documents.first?.versions?.first?.steps?.first?.captureDescription
     questionnaireHeader.setDescriptionLabelText(descriptionText ?? "Please answer the following simple questions to help us serve you better.")
     return questionnaireHeader
+    #endif
   }
 
   func tableView(_ tableView: UITableView, viewForFooterInSection section: Int) -> UIView? {

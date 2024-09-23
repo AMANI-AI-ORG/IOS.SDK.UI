@@ -8,6 +8,9 @@
 import Foundation
 import UIKit
 import AmaniSDK
+#if canImport(AmaniLocalization)
+import AmaniLocalization
+#endif
 
 class QuestionnaireViewController: BaseViewController {
   private var questionnaireView: QuestionnaireView!
@@ -51,7 +54,11 @@ class QuestionnaireViewController: BaseViewController {
   func bind(with stepVM: KYCStepViewModel) {
     self.questionnaireViewModel.setRuleID(stepVM.getRuleModel().id!)
     DispatchQueue.main.async {
+      #if canImport(AmaniLocalization)
+      self.title = AmaniLocalization.localizedString(forKey: "questionnaire_captureTitle")
+      #else
       self.title = stepVM.documents.first?.versions?.first?.steps?.first?.captureTitle ?? "Questionnaire"
+      #endif
     }
   }
   
