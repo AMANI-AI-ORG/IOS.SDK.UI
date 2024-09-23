@@ -8,6 +8,9 @@
 import Foundation
 import UIKit
 import AmaniSDK
+#if canImport(AmaniLocalization)
+import AmaniLocalization
+#endif
 
 class CheckSMSViewController: KeyboardAvoidanceViewController {
   private var checkSMSView: CheckSMSView!
@@ -35,7 +38,11 @@ class CheckSMSViewController: KeyboardAvoidanceViewController {
           return
       }
       
+    #if canImport(AmaniLocalization)
+    self.title = AmaniLocalization.localizedString(forKey: "phone_confirmationTitle")
+    #else
     self.title = docVersion?.steps?.first?.confirmationTitle ?? "Check your SMS"
+    #endif
     checkSMSView.appConfig = appConfig
     checkSMSView.bind(withViewModel: checkSMSViewModel, withDocument: docVersion)
     addPoweredByIcon()

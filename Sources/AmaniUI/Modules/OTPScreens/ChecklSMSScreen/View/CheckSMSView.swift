@@ -9,6 +9,9 @@ import Foundation
 import UIKit
 import Combine
 import AmaniSDK
+#if canImport(AmaniLocalization)
+import AmaniLocalization
+#endif
 
 class CheckSMSView: UIView {
   private var viewModel: CheckSMSViewModel!
@@ -325,8 +328,13 @@ class CheckSMSView: UIView {
   private func setTextsFrom(document: DocumentVersion) {
     if let step = document.steps?.first {
       DispatchQueue.main.async {
+        #if canImport(AmaniLocalization)
+        self.titleDescription.text = AmaniLocalization.localizedString(forKey: "phone_confirmationDescription")
+        self.setTimerButtonDefaultStylings(text: AmaniLocalization.localizedString(forKey: "phone_resendOTP"))
+        #else
         self.titleDescription.text = step.confirmationDescription
         self.setTimerButtonDefaultStylings(text: document.resendOTP)
+        #endif
         // FIXME: Another one
 //        self.otpLegend.text = step.otpHint
       }

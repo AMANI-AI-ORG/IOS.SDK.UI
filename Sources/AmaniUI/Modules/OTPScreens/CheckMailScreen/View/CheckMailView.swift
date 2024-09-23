@@ -9,6 +9,9 @@ import Combine
 import Foundation
 import UIKit
 import AmaniSDK
+#if canImport(AmaniLocalization)
+import AmaniLocalization
+#endif
 
 class CheckMailView: UIView {
   private var viewModel: CheckMailViewModel!
@@ -335,8 +338,13 @@ class CheckMailView: UIView {
     if let step = document.steps?.first {
       DispatchQueue.main.async {
         // FIXME: proper confirm button text isn't in the document version.
+    #if canImport(AmaniLocalization)
+        self.titleDescription.text = AmaniLocalization.localizedString(forKey: "email_confirmationDescription")
+        self.setTimerButtonDefaultStylings(text: AmaniLocalization.localizedString(forKey: "email_resendOTP"))
+    #else
         self.titleDescription.text = step.confirmationDescription
         self.setTimerButtonDefaultStylings(text: document.resendOTP)
+    #endif
         // FIXME: Also no otp hint
 //        self.otpLegend.text = document.otpHint
       }

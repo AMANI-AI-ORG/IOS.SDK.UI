@@ -8,6 +8,9 @@
 import Foundation
 import UIKit
 import AmaniSDK
+#if canImport(AmaniLocalization)
+import AmaniLocalization
+#endif
 
 class CheckMailViewController: KeyboardAvoidanceViewController {
   private var checkMailView: CheckMailView!
@@ -36,7 +39,11 @@ class CheckMailViewController: KeyboardAvoidanceViewController {
   }
   
   override func viewDidLoad() {
-    self.title = docVersion?.steps?.first?.confirmationTitle
+  #if canImport(AmaniLocalization)
+    self.title = AmaniLocalization.localizedString(forKey: "email_confirmationTitle")
+  #else
+    self.title = docVersion?.steps?.first?.confirmationTitle ?? "Check Your Email"
+  #endif
     checkMailView.bind(
       withViewModel: self.checkMailViewModel,
       withDocument: self.docVersion

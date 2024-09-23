@@ -8,6 +8,9 @@
 import Foundation
 import UIKit
 import AmaniSDK
+#if canImport(AmaniLocalization)
+import AmaniLocalization
+#endif
 
 class PhoneOTPScreenViewController: KeyboardAvoidanceViewController {
   private var phoneOTPView: PhoneOTPView!
@@ -34,7 +37,11 @@ class PhoneOTPScreenViewController: KeyboardAvoidanceViewController {
   }
   
   override func viewDidLoad() {
+    #if canImport(AmaniLocalization)
+    self.title = AmaniLocalization.localizedString(forKey: "phone_phone_captureTitle")
+    #else
     self.title = docVersion?.steps?.first?.captureTitle ?? "Verify Phone Number"
+    #endif
     phoneOTPView.bind(withViewModel: phoneOTPViewModel, withDocument: self.docVersion)
     phoneOTPView.setCompletion {[weak self] in
       let checkSMSViewController = CheckSMSViewController()

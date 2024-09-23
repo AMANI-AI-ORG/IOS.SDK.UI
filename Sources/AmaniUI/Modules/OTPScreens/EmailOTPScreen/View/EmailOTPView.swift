@@ -9,6 +9,9 @@ import Foundation
 import UIKit
 import Combine
 import AmaniSDK
+#if canImport(AmaniLocalization)
+import AmaniLocalization
+#endif
 
 class EmailOTPView: UIView {
   
@@ -134,10 +137,13 @@ class EmailOTPView: UIView {
     viewModel.isEmailValidPublisher
       .sink(receiveValue: { [weak self] isValidEmail in
         if !isValidEmail {
-            let message = self?.appConfig?.stepConfig?[1].documents?[0].versions?[0].invalidEmailError
-            print(message)
-            self?.emailInput.showError(message: message ?? "This email Address is wrong")
-          
+          #if canImport(AmaniLocalization)
+          self?.emailInput.showError(message: AmaniLocalization.localizedString(forKey: "email_invalidEmailError") )
+          #else
+          let message = self?.appConfig?.stepConfig?[1].documents?[0].versions?[0].invalidEmailError
+          print(message)
+          self?.emailInput.showError(message: message ?? "This email Address is wrong")
+          #endif
         } else {
           self?.emailInput.hideError()
         }
@@ -179,9 +185,15 @@ class EmailOTPView: UIView {
     let step = document.steps!.first!
     DispatchQueue.main.async {
       // FIXME: Button titles DOES NOT EXISTS in the configuration
+    #if canImport(AmaniLocalization)
+      self.descriptionText.text = AmaniLocalization.localizedString(forKey: "email_captureDescription")
+      self.emailLegend.text = AmaniLocalization.localizedString(forKey: "email_emailTitle")
+      self.emailInput.updatePlaceHolder(text: AmaniLocalization.localizedString(forKey: "email_emailHint"))
+    #else
       self.descriptionText.text = step.captureDescription
       self.emailLegend.text = document.emailTitle!
       self.emailInput.updatePlaceHolder(text: document.emailHint!, color: UIColor(hexString: "#C0C0C0"))
+    #endif
     }
     
   }

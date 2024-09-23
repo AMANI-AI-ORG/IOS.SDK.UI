@@ -8,6 +8,9 @@
 import Foundation
 import UIKit
 import AmaniSDK
+#if canImport(AmaniLocalization)
+import AmaniLocalization
+#endif
 
 class EmailOTPScreenViewController: KeyboardAvoidanceViewController {
   let emailOTPView = EmailOTPView()
@@ -30,7 +33,11 @@ class EmailOTPScreenViewController: KeyboardAvoidanceViewController {
           return
       }
       
+  #if canImport(AmaniLocalization)
+    self.title = AmaniLocalization.localizedString(forKey: "email_captureTitle")
+  #else
     self.title = docVersion?.steps?.first?.captureTitle ?? "Verify Email Address"
+  #endif
     emailOTPView.appConfig = appConfig
     emailOTPView.bind(withViewModel: emailOTPViewModel, withDocument: docVersion)
   

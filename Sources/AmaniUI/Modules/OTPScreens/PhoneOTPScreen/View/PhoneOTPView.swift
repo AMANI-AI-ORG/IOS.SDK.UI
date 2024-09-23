@@ -9,6 +9,9 @@ import Foundation
 import UIKit
 import Combine
 import AmaniSDK
+#if canImport(AmaniLocalization)
+import AmaniLocalization
+#endif
 
 class PhoneOTPView: UIView {
   
@@ -214,7 +217,11 @@ class PhoneOTPView: UIView {
       .sink(receiveValue: { [weak self] isValidEmail in
           if !isValidEmail || self?.phoneInput.field.text == "" {
               let message = self?.appConfig?.stepConfig?[2].documents?[0].versions?[0].invalidPhoneNumberError
-          self?.phoneInput.showError(message: message ?? "This phone number is wrong")
+            #if canImport(AmaniLocalization)
+            self?.phoneInput.showError(message: AmaniLocalization.localizedString(forKey: "phone_invalidPhoneNumberError"))
+            #else
+            self?.phoneInput.showError(message: message ?? "This phone number is wrong")
+            #endif
         } else {
           self?.phoneInput.hideError()
         }
@@ -292,9 +299,15 @@ class PhoneOTPView: UIView {
     if let step = document.steps?.first {
       // FIXME: No button text
       DispatchQueue.main.async {
+      #if canImport(AmaniLocalization)
+        self.submitButton.titleLabel?.text = document.nextButtonText
+        self.descriptionText.text = AmaniLocalization.localizedString(forKey: "phone_captureDescription")
+        self.phoneLegend.text = AmaniLocalization.localizedString(forKey: "phone_phoneHint")
+      #else
         self.submitButton.titleLabel?.text = document.nextButtonText
         self.descriptionText.text = step.captureDescription
         self.phoneLegend.text = document.phoneHint
+      #endif
       }
     }
   }
