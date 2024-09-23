@@ -1,5 +1,8 @@
 import AmaniSDK
 import UIKit
+#if canImport(AmaniLocalization)
+import AmaniLocalization
+#endif
 
 class SuccessViewController: BaseViewController {
     private lazy var stackView: UIStackView = {
@@ -104,22 +107,30 @@ extension SuccessViewController {
     private func initialSetup() {
       let generalConfig = try? Amani.sharedInstance.appConfig().getApplicationConfig().generalconfigs
       let textColor = generalConfig?.appFontColor ?? "ffffff"
+      #if canImport(AmaniLocalization)
+      setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "general_successTitle"), textColor: UIColor(hexString: textColor))
+      continueButton.setTitle(AmaniLocalization.localizedString(forKey: "general_continueText"), for: .normal)
+      headerLabel.text = AmaniLocalization.localizedString(forKey: "general_successHeaderText")
+      info1TextLabel.text = AmaniLocalization.localizedString(forKey: "general_successInfo1Text")
+      info2TextLabel.text = AmaniLocalization.localizedString(forKey: "general_successInfo2Text")
+      #else
       setNavigationBarWith(title: generalConfig?.successTitle ?? "Adımları Tamamladınız", textColor: UIColor(hexString: textColor))
+      continueButton.setTitle(generalConfig?.continueText, for: .normal)
+      headerLabel.text = generalConfig?.successHeaderText ?? "Tebrikler"
+      info1TextLabel.text = generalConfig?.successInfo1Text ?? "Bütün adımları tamamladınız."
+      info2TextLabel.text = generalConfig?.successInfo2Text ?? "Evraklarınızı kontrol edip başvurunuzu değerlendireceğiz."
+      #endif
       setNavigationLeftButton(TintColor: textColor)
       continueButton.setTitleColor(UIColor(hexString: generalConfig?.primaryButtonTextColor ?? ThemeColor.whiteColor.toHexString()), for: .normal)
       continueButton.backgroundColor = UIColor(hexString: generalConfig?.primaryButtonBackgroundColor ?? ThemeColor.whiteColor.toHexString())
       continueButton.addCornerRadiousWith(radious: CGFloat(generalConfig?.buttonRadius ?? 10))
       amaniLogo.isHidden = generalConfig?.hideLogo ?? false
       amaniLogo.tintColor = UIColor(hexString: textColor)
-      continueButton.setTitle(generalConfig?.continueText, for: .normal)
-        continueButton.backgroundColor = UIColor(hexString: generalConfig?.primaryButtonBackgroundColor ?? "#EA3365")
-        continueButton.layer.cornerRadius = 25
+      continueButton.backgroundColor = UIColor(hexString: generalConfig?.primaryButtonBackgroundColor ?? "#EA3365")
+      continueButton.layer.cornerRadius = 25
       headerLabel.textColor = UIColor(hexString: textColor)
       info1TextLabel.textColor = UIColor(hexString: textColor)
       info2TextLabel.textColor = UIColor(hexString: textColor)
-      headerLabel.text = generalConfig?.successHeaderText ?? "Tebrikler"
-      info1TextLabel.text = generalConfig?.successInfo1Text ?? "Bütün adımları tamamladınız."
-      info2TextLabel.text = generalConfig?.successInfo2Text ?? "Evraklarınızı kontrol edip başvurunuzu değerlendireceğiz."
     }
     
     private func setConstraints() {
