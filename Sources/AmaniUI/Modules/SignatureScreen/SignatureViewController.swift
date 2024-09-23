@@ -7,6 +7,9 @@
 
 import UIKit
 import AmaniSDK
+#if canImport(AmaniLocalization)
+import AmaniLocalization
+#endif
 
 final class SignatureViewController: BaseViewController {
     
@@ -122,12 +125,20 @@ extension SignatureViewController {
            
            
            // Navigation Bar
-           self.setNavigationBarWith(title: self.docStep?.captureTitle ?? "", textColor: UIColor(hexString: appConfig.generalconfigs?.topBarFontColor ?? "ffffff"))
+         #if canImport(AmaniLocalization)
+         self.setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "sg_captureTitle"), textColor: UIColor(hexString: appConfig.generalconfigs?.topBarFontColor ?? "ffffff"))
+         #else
+         self.setNavigationBarWith(title: self.docStep?.captureTitle ?? "", textColor: UIColor(hexString: appConfig.generalconfigs?.topBarFontColor ?? "ffffff"))
+         #endif
            self.setNavigationLeftButton(TintColor: appConfig.generalconfigs?.topBarFontColor ?? "ffffff")
            self.view.backgroundColor = UIColor(hexString: appConfig.generalconfigs?.appBackground ?? "#263B5B")
            self.confirmBtn.backgroundColor = UIColor(hexString: appConfig.generalconfigs?.primaryButtonBackgroundColor ?? ThemeColor.primaryColor.toHexString())
            self.confirmBtn.layer.borderColor = UIColor(hexString: appConfig.generalconfigs?.primaryButtonBorderColor ?? "#263B5B").cgColor
-           self.confirmBtn.setTitle(appConfig.generalconfigs?.confirmText, for: .normal)
+         #if canImport(AmaniLocalization)
+         self.confirmBtn.setTitle(AmaniLocalization.localizedString(forKey: "general_confirmText"), for: .normal)
+         #else
+         self.confirmBtn.setTitle(appConfig.generalconfigs?.confirmText, for: .normal)
+         #endif
            self.confirmBtn.setTitleColor(UIColor(hexString: appConfig.generalconfigs?.primaryButtonTextColor ?? ThemeColor.whiteColor.toHexString()), for: .normal)
            self.confirmBtn.tintColor = UIColor(hexString: appConfig.generalconfigs?.primaryButtonTextColor ?? ThemeColor.whiteColor.toHexString())
            self.confirmBtn.addCornerRadiousWith(radious: buttonRadious)
@@ -136,7 +147,11 @@ extension SignatureViewController {
 
            self.clearBtn.backgroundColor = secondaryBackgroundColor
            self.clearBtn.addBorder(borderWidth: 1, borderColor: UIColor(hexString: appConfig.generalconfigs?.secondaryButtonBorderColor ?? "#263B5B").cgColor)
-           self.clearBtn.setTitle(self.documentVersion?.clearText ?? "Temizle", for: .normal)
+          #if canImport(AmaniLocalization)
+         self.clearBtn.setTitle(AmaniLocalization.localizedString(forKey: "sg_clearText"), for: .normal)
+          #else
+            self.clearBtn.setTitle(self.documentVersion?.clearText ?? "Temizle", for: .normal)
+          #endif
            self.clearBtn.setTitleColor(UIColor(hexString: appConfig.generalconfigs?.secondaryButtonTextColor ?? ThemeColor.whiteColor.toHexString()), for: .normal)
            self.clearBtn.tintColor = UIColor(hexString: appConfig.generalconfigs?.secondaryButtonTextColor ?? ThemeColor.whiteColor.toHexString())
            self.clearBtn.addCornerRadiousWith(radious: buttonRadious)
