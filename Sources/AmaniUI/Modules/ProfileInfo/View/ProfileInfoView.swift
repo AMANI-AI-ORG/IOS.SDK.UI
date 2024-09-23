@@ -9,6 +9,9 @@ import AmaniSDK
 import Combine
 import Foundation
 import UIKit
+#if canImport(AmaniLocalization)
+import AmaniLocalization
+#endif
 
 class ProfileInfoView: UIView {
   private var cancellables = Set<AnyCancellable>()
@@ -385,12 +388,20 @@ class ProfileInfoView: UIView {
   
   private func setTextsFrom(document: DocumentVersion) {
       DispatchQueue.main.async {
+        #if canImport(AmaniLocalization)
+        self.nameLegend.text = AmaniLocalization.localizedString(forKey: "profileInfo_nameTitle")
+        self.nameInput.updatePlaceHolder(text: AmaniLocalization.localizedString(forKey: "profileInfo_nameHint"))
+        self.surnameLegend.text = AmaniLocalization.localizedString(forKey: "profileInfo_surnameTitle")
+        self.surnameInput.updatePlaceHolder(text: AmaniLocalization.localizedString(forKey: "profileInfo_surnameHint"))
+        self.birthdateLabel.text = AmaniLocalization.localizedString(forKey: "profileInfo_birthDateTitle")
+        #else
         self.nameLegend.text = document.nameTitle!
         self.nameInput.updatePlaceHolder(text: document.nameHint!)
         self.surnameLegend.text = document.surnameTitle!
         self.surnameInput.updatePlaceHolder(text: document.surnameHint!)
         self.birthdateLabel.text = document.birthDateTitle!
 //        self.birthdateInput.updatePlaceHolder(text: document.birthDateHint!)
+        #endif
     }
   }
   

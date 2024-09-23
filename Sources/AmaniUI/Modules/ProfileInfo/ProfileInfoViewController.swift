@@ -8,6 +8,9 @@
 import Foundation
 import UIKit
 import AmaniSDK
+#if canImport(AmaniLocalization)
+import AmaniLocalization
+#endif
 
 class ProfileInfoViewController: KeyboardAvoidanceViewController {
   var profileInfoView: ProfileInfoView!
@@ -27,8 +30,11 @@ class ProfileInfoViewController: KeyboardAvoidanceViewController {
           print("AppConfigError")
           return
       }
-      
-      title = docVersion?.steps?.first?.captureTitle
+      #if canImport(AmaniLocalization)
+          title = AmaniLocalization.localizedString(forKey: "profileInfo_captureTitle")
+      #else
+          title = docVersion?.steps?.first?.captureTitle
+      #endif
       profileInfoView = ProfileInfoView()
       profileInfoView.appConfig = appConfig
       profileInfoView.bind(withViewModel: profileInfoViewModel, withDocument: docVersion)

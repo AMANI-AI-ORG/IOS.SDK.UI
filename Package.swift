@@ -25,14 +25,17 @@ let package = Package(
             name: "AmaniRepo",
             url: "https://github.com/AmaniTechnologiesLtd/Mobile_SDK_Repo.git",
             .branch("main")
-        )
+        ),
+        .package(name: "AmaniLocalization",
+                 path: "../AmaniLocalization")
     ],
     targets: [
         .target(
             name: "AmaniUI",
             dependencies: [
                     .product(name:"AmaniSDK", package:"AmaniRepo"),
-                    "Lottie"
+                    "Lottie",
+                    "AmaniLocalization"
                 ],
             resources: [
               .process("Assets"),
