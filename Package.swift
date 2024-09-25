@@ -41,13 +41,16 @@ let package = Package(
               .process("Assets"),
               .process("PrivacyInfo.xcprivacy")
             ],
+            swiftSettings: [
+              .define("SPM=1"),
+            ],
             linkerSettings:[
               .linkedFramework("AmaniSDK"),
               .linkedFramework("CryptoKit"),
               .linkedFramework("CoreNFC"),
               .linkedFramework("CryptoTokenKit"),
             ]
-        )  
+        )
     ]
 )
 

@@ -82,11 +82,13 @@ public class AmaniUI {
               let bundle = Bundle(path: path)  {
       self.bundle = bundle
     } else {
-    #if !SPM
-        let bundle = Bundle(for: AmaniBundleLocator.self)
-    #else
+      //FIXME: SPM doğru konfigüre edilmediği için alttaki blok doğru çalışmıyor
+//    #if !SPM
+//        let bundle = Bundle(for: AmaniBundleLocator.self)
+//    #else
+//      let bundle = Bundle.module
+//    #endif
       let bundle = Bundle.module
-    #endif
       self.bundle = bundle
     }
   }

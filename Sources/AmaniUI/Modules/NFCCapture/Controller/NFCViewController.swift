@@ -1,5 +1,8 @@
 import AmaniSDK
 import UIKit
+#if canImport(AmaniLocalization)
+import AmaniLocalization
+#endif
 
 typealias VoidCallback = () -> Void
 
@@ -91,8 +94,23 @@ class NFCViewController: BaseViewController {
         
         let navFontColor = generalConfigs?.topBarFontColor ?? "ffffff"
         let textColor = generalConfigs?.appFontColor ?? "ffffff"
+      
+      #if canImport(AmaniLocalization)
+      setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "nf_nfcTitle"), textColor: UIColor(hexString: navFontColor))
+      headerLabel.text = AmaniLocalization.localizedString(forKey: "nf_nfcTitle")
+      desc1Label.text = AmaniLocalization.localizedString(forKey: "nf_nfcDescription1")
+      desc2Label.text = AmaniLocalization.localizedString(forKey: "nf_nfcDescription2")
+      desc3Label.text = AmaniLocalization.localizedString(forKey: "nf_nfcDescription3")
+      continueButton.setTitle(AmaniLocalization.localizedString(forKey: "general_continueText"), for: .normal)
+      #else
+      setNavigationBarWith(title: (documentVersion.nfcTitle)!, textColor: UIColor(hexString: navFontColor))
+      headerLabel.text = documentVersion.nfcTitle
+      desc1Label.text = documentVersion.nfcDescription1
+      desc2Label.text = documentVersion.nfcDescription2
+      desc3Label.text = documentVersion.nfcDescription3
+      continueButton.setTitle(generalConfigs?.continueText ?? "Devam", for: .normal)
+      #endif
         
-        setNavigationBarWith(title: (documentVersion.nfcTitle)!, textColor: UIColor(hexString: navFontColor))
         setNavigationLeftButton(TintColor: navFontColor)
         amaniLogo.isHidden = generalConfigs?.hideLogo ?? false
         amaniLogo.tintColor = UIColor(hexString: textColor)
@@ -100,10 +118,6 @@ class NFCViewController: BaseViewController {
         desc2Label.textColor = UIColor(hexString: textColor)
         desc3Label.textColor = UIColor(hexString: textColor)
         headerLabel.textColor = UIColor(hexString: textColor)
-        headerLabel.text = documentVersion.nfcTitle
-        desc1Label.text = documentVersion.nfcDescription1
-        desc2Label.text = documentVersion.nfcDescription2
-        desc3Label.text = documentVersion.nfcDescription3
         desc1Label.numberOfLines = 0
         desc2Label.numberOfLines = 0
         desc3Label.numberOfLines = 0
@@ -116,7 +130,6 @@ class NFCViewController: BaseViewController {
         continueButton.setTitleColor(UIColor(hexString: generalConfigs?.primaryButtonTextColor ?? ThemeColor.whiteColor.toHexString()), for: .normal)
         continueButton.backgroundColor = UIColor(hexString: generalConfigs?.primaryButtonBackgroundColor ?? ThemeColor.whiteColor.toHexString())
         continueButton.addCornerRadiousWith(radious: CGFloat(generalConfigs?.buttonRadius ?? 10))
-        continueButton.setTitle(generalConfigs?.continueText ?? "Devam", for: .normal)
         await scanNFC()
     }
     
