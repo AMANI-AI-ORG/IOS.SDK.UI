@@ -51,6 +51,16 @@ public class AmaniUI {
   public var idHologramDetection:Bool = false
   public var poseEstimationRecord:Bool = false
   public var isEnabledClientSideMrz: Bool = false
+  public var isVoiceAssistantEnabled: Bool = false
+  
+  
+  public func setVoiceAssistantValue(_ value: Bool) {
+    isVoiceAssistantEnabled = value
+  }
+  
+  public func getVoiceAssistantValue() -> Bool? {
+    return isVoiceAssistantEnabled
+  }
   
   /**
    This method used to get SDK bundle

@@ -41,7 +41,6 @@ class KYCStepTableViewCell: UITableViewCell {
         self.selectionStyle = .none
     
     }
-    
     // MARK: - Helper methods
     /**
      This method bind the data with view

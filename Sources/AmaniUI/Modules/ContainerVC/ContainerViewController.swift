@@ -8,6 +8,9 @@
 import Lottie
 import UIKit
 import AmaniSDK
+#if canImport(AmaniLocalization)
+import AmaniLocalization
+#endif
 
 class ContainerViewController: BaseViewController {
     // MARK: Properties
@@ -45,7 +48,8 @@ class ContainerViewController: BaseViewController {
   private var step:steps = .front
   private var isDissapeared = false
   var stepConfig: StepConfig?
-    
+  private var documentID: DocumentID?
+
   func bind(animationName:String?,
             docStep:DocumentStepModel,
             step:steps,
@@ -94,6 +98,32 @@ class ContainerViewController: BaseViewController {
       }
       var name = "\((animationName.lowercased()))_\(side)"
       
+      #if canImport(AmaniLocalization)
+      if name.contains("id"){
+        if side == "front"{
+          self.titleDescription.text = AmaniLocalization.localizedString(forKey: "id_captureDescription")
+          self.setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "id_front_captureTitle"))
+          VoiceAssistant.shared.speakManager(text: AmaniLocalization.localizedString(forKey: "voice_idFrontSide"), language: AmaniLocalization.selectedLanguage)
+          
+        }else if side == "back"{
+          self.titleDescription.text = AmaniLocalization.localizedString(forKey: "id_captureDescription")
+          self.setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "id_back_captureTitle"))
+          VoiceAssistant.shared.speakManager(text: AmaniLocalization.localizedString(forKey: "voice_idBackSide"), language: AmaniLocalization.selectedLanguage)
+          
+        }
+      }else if name.contains("pa"){
+        self.titleDescription.text = AmaniLocalization.localizedString(forKey: "pa_captureDescription")
+        self.setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "pa_captureTitle"))
+        
+      }else if name.contains("se"){
+        self.titleDescription.text = AmaniLocalization.localizedString(forKey: "se_informationScreenDesc1")
+        self.setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "se_captureTitle"))
+      }
+      #else
+      self.setNavigationBarWith(title: docStep?.captureTitle ?? "", textColor: UIColor(hexString: appConfig.generalconfigs?.topBarFontColor ?? "ffffff"))
+
+      #endif
+      
       if ((AmaniUI.sharedInstance.getBundle().url(forResource: name, withExtension: "json")?.isFileURL) == nil) {
         name = "xxx_id_0_\(side)"
       }
@@ -137,6 +167,12 @@ extension ContainerViewController {
       }
       let appConfig = try! Amani.sharedInstance.appConfig().getApplicationConfig()
       let buttonRadious = CGFloat(appConfig.generalconfigs?.buttonRadius ?? 10)
+      
+      #if canImport(AmaniLocalization)
+      btnContinue.setTitle(AmaniLocalization.localizedString(forKey: "general_continueText"), for: .normal)
+      #else
+      btnContinue.setTitle(appConfig.generalconfigs?.continueText, for: .normal)
+      #endif
 
       // Navigation Bar
       self.setNavigationBarWith(title: docStep?.captureTitle ?? "", textColor: UIColor(hexString: appConfig.generalconfigs?.topBarFontColor ?? "ffffff"))
@@ -144,7 +180,6 @@ extension ContainerViewController {
       self.view.backgroundColor = UIColor(hexString: appConfig.generalconfigs?.appBackground ?? "#263B5B")
       btnContinue.backgroundColor = UIColor(hexString: appConfig.generalconfigs?.primaryButtonBackgroundColor ?? ThemeColor.primaryColor.toHexString())
       btnContinue.layer.borderColor = UIColor(hexString: appConfig.generalconfigs?.primaryButtonBorderColor ?? "#263B5B").cgColor
-      btnContinue.setTitle(appConfig.generalconfigs?.continueText, for: .normal)
       btnContinue.setTitleColor(UIColor(hexString: appConfig.generalconfigs?.primaryButtonTextColor ?? ThemeColor.whiteColor.toHexString()), for: .normal)
       btnContinue.tintColor = UIColor(hexString: appConfig.generalconfigs?.primaryButtonTextColor ?? ThemeColor.whiteColor.toHexString())
       btnContinue.addCornerRadiousWith(radious: buttonRadious)

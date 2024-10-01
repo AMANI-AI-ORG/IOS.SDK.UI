@@ -8,6 +8,9 @@
 import AmaniSDK
 import UIKit
 import CoreServices
+#if canImport(AmaniLocalization)
+import AmaniLocalization
+#endif
 
 class DocumentsHandler: NSObject, DocumentHandler{
   var topVC: UIViewController
@@ -41,7 +44,13 @@ class DocumentsHandler: NSObject, DocumentHandler{
       print("AppConfigError")
       return
     }
+    
+    #if canImport(AmaniLocalization)
+    ContainerVC.setNavigationRightButton(text: AmaniLocalization.localizedString(forKey: "general_uploadPdf") ,TintColor: appConfig.topBarFontColor)
+    #else
     ContainerVC.setNavigationRightButton(text: appConfig.uploadPdf ?? "Upload PDF" ,TintColor: appConfig.topBarFontColor)
+    #endif
+    
     ContainerVC.setRightNavBarButtonAction {
       DispatchQueue.main.async {
       let documentPicker = UIDocumentPickerViewController(documentTypes: [kUTTypePDF as String ], in: .import)

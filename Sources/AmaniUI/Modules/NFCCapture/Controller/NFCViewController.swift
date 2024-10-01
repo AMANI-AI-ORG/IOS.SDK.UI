@@ -102,6 +102,7 @@ class NFCViewController: BaseViewController {
       desc2Label.text = AmaniLocalization.localizedString(forKey: "nf_nfcDescription2")
       desc3Label.text = AmaniLocalization.localizedString(forKey: "nf_nfcDescription3")
       continueButton.setTitle(AmaniLocalization.localizedString(forKey: "general_continueText"), for: .normal)
+      VoiceAssistant.shared.speakManager(text: AmaniLocalization.localizedString(forKey: "voice_nfc"), language: AmaniLocalization.selectedLanguage)
       #else
       setNavigationBarWith(title: (documentVersion.nfcTitle)!, textColor: UIColor(hexString: navFontColor))
       headerLabel.text = documentVersion.nfcTitle

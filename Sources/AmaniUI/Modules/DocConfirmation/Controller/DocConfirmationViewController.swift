@@ -7,6 +7,9 @@
 
 import UIKit
 import AmaniSDK
+#if canImport(AmaniLocalization)
+import AmaniLocalization
+#endif
 
 typealias ConfirmCallback = () -> Void
 
@@ -141,8 +144,13 @@ class DocConfirmationViewController: BaseViewController {
     tryAgainBtn.addCornerRadiousWith(radious: buttonRadious)
     confirmBtn.addCornerRadiousWith(radious: buttonRadious)
     // Setting titles
+    #if canImport(AmaniLocalization)
+    tryAgainBtn.setTitle(AmaniLocalization.localizedString(forKey: "general_tryAgainText"), for: .normal)
+    confirmBtn.setTitle(AmaniLocalization.localizedString(forKey: "general_confirmText"), for: .normal)
+    #else
     tryAgainBtn.setTitle(appConfig.generalconfigs?.tryAgainText, for: .normal)
     confirmBtn.setTitle(appConfig.generalconfigs?.confirmText, for: .normal)
+    #endif
     // Border color for try again button
     tryAgainBtn.addBorder(borderWidth: 2, borderColor: UIColor(hexString: appConfig.generalconfigs?.secondaryButtonBorderColor ?? ThemeColor.whiteColor.toHexString()).cgColor)
     // Title Colors
@@ -168,6 +176,16 @@ class DocConfirmationViewController: BaseViewController {
       titleLabel.isHidden = true
       physicalContractImageView.isHidden = true
       imgOuterView.isHidden = true
+      
+      #if canImport(AmaniLocalization)
+      self.setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "se_confirmationTitle"), textColor: UIColor(hexString: appConfig.generalconfigs?.topBarFontColor ?? "ffffff"))
+      descriptionLabel.text = AmaniLocalization.localizedString(forKey: "se_confirmationDescription")
+      titleLabel.text = AmaniLocalization.localizedString(forKey: "se_confirmationPageTitle")
+      #else
+      self.setNavigationBarWith(title: documentStep?.confirmationTitle ?? "", textColor: UIColor(hexString: appConfig.generalconfigs?.topBarFontColor ?? "ffffff"))
+      titleLabel.text = documentStep?.confirmationTitle ?? ""
+      descriptionLabel.text = documentStep?.confirmationDescription ?? ""
+      #endif
       
       selfieImageView.image = image
       selfieImageView.isHidden = false
@@ -240,8 +258,61 @@ class DocConfirmationViewController: BaseViewController {
           ])
          
       }
-    // For everything else
+
     else {
+      #if canImport(AmaniLocalization)
+      if let documentID = documentID {
+        switch documentID {
+        case DocumentID.DL:
+          print("Handling DocumentID.DL")
+          
+          self.setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "dl_confirmationTitle"), textColor: UIColor(hexString: appConfig.generalconfigs?.topBarFontColor ?? "ffffff"))
+          descriptionLabel.text = AmaniLocalization.localizedString(forKey: "dl_confirmationDescription")
+          titleLabel.text = AmaniLocalization.localizedString(forKey: "dl_confirmationPageTitle")
+          
+        case DocumentID.ID:
+          print("Handling DocumentID.ID")
+          
+          if stepid == steps.front.rawValue{
+            self.setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "id_front_confirmationTitle"), textColor: UIColor(hexString: appConfig.generalconfigs?.topBarFontColor ?? "ffffff"))
+            descriptionLabel.text = AmaniLocalization.localizedString(forKey: "id_confirmationDescription")
+            titleLabel.text = AmaniLocalization.localizedString(forKey: "id_front_confirmationPageTitle")
+          }else if stepid == steps.back.rawValue{
+            self.setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "id_back_confirmationTitle"), textColor: UIColor(hexString: appConfig.generalconfigs?.topBarFontColor ?? "ffffff"))
+            descriptionLabel.text = AmaniLocalization.localizedString(forKey: "id_confirmationDescription")
+            titleLabel.text = AmaniLocalization.localizedString(forKey: "id_front_confirmationPageTitle")
+          }
+          
+        case DocumentID.NF:
+          print("Handling DocumentID.NF")
+          
+          self.setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "nf_confirmationTitle"), textColor: UIColor(hexString: appConfig.generalconfigs?.topBarFontColor ?? "ffffff"))
+          descriptionLabel.text = AmaniLocalization.localizedString(forKey: "nf_confirmationDescription")
+          titleLabel.text = AmaniLocalization.localizedString(forKey: "nf_confirmationPageTitle")
+          
+        case DocumentID.PA:
+          print("Handling DocumentID.PA")
+          
+          self.setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "pa_confirmationTitle"), textColor: UIColor(hexString: appConfig.generalconfigs?.topBarFontColor ?? "ffffff"))
+          descriptionLabel.text = AmaniLocalization.localizedString(forKey: "pa_confirmationDescription")
+          titleLabel.text = AmaniLocalization.localizedString(forKey: "pa_confirmationTitle")
+          
+        case DocumentID.VA:
+          print("Handling DocumentID.VA")
+          
+        default:
+          print("Handling default case for unhandled DocumentID")
+        }
+      } else {
+
+        print("documentID is nil")
+      }
+      #else
+      self.setNavigationBarWith(title: (self.documentStep?.confirmationTitle)!)
+      titleLabel.text = documentStep?.confirmationTitle ?? ""
+      descriptionLabel.text = documentStep?.confirmationDescription ?? ""
+      #endif
+      
       imgOuterView.isHidden = false
       self.idImgView.image = image
       self.idImgView.backgroundColor = UIColor(hexString: appConfig.generalconfigs?.appBackground ?? "#263B5B")

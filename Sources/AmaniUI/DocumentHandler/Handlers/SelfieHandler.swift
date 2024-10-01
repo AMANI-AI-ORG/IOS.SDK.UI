@@ -7,6 +7,9 @@
 
 import AmaniSDK
 import UIKit
+#if canImport(AmaniLocalization)
+import AmaniLocalization
+#endif
 
 class SelfieHandler: DocumentHandler {
   var topVC: UIViewController
@@ -132,11 +135,20 @@ class SelfieHandler: DocumentHandler {
         screenConfig[.appBackgroundColor] = generalConfig.appBackground
         screenConfig[.appFontColor] = generalConfig.appFontColor
       }
+      
+      #if canImport(AmaniLocalization)
       infoMessages[.faceTooSmall] = version.faceIsTooFarText
       infoMessages[.notInArea] = version.faceNotInsideText
       infoMessages[.captureDescription] = step.captureDescription
       infoMessages[.completed] = ""
       infoMessages[.faceIsOk] = ""
+      #else
+      infoMessages[.faceTooSmall] = version.faceIsTooFarText
+      infoMessages[.notInArea] = version.faceNotInsideText
+      infoMessages[.captureDescription] = step.captureDescription
+      infoMessages[.completed] = ""
+      infoMessages[.faceIsOk] = ""
+      #endif
 
       screenConfig[.ovalBorderColor] = version.ovalViewStartColor
       screenConfig[.ovalBorderSuccessColor] = version.ovalViewSuccessColor
