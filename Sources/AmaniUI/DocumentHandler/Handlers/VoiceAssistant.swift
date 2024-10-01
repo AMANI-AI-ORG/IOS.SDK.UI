@@ -23,4 +23,8 @@ class VoiceAssistant{
     
     self.synthesizer.speak(utterance)
   }
+  
+  func stopSpeaking(){
+    synthesizer.stopSpeaking(at: .immediate)
+  }
 }

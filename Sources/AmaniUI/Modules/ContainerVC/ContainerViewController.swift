@@ -49,6 +49,7 @@ class ContainerViewController: BaseViewController {
   private var isDissapeared = false
   var stepConfig: StepConfig?
   private var documentID: DocumentID?
+  let isVoiceAssistantEnabled = AmaniUI.sharedInstance.getVoiceAssistantValue()
 
   func bind(animationName:String?,
             docStep:DocumentStepModel,
@@ -103,12 +104,18 @@ class ContainerViewController: BaseViewController {
         if side == "front"{
           self.titleDescription.text = AmaniLocalization.localizedString(forKey: "id_captureDescription")
           self.setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "id_front_captureTitle"))
-          VoiceAssistant.shared.speakManager(text: AmaniLocalization.localizedString(forKey: "voice_idFrontSide"), language: AmaniLocalization.selectedLanguage)
+          
+          if isVoiceAssistantEnabled!{
+            VoiceAssistant.shared.speakManager(text: AmaniLocalization.localizedString(forKey: "voice_idFrontSide"), language: AmaniLocalization.selectedLanguage)
+          }
           
         }else if side == "back"{
           self.titleDescription.text = AmaniLocalization.localizedString(forKey: "id_captureDescription")
           self.setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "id_back_captureTitle"))
-          VoiceAssistant.shared.speakManager(text: AmaniLocalization.localizedString(forKey: "voice_idBackSide"), language: AmaniLocalization.selectedLanguage)
+          
+          if isVoiceAssistantEnabled!{
+            VoiceAssistant.shared.speakManager(text: AmaniLocalization.localizedString(forKey: "voice_idBackSide"), language: AmaniLocalization.selectedLanguage)
+          }
           
         }
       }else if name.contains("pa"){

@@ -81,6 +81,8 @@ class SuccessViewController: BaseViewController {
         
         return imageView
     }()
+  
+  let isVoiceAssistantEnabled = AmaniUI.sharedInstance.getVoiceAssistantValue()
     
   override func viewDidLoad() {
     super.viewDidLoad()
@@ -113,7 +115,9 @@ extension SuccessViewController {
       headerLabel.text = AmaniLocalization.localizedString(forKey: "general_successHeaderText")
       info1TextLabel.text = AmaniLocalization.localizedString(forKey: "general_successInfo1Text")
       info2TextLabel.text = AmaniLocalization.localizedString(forKey: "general_successInfo2Text")
-      VoiceAssistant.shared.speakManager(text: AmaniLocalization.localizedString(forKey: "voice_success"), language: AmaniLocalization.selectedLanguage)
+      if isVoiceAssistantEnabled!{
+        VoiceAssistant.shared.speakManager(text: AmaniLocalization.localizedString(forKey: "voice_success"), language: AmaniLocalization.selectedLanguage)
+      }
       #else
       setNavigationBarWith(title: generalConfig?.successTitle ?? "Adımları Tamamladınız", textColor: UIColor(hexString: textColor))
       continueButton.setTitle(generalConfig?.continueText, for: .normal)

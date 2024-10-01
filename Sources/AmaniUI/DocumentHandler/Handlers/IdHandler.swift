@@ -9,6 +9,10 @@ import AmaniSDK
 import UIKit
 import CoreNFC
 
+var idSide = String()
+var isFrontScanned = false
+var isBackScanned = false
+
 class IdHandler: DocumentHandler {
     var stepView: UIView?
 
@@ -29,7 +33,39 @@ class IdHandler: DocumentHandler {
         // Start the NFC Screen
         DispatchQueue.main.async {
           if version.nfc == true && NFCNDEFReaderSession.readingAvailable {
-                self.startNFCCapture(docVer: version, completion: completion)
+            if isBackScanned{
+              self.startNFCCapture(docVer: version, completion: completion)
+              
+            }else{
+              var workingStep = 1
+              
+              do {
+                idSide = "Back"
+                self.showContainerVC(version: version, workingStep: workingStep) { [weak self] _ in
+                    // CONFIRM CALLBACK
+                  if version.steps!.count > workingStep+1 {
+                      // Remove the current instance of capture view
+                    self?.frontView?.removeFromSuperview()
+                    
+                      // Run the back step
+                    workingStep += 1
+                    self?.showContainerVC(version: version, workingStep: workingStep) { [weak self] _ in
+                      idSide = "Back"
+                      self?.goNextStep(version: version, completion: completion)
+                    }
+                  } else {
+                    self?.goNextStep(version: version, completion: completion)
+                  }
+                }
+                
+              } catch let error {
+                print(error)
+                completion(.failure(.moduleError))
+              }
+            }
+            
+            
+            
             } else {
                 self.topVC.navigationController?.popToViewController(ofClass: HomeViewController.self)
                 completion(.success(self.stepViewModel))
@@ -84,6 +120,7 @@ class IdHandler: DocumentHandler {
         idCaptureModule.setManualCropTimeout(Timeout: 30)
 
         do {
+          idSide = "Front"
             showContainerVC(version: version, workingStep: workingStep) { [weak self] _ in
                 // CONFIRM CALLBACK
                 if version.steps!.count > workingStep+1 {
@@ -94,6 +131,7 @@ class IdHandler: DocumentHandler {
                     workingStep += 1
                     self?.showContainerVC(version: version, workingStep: workingStep) { [weak self] _ in
                       self?.goNextStep(version: version, completion: completion)
+                      idSide = "Back"
                     }
                 } else {
                   self?.goNextStep(version: version, completion: completion)

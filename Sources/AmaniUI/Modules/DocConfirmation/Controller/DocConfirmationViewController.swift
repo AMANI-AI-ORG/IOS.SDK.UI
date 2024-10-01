@@ -127,6 +127,7 @@ class DocConfirmationViewController: BaseViewController {
   override func viewWillAppear(_ animated: Bool) {
     super.viewWillAppear(true)
     checkMRZ()
+    confimClicked = false
   }
   
   func initialSetup() {
@@ -421,6 +422,12 @@ class DocConfirmationViewController: BaseViewController {
     }
     
     @objc func confirmAction(_ sender: Any) {
+      if idSide == "Front"{
+        isFrontScanned = true
+      }else if idSide == "Back"{
+        isBackScanned = true
+      }
+      
         if (!confimClicked){
             confimClicked = true
             if let confirmCallback = confirmCallback {

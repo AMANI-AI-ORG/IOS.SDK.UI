@@ -75,6 +75,7 @@ class NFCViewController: BaseViewController {
     let idCaptureModule =  Amani.sharedInstance.IdCapture()
     let amani:Amani = Amani.sharedInstance
     var isDone: Bool = false
+    let isVoiceAssistantEnabled = AmaniUI.sharedInstance.getVoiceAssistantValue()
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(true)
@@ -102,7 +103,9 @@ class NFCViewController: BaseViewController {
       desc2Label.text = AmaniLocalization.localizedString(forKey: "nf_nfcDescription2")
       desc3Label.text = AmaniLocalization.localizedString(forKey: "nf_nfcDescription3")
       continueButton.setTitle(AmaniLocalization.localizedString(forKey: "general_continueText"), for: .normal)
-      VoiceAssistant.shared.speakManager(text: AmaniLocalization.localizedString(forKey: "voice_nfc"), language: AmaniLocalization.selectedLanguage)
+      if isVoiceAssistantEnabled!{
+        VoiceAssistant.shared.speakManager(text: AmaniLocalization.localizedString(forKey: "voice_nfc"), language: AmaniLocalization.selectedLanguage)
+      }
       #else
       setNavigationBarWith(title: (documentVersion.nfcTitle)!, textColor: UIColor(hexString: navFontColor))
       headerLabel.text = documentVersion.nfcTitle
