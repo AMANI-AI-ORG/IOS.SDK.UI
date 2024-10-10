@@ -34,7 +34,7 @@ class EmailOTPScreenViewController: KeyboardAvoidanceViewController {
       }
       
   #if canImport(AmaniLocalization)
-    self.title = AmaniLocalization.localizedString(forKey: "email_captureTitle")
+    self.title = AmaniLocalization.localizedString(forKey: "EMAIL_CAPTURETITLE")
   #else
     self.title = docVersion?.steps?.first?.captureTitle ?? "Verify Email Address"
   #endif

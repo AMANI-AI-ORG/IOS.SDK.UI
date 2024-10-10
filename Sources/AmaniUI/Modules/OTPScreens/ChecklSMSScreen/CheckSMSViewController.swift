@@ -39,7 +39,7 @@ class CheckSMSViewController: KeyboardAvoidanceViewController {
       }
       
     #if canImport(AmaniLocalization)
-    self.title = AmaniLocalization.localizedString(forKey: "phone_confirmationTitle")
+    self.title = AmaniLocalization.localizedString(forKey: "PHONE_CONFIRMATIONTITLE")
     #else
     self.title = docVersion?.steps?.first?.confirmationTitle ?? "Check your SMS"
     #endif

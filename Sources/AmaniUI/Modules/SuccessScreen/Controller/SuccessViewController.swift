@@ -110,13 +110,13 @@ extension SuccessViewController {
       let generalConfig = try? Amani.sharedInstance.appConfig().getApplicationConfig().generalconfigs
       let textColor = generalConfig?.appFontColor ?? "ffffff"
       #if canImport(AmaniLocalization)
-      setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "general_successTitle"), textColor: UIColor(hexString: textColor))
-      continueButton.setTitle(AmaniLocalization.localizedString(forKey: "general_continueText"), for: .normal)
-      headerLabel.text = AmaniLocalization.localizedString(forKey: "general_successHeaderText")
-      info1TextLabel.text = AmaniLocalization.localizedString(forKey: "general_successInfo1Text")
-      info2TextLabel.text = AmaniLocalization.localizedString(forKey: "general_successInfo2Text")
+      setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "GENERAL_SUCCESSTITLE"), textColor: UIColor(hexString: textColor))
+      continueButton.setTitle(AmaniLocalization.localizedString(forKey: "GENERAL_CONTINUETEXT"), for: .normal)
+      headerLabel.text = AmaniLocalization.localizedString(forKey: "GENERAL_SUCCESSHEADERTEXT")
+      info1TextLabel.text = AmaniLocalization.localizedString(forKey: "GENERAL_SUCCESSINFO1TEXT")
+      info2TextLabel.text = AmaniLocalization.localizedString(forKey: "GENERAL_SUCCESSINFO2TEXT")
       if isVoiceAssistantEnabled!{
-        VoiceAssistant.shared.speakManager(text: AmaniLocalization.localizedString(forKey: "voice_success"), language: AmaniLocalization.selectedLanguage)
+        VoiceAssistant.shared.speakManager(text: AmaniLocalization.localizedString(forKey: "VOICE_SUCCESS"), language: AmaniLocalization.selectedLanguage)
       }
       #else
       setNavigationBarWith(title: generalConfig?.successTitle ?? "Adımları Tamamladınız", textColor: UIColor(hexString: textColor))

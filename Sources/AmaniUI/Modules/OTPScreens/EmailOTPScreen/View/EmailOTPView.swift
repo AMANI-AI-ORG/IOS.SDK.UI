@@ -138,7 +138,7 @@ class EmailOTPView: UIView {
       .sink(receiveValue: { [weak self] isValidEmail in
         if !isValidEmail {
           #if canImport(AmaniLocalization)
-          self?.emailInput.showError(message: AmaniLocalization.localizedString(forKey: "email_invalidEmailError") )
+          self?.emailInput.showError(message: AmaniLocalization.localizedString(forKey: "EMAIL_INVALIDEMAILERROR") )
           #else
           let message = self?.appConfig?.stepConfig?[1].documents?[0].versions?[0].invalidEmailError
           print(message)
@@ -186,9 +186,9 @@ class EmailOTPView: UIView {
     DispatchQueue.main.async {
       // FIXME: Button titles DOES NOT EXISTS in the configuration
     #if canImport(AmaniLocalization)
-      self.descriptionText.text = AmaniLocalization.localizedString(forKey: "email_captureDescription")
-      self.emailLegend.text = AmaniLocalization.localizedString(forKey: "email_emailTitle")
-      self.emailInput.updatePlaceHolder(text: AmaniLocalization.localizedString(forKey: "email_emailHint"))
+      self.descriptionText.text = AmaniLocalization.localizedString(forKey: "EMAIL_CAPTUREDESCRIPTION")
+      self.emailLegend.text = AmaniLocalization.localizedString(forKey: "EMAIL_EMAILTITLE")
+      self.emailInput.updatePlaceHolder(text: AmaniLocalization.localizedString(forKey: "EMAIL_EMAILHINT"))
     #else
       self.descriptionText.text = step.captureDescription
       self.emailLegend.text = document.emailTitle!

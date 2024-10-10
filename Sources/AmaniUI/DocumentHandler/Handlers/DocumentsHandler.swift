@@ -46,7 +46,7 @@ class DocumentsHandler: NSObject, DocumentHandler{
     }
     
     #if canImport(AmaniLocalization)
-    ContainerVC.setNavigationRightButton(text: AmaniLocalization.localizedString(forKey: "general_uploadPdf") ,TintColor: appConfig.topBarFontColor)
+    ContainerVC.setNavigationRightButton(text: AmaniLocalization.localizedString(forKey: "GENERAL_UPLOADPDF") ,TintColor: appConfig.topBarFontColor)
     #else
     ContainerVC.setNavigationRightButton(text: appConfig.uploadPdf ?? "Upload PDF" ,TintColor: appConfig.topBarFontColor)
     #endif

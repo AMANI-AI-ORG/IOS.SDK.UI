@@ -389,11 +389,11 @@ class ProfileInfoView: UIView {
   private func setTextsFrom(document: DocumentVersion) {
       DispatchQueue.main.async {
         #if canImport(AmaniLocalization)
-        self.nameLegend.text = AmaniLocalization.localizedString(forKey: "profileInfo_nameTitle")
-        self.nameInput.updatePlaceHolder(text: AmaniLocalization.localizedString(forKey: "profileInfo_nameHint"))
-        self.surnameLegend.text = AmaniLocalization.localizedString(forKey: "profileInfo_surnameTitle")
-        self.surnameInput.updatePlaceHolder(text: AmaniLocalization.localizedString(forKey: "profileInfo_surnameHint"))
-        self.birthdateLabel.text = AmaniLocalization.localizedString(forKey: "profileInfo_birthDateTitle")
+        self.nameLegend.text = AmaniLocalization.localizedString(forKey: "PROFILEINFO_NAMETITLE")
+        self.nameInput.updatePlaceHolder(text: AmaniLocalization.localizedString(forKey: "PROFILEINFO_NAMEHINT"))
+        self.surnameLegend.text = AmaniLocalization.localizedString(forKey: "PROFILEINFO_SURNAMETITLE")
+        self.surnameInput.updatePlaceHolder(text: AmaniLocalization.localizedString(forKey: "PROFILEINFO_SURNAMEHINT"))
+        self.birthdateLabel.text = AmaniLocalization.localizedString(forKey: "PROFILEINFO_BIRTHDATETITLE")
         #else
         self.nameLegend.text = document.nameTitle!
         self.nameInput.updatePlaceHolder(text: document.nameHint!)

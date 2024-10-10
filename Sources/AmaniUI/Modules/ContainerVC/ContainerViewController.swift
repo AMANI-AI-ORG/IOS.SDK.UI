@@ -102,29 +102,29 @@ class ContainerViewController: BaseViewController {
       #if canImport(AmaniLocalization)
       if name.contains("id"){
         if side == "front"{
-          self.titleDescription.text = AmaniLocalization.localizedString(forKey: "id_captureDescription")
-          self.setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "id_front_captureTitle"))
+          self.titleDescription.text = AmaniLocalization.localizedString(forKey: "ID_CAPTUREDESCRIPTION")
+          self.setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "ID_FRONT_CAPTURETITLE"))
           
           if isVoiceAssistantEnabled!{
-            VoiceAssistant.shared.speakManager(text: AmaniLocalization.localizedString(forKey: "voice_idFrontSide"), language: AmaniLocalization.selectedLanguage)
+            VoiceAssistant.shared.speakManager(text: AmaniLocalization.localizedString(forKey: "VOICE_IDFRONTSIDE"), language: AmaniLocalization.selectedLanguage)
           }
           
         }else if side == "back"{
-          self.titleDescription.text = AmaniLocalization.localizedString(forKey: "id_captureDescription")
-          self.setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "id_back_captureTitle"))
+          self.titleDescription.text = AmaniLocalization.localizedString(forKey: "ID_CAPTUREDESCRIPTION")
+          self.setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "ID_BACK_CAPTURETITLE"))
           
           if isVoiceAssistantEnabled!{
-            VoiceAssistant.shared.speakManager(text: AmaniLocalization.localizedString(forKey: "voice_idBackSide"), language: AmaniLocalization.selectedLanguage)
+            VoiceAssistant.shared.speakManager(text: AmaniLocalization.localizedString(forKey: "VOICE_IDBACKSIDE"), language: AmaniLocalization.selectedLanguage)
           }
           
         }
       }else if name.contains("pa"){
-        self.titleDescription.text = AmaniLocalization.localizedString(forKey: "pa_captureDescription")
-        self.setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "pa_captureTitle"))
+        self.titleDescription.text = AmaniLocalization.localizedString(forKey: "PA_CAPTUREDESCRIPTION")
+        self.setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "PA_CAPTURETITLE"))
         
       }else if name.contains("se"){
-        self.titleDescription.text = AmaniLocalization.localizedString(forKey: "se_informationScreenDesc1")
-        self.setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "se_captureTitle"))
+        self.titleDescription.text = AmaniLocalization.localizedString(forKey: "SE_INFORMATIONSCREENDESC1")
+        self.setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "SE_CAPTURETITLE"))
       }
       #else
       self.setNavigationBarWith(title: docStep?.captureTitle ?? "", textColor: UIColor(hexString: appConfig.generalconfigs?.topBarFontColor ?? "ffffff"))
@@ -176,7 +176,7 @@ extension ContainerViewController {
       let buttonRadious = CGFloat(appConfig.generalconfigs?.buttonRadius ?? 10)
       
       #if canImport(AmaniLocalization)
-      btnContinue.setTitle(AmaniLocalization.localizedString(forKey: "general_continueText"), for: .normal)
+      btnContinue.setTitle(AmaniLocalization.localizedString(forKey: "GENERAL_CONTINUETEXT"), for: .normal)
       #else
       btnContinue.setTitle(appConfig.generalconfigs?.continueText, for: .normal)
       #endif

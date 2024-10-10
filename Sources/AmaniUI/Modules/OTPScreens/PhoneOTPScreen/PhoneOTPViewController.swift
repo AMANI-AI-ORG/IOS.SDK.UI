@@ -38,7 +38,7 @@ class PhoneOTPScreenViewController: KeyboardAvoidanceViewController {
   
   override func viewDidLoad() {
     #if canImport(AmaniLocalization)
-    self.title = AmaniLocalization.localizedString(forKey: "phone_phone_captureTitle")
+    self.title = AmaniLocalization.localizedString(forKey: "PHONE_PHONE_CAPTURETITLE")
     #else
     self.title = docVersion?.steps?.first?.captureTitle ?? "Verify Phone Number"
     #endif

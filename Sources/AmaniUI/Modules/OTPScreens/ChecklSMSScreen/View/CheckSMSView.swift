@@ -329,8 +329,8 @@ class CheckSMSView: UIView {
     if let step = document.steps?.first {
       DispatchQueue.main.async {
         #if canImport(AmaniLocalization)
-        self.titleDescription.text = AmaniLocalization.localizedString(forKey: "phone_confirmationDescription")
-        self.setTimerButtonDefaultStylings(text: AmaniLocalization.localizedString(forKey: "phone_resendOTP"))
+        self.titleDescription.text = AmaniLocalization.localizedString(forKey: "PHONE_CONFIRMATIONDESCRIPTION")
+        self.setTimerButtonDefaultStylings(text: AmaniLocalization.localizedString(forKey: "PHONE_RESENDOTP"))
         #else
         self.titleDescription.text = step.confirmationDescription
         self.setTimerButtonDefaultStylings(text: document.resendOTP)

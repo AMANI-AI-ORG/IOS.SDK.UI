@@ -97,14 +97,14 @@ class NFCViewController: BaseViewController {
         let textColor = generalConfigs?.appFontColor ?? "ffffff"
       
       #if canImport(AmaniLocalization)
-      setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "nf_nfcTitle"), textColor: UIColor(hexString: navFontColor))
-      headerLabel.text = AmaniLocalization.localizedString(forKey: "nf_nfcTitle")
-      desc1Label.text = AmaniLocalization.localizedString(forKey: "nf_nfcDescription1")
-      desc2Label.text = AmaniLocalization.localizedString(forKey: "nf_nfcDescription2")
-      desc3Label.text = AmaniLocalization.localizedString(forKey: "nf_nfcDescription3")
-      continueButton.setTitle(AmaniLocalization.localizedString(forKey: "general_continueText"), for: .normal)
+      setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "NF_NFCTITLE"), textColor: UIColor(hexString: navFontColor))
+      headerLabel.text = AmaniLocalization.localizedString(forKey: "NF_NFCTITLE")
+      desc1Label.text = AmaniLocalization.localizedString(forKey: "NF_NFCDESCRIPTION1")
+      desc2Label.text = AmaniLocalization.localizedString(forKey: "NF_NFCDESCRIPTION2")
+      desc3Label.text = AmaniLocalization.localizedString(forKey: "NF_NFCDESCRIPTION3")
+      continueButton.setTitle(AmaniLocalization.localizedString(forKey: "GENERAL_CONTINUETEXT"), for: .normal)
       if isVoiceAssistantEnabled!{
-        VoiceAssistant.shared.speakManager(text: AmaniLocalization.localizedString(forKey: "voice_nfc"), language: AmaniLocalization.selectedLanguage)
+        VoiceAssistant.shared.speakManager(text: AmaniLocalization.localizedString(forKey: "VOICE_NFC"), language: AmaniLocalization.selectedLanguage)
       }
       #else
       setNavigationBarWith(title: (documentVersion.nfcTitle)!, textColor: UIColor(hexString: navFontColor))

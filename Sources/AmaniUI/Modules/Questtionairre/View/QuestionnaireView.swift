@@ -122,7 +122,7 @@ extension QuestionnaireView: UITableViewDelegate {
     let questionnaireHeader = QuestionnaireHeaderView()
       questionnaireHeader.genConfig = appConfig?.generalconfigs
     #if canImport(AmaniLocalization)
-    let descriptionText = AmaniLocalization.localizedString(forKey: "questionnaire_captureDescription")
+    let descriptionText = AmaniLocalization.localizedString(forKey: "QUESTIONNAIRE_CAPTUREDESCRIPTION")
     questionnaireHeader.setDescriptionLabelText(descriptionText)
     return questionnaireHeader
     #else

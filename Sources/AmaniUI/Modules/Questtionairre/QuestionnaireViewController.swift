@@ -55,7 +55,7 @@ class QuestionnaireViewController: BaseViewController {
     self.questionnaireViewModel.setRuleID(stepVM.getRuleModel().id!)
     DispatchQueue.main.async {
       #if canImport(AmaniLocalization)
-      self.title = AmaniLocalization.localizedString(forKey: "questionnaire_captureTitle")
+      self.title = AmaniLocalization.localizedString(forKey: "QUESTIONNAIRE_CAPTURETITLE")
       #else
       self.title = stepVM.documents.first?.versions?.first?.steps?.first?.captureTitle ?? "Questionnaire"
       #endif

@@ -218,7 +218,7 @@ class PhoneOTPView: UIView {
           if !isValidEmail || self?.phoneInput.field.text == "" {
               let message = self?.appConfig?.stepConfig?[2].documents?[0].versions?[0].invalidPhoneNumberError
             #if canImport(AmaniLocalization)
-            self?.phoneInput.showError(message: AmaniLocalization.localizedString(forKey: "phone_invalidPhoneNumberError"))
+            self?.phoneInput.showError(message: AmaniLocalization.localizedString(forKey: "PHONE_INVALIDPHONENUMBERERROR"))
             #else
             self?.phoneInput.showError(message: message ?? "This phone number is wrong")
             #endif
@@ -301,8 +301,8 @@ class PhoneOTPView: UIView {
       DispatchQueue.main.async {
       #if canImport(AmaniLocalization)
         self.submitButton.titleLabel?.text = document.nextButtonText
-        self.descriptionText.text = AmaniLocalization.localizedString(forKey: "phone_captureDescription")
-        self.phoneLegend.text = AmaniLocalization.localizedString(forKey: "phone_phoneHint")
+        self.descriptionText.text = AmaniLocalization.localizedString(forKey: "PHONE_CAPTUREDESCRIPTION")
+        self.phoneLegend.text = AmaniLocalization.localizedString(forKey: "PHONE_PHONEHINT")
       #else
         self.submitButton.titleLabel?.text = document.nextButtonText
         self.descriptionText.text = step.captureDescription

@@ -339,8 +339,8 @@ class CheckMailView: UIView {
       DispatchQueue.main.async {
         // FIXME: proper confirm button text isn't in the document version.
     #if canImport(AmaniLocalization)
-        self.titleDescription.text = AmaniLocalization.localizedString(forKey: "email_confirmationDescription")
-        self.setTimerButtonDefaultStylings(text: AmaniLocalization.localizedString(forKey: "email_resendOTP"))
+        self.titleDescription.text = AmaniLocalization.localizedString(forKey: "EMAIL_CONFIRMATIONDESCRIPTION")
+        self.setTimerButtonDefaultStylings(text: AmaniLocalization.localizedString(forKey: "EMAIL_RESENDOTP"))
     #else
         self.titleDescription.text = step.confirmationDescription
         self.setTimerButtonDefaultStylings(text: document.resendOTP)

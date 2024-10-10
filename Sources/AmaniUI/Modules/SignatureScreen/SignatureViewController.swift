@@ -124,9 +124,9 @@ extension SignatureViewController {
            let buttonRadious = CGFloat(appConfig.generalconfigs?.buttonRadius ?? 10)
            
          #if canImport(AmaniLocalization)
-         self.setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "sg_captureTitle"), textColor: UIColor(hexString: appConfig.generalconfigs?.topBarFontColor ?? "ffffff"))
-         self.confirmBtn.setTitle(AmaniLocalization.localizedString(forKey: "general_confirmText"), for: .normal)
-         self.clearBtn.setTitle(AmaniLocalization.localizedString(forKey: "sg_clearText"), for: .normal)
+         self.setNavigationBarWith(title: AmaniLocalization.localizedString(forKey: "SG_CAPTURETITLE"), textColor: UIColor(hexString: appConfig.generalconfigs?.topBarFontColor ?? "ffffff"))
+         self.confirmBtn.setTitle(AmaniLocalization.localizedString(forKey: "GENERAL_CONFIRMTEXT"), for: .normal)
+         self.clearBtn.setTitle(AmaniLocalization.localizedString(forKey: "SG_CLEARTEXT"), for: .normal)
          #else
          self.setNavigationBarWith(title: self.docStep?.captureTitle ?? "", textColor: UIColor(hexString: appConfig.generalconfigs?.topBarFontColor ?? "ffffff"))
          self.confirmBtn.setTitle(appConfig.generalconfigs?.confirmText, for: .normal)

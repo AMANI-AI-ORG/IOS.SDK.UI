@@ -40,7 +40,7 @@ class CheckMailViewController: KeyboardAvoidanceViewController {
   
   override func viewDidLoad() {
   #if canImport(AmaniLocalization)
-    self.title = AmaniLocalization.localizedString(forKey: "email_confirmationTitle")
+    self.title = AmaniLocalization.localizedString(forKey: "EMAIL_CONFIRMATIONTITLE")
   #else
     self.title = docVersion?.steps?.first?.confirmationTitle ?? "Check Your Email"
   #endif

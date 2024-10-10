@@ -1,5 +1,8 @@
 import UIKit
 import AmaniSDK
+#if canImport(AmaniLocalization)
+import AmaniLocalization
+#endif
 /**
  This class represents the cell class of KYC step
  */
@@ -52,27 +55,203 @@ class KYCStepTableViewCell: UITableViewCell {
       var labelTest: String = model.title
       if let loaderView = self?.loaderView {
         if model.status == DocumentStatus.PROCESSING {
-          labelTest = model.stepConfig.buttonText?.processing ?? model.title
-          loaderView.startAnimating()
+          #if canImport(AmaniLocalization)
+          labelTest = AmaniLocalization.localizedString(forKey: "\(model.stepConfig.documents?.first?.id ?? "ID")_PROCESSING")
+
+//          switch model.stepConfig.documents?.first?.id{
+//          case "CO":
+//            labelTest = AmaniLocalization.localizedString(forKey: "ID_PROCESSING")
+//          case "DL":
+//            labelTest = AmaniLocalization.localizedString(forKey: "DL_PROCESSING")
+//          case "IB":
+//            labelTest = AmaniLocalization.localizedString(forKey: "IB_PROCESSING")
+//          case "ID":
+//            labelTest = AmaniLocalization.localizedString(forKey: "ID_PROCESSING")
+//          case "NF":
+//            labelTest = AmaniLocalization.localizedString(forKey: "NF_PROCESSING")
+//          case "PA":
+//            labelTest = AmaniLocalization.localizedString(forKey: "PA_PROCESSING")
+//          case "SE":
+//            labelTest = AmaniLocalization.localizedString(forKey: "SE_PROCESSING")
+//          case "SG":
+//            labelTest = AmaniLocalization.localizedString(forKey: "SG_PROCESSING")
+//          case "UB":
+//            labelTest = AmaniLocalization.localizedString(forKey: "ID_PROCESSING")
+//          case "VA":
+//            labelTest = AmaniLocalization.localizedString(forKey: "ID_PROCESSING")
+//          default:
+//            print("Missing case")
+//          }
+          
+          #else
+          labelTest = model.stepConfig.buttonText?.notUploaded ?? model.title
+          #endif
+          loaderView.stopAnimating()
           
         }else if model.status == DocumentStatus.APPROVED{
-          labelTest = model.stepConfig.buttonText?.approved ?? model.title
+          #if canImport(AmaniLocalization)
+          labelTest = AmaniLocalization.localizedString(forKey: "\(model.stepConfig.documents?.first?.id ?? "ID")_APPROVED")
+
+//          switch model.stepConfig.documents?.first?.id{
+//          case "CO":
+//            labelTest = AmaniLocalization.localizedString(forKey: "ID_APPROVED")
+//          case "DL":
+//            labelTest = AmaniLocalization.localizedString(forKey: "DL_APPROVED")
+//          case "IB":
+//            labelTest = AmaniLocalization.localizedString(forKey: "IB_APPROVED")
+//          case "ID":
+//            labelTest = AmaniLocalization.localizedString(forKey: "ID_APPROVED")
+//          case "NF":
+//            labelTest = AmaniLocalization.localizedString(forKey: "NF_APPROVED")
+//          case "PA":
+//            labelTest = AmaniLocalization.localizedString(forKey: "PA_APPROVED")
+//          case "SE":
+//            labelTest = AmaniLocalization.localizedString(forKey: "SE_APPROVED")
+//          case "SG":
+//            labelTest = AmaniLocalization.localizedString(forKey: "SG_APPROVED")
+//          case "UB":
+//            labelTest = AmaniLocalization.localizedString(forKey: "ID_APPROVED")
+//          case "VA":
+//            labelTest = AmaniLocalization.localizedString(forKey: "ID_APPROVED")
+//          default:
+//            print("Missing case")
+//          }
+          
+          #else
+          labelTest = model.stepConfig.buttonText?.notUploaded ?? model.title
+          #endif
           loaderView.stopAnimating()
           
         }else if model.status == DocumentStatus.REJECTED{
-          labelTest = model.stepConfig.buttonText?.rejected ?? model.title
+          #if canImport(AmaniLocalization)
+          labelTest = AmaniLocalization.localizedString(forKey: "\(model.stepConfig.documents?.first?.id ?? "ID")_REJECTED")
+
+//          switch model.stepConfig.documents?.first?.id{
+//          case "CO":
+//            labelTest = AmaniLocalization.localizedString(forKey: "ID_REJECTED")
+//          case "DL":
+//            labelTest = AmaniLocalization.localizedString(forKey: "DL_REJECTED")
+//          case "IB":
+//            labelTest = AmaniLocalization.localizedString(forKey: "IB_REJECTED")
+//          case "ID":
+//            labelTest = AmaniLocalization.localizedString(forKey: "ID_REJECTED")
+//          case "NF":
+//            labelTest = AmaniLocalization.localizedString(forKey: "NF_REJECTED")
+//          case "PA":
+//            labelTest = AmaniLocalization.localizedString(forKey: "PA_REJECTED")
+//          case "SE":
+//            labelTest = AmaniLocalization.localizedString(forKey: "SE_REJECTED")
+//          case "SG":
+//            labelTest = AmaniLocalization.localizedString(forKey: "SG_REJECTED")
+//          case "UB":
+//            labelTest = AmaniLocalization.localizedString(forKey: "ID_REJECTED")
+//          case "VA":
+//            labelTest = AmaniLocalization.localizedString(forKey: "ID_REJECTED")
+//          default:
+//            print("Missing case")
+//          }
+          
+          #else
+          labelTest = model.stepConfig.buttonText?.notUploaded ?? model.title
+          #endif
           loaderView.stopAnimating()
           
         }else if model.status == DocumentStatus.AUTOMATICALLY_REJECTED{
-          labelTest = model.stepConfig.buttonText?.autoRejected ?? model.title
+          #if canImport(AmaniLocalization)
+          labelTest = AmaniLocalization.localizedString(forKey: "\(model.stepConfig.documents?.first?.id ?? "ID")_AUTOMATICALLYREJECTED")
+
+//          switch model.stepConfig.documents?.first?.id{
+//          case "CO":
+//            labelTest = AmaniLocalization.localizedString(forKey: "ID_AUTOMATICALLYREJECTED")
+//          case "DL":
+//            labelTest = AmaniLocalization.localizedString(forKey: "DL_AUTOMATICALLYREJECTED")
+//          case "IB":
+//            labelTest = AmaniLocalization.localizedString(forKey: "IB_AUTOMATICALLYREJECTED")
+//          case "ID":
+//            labelTest = AmaniLocalization.localizedString(forKey: "ID_AUTOMATICALLYREJECTED")
+//          case "NF":
+//            labelTest = AmaniLocalization.localizedString(forKey: "NF_AUTOMATICALLYREJECTED")
+//          case "PA":
+//            labelTest = AmaniLocalization.localizedString(forKey: "PA_AUTOMATICALLYREJECTED")
+//          case "SE":
+//            labelTest = AmaniLocalization.localizedString(forKey: "SE_AUTOMATICALLYREJECTED")
+//          case "SG":
+//            labelTest = AmaniLocalization.localizedString(forKey: "SG_AUTOMATICALLYREJECTED")
+//          case "UB":
+//            labelTest = AmaniLocalization.localizedString(forKey: "ID_AUTOMATICALLYREJECTED")
+//          case "VA":
+//            labelTest = AmaniLocalization.localizedString(forKey: "ID_AUTOMATICALLYREJECTED")
+//          default:
+//            print("Missing case")
+//          }
+          
+          #else
+          labelTest = model.stepConfig.buttonText?.notUploaded ?? model.title
+          #endif
           loaderView.stopAnimating()
           
         }else if model.status == DocumentStatus.NOT_UPLOADED{
+          #if canImport(AmaniLocalization)
+          labelTest = AmaniLocalization.localizedString(forKey: "\(model.stepConfig.documents?.first?.id ?? "ID")_NOTUPLOADED")
+//          switch model.stepConfig.documents?.first?.id{
+//          case "CO":
+//            labelTest = AmaniLocalization.localizedString(forKey: "ID_NOTUPLOADED")
+//          case "DL":
+//            labelTest = AmaniLocalization.localizedString(forKey: "DL_NOTUPLOADED")
+//          case "IB":
+//            labelTest = AmaniLocalization.localizedString(forKey: "IB_NOTUPLOADED")
+//          case "ID":
+//            labelTest = AmaniLocalization.localizedString(forKey: "ID_NOTUPLOADED")
+//          case "NF":
+//            labelTest = AmaniLocalization.localizedString(forKey: "NF_NOTUPLOADED")
+//          case "PA":
+//            labelTest = AmaniLocalization.localizedString(forKey: "PA_NOTUPLOADED")
+//          case "SE":
+//            labelTest = AmaniLocalization.localizedString(forKey: "SE_NOTUPLOADED")
+//          case "SG":
+//            labelTest = AmaniLocalization.localizedString(forKey: "SG_NOTUPLOADED")
+//          case "UB":
+//            labelTest = AmaniLocalization.localizedString(forKey: "ID_NOTUPLOADED")
+//          case "VA":
+//            labelTest = AmaniLocalization.localizedString(forKey: "ID_NOTUPLOADED")
+//          default:
+//            print("Missing case")
+//          }
+          #else
           labelTest = model.stepConfig.buttonText?.notUploaded ?? model.title
+          #endif
           loaderView.stopAnimating()
           
         }else if model.status == DocumentStatus.PENDING_REVIEW{
-          labelTest = model.stepConfig.buttonText?.pendingReview ?? model.title
+          #if canImport(AmaniLocalization)
+          labelTest = AmaniLocalization.localizedString(forKey: "\(model.stepConfig.documents?.first?.id)_PENDINGREVIEW")
+//          switch model.stepConfig.documents?.first?.id{
+//          case "CO":
+//            labelTest = AmaniLocalization.localizedString(forKey: "ID_PENDINGREVIEW")
+//          case "DL":
+//            labelTest = AmaniLocalization.localizedString(forKey: "DL_PENDINGREVIEW")
+//          case "IB":
+//            labelTest = AmaniLocalization.localizedString(forKey: "IB_PENDINGREVIEW")
+//          case "ID":
+//            labelTest = AmaniLocalization.localizedString(forKey: "ID_PENDINGREVIEW")
+//          case "NF":
+//            labelTest = AmaniLocalization.localizedString(forKey: "NF_PENDINGREVIEW")
+//          case "PA":
+//            labelTest = AmaniLocalization.localizedString(forKey: "PA_PENDINGREVIEW")
+//          case "SE":
+//            labelTest = AmaniLocalization.localizedString(forKey: "SE_PENDINGREVIEW")
+//          case "SG":
+//            labelTest = AmaniLocalization.localizedString(forKey: "SG_PENDINGREVIEW")
+//          case "UB":
+//            labelTest = AmaniLocalization.localizedString(forKey: "ID_PENDINGREVIEW")
+//          case "VA":
+//            labelTest = AmaniLocalization.localizedString(forKey: "ID_PENDINGREVIEW")
+//          default:
+//            print("Missing case")
+//          }
+          #else
+          labelTest = model.stepConfig.buttonText?.notUploaded ?? model.title
+          #endif
           loaderView.stopAnimating()
           
         } else {

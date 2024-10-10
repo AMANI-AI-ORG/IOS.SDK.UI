@@ -8,6 +8,9 @@
 import UIKit
 import AmaniSDK
 import Foundation
+#if canImport(AmaniLocalization)
+import AmaniLocalization
+#endif
 
 typealias StepCompletionCallback = (Result<KYCStepViewModel, KYCStepError>) -> Void
 typealias StepUploadCallback = (Bool?, [String : Any]?) -> Void
@@ -55,8 +58,13 @@ class KYCStepViewModel {
     self.buttonColor = buttonColor
     self.textColor = textColor
     
+    #if canImport(AmaniLocalization)
+    self.documentSelectionTitle = AmaniLocalization.localizedString(forKey: "ID_DOCUMENTSELECTIONTITLE")
+    self.documentSelectionDescription = AmaniLocalization.localizedString(forKey: "ID_DOCUMENTSELECTIONDESCRIPTION")
+    #else
     self.documentSelectionTitle = stepConfig.documentSelectionTitle ?? ""
     self.documentSelectionDescription = stepConfig.documentSelectionDescription ?? ""
+    #endif
     
     topViewController = onVC
     documents = stepConfig.documents!

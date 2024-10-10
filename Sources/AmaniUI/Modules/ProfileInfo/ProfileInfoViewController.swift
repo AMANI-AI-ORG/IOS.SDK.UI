@@ -31,7 +31,7 @@ class ProfileInfoViewController: KeyboardAvoidanceViewController {
           return
       }
       #if canImport(AmaniLocalization)
-          title = AmaniLocalization.localizedString(forKey: "profileInfo_captureTitle")
+          title = AmaniLocalization.localizedString(forKey: "PROFILEINFO_CAPTURETITLE")
       #else
           title = docVersion?.steps?.first?.captureTitle
       #endif
