@@ -16,6 +16,7 @@ final class SignatureViewController: BaseViewController {
 
     // MARK: Properties
   private let signature = Amani.sharedInstance.signature()
+  private var btnContinue = UIButton()
   private var clearBtn = UIButton()
   private var confirmBtn = UIButton()
   private var animationName : String?
@@ -46,7 +47,7 @@ final class SignatureViewController: BaseViewController {
     self.docStep = docStep
     self.callback = completion
     self.animationName = version.type
-    self.playLottieAnimation()
+   
   }
   
   func setDisappearCallback(_ callback: @escaping VoidCallback) {
@@ -55,12 +56,15 @@ final class SignatureViewController: BaseViewController {
    
     override func viewDidLoad() {
         super.viewDidLoad()
-
+      self.setupUI()
+      clearBtn.isHidden = true
+      confirmBtn.isHidden = true
+      self.btnContinue.addTarget(self, action: #selector(actBtnContinue(_ :)), for: .touchUpInside)
     }
   
   override func viewWillAppear(_ animated: Bool) {
 //    self.navigationItem.leftBarButtonItem?.title = ""
-  
+      self.playLottieAnimation()
     }
   
     override func viewDidAppear(_ animated: Bool) {
@@ -82,6 +86,12 @@ final class SignatureViewController: BaseViewController {
 
 // MARK: Initial setup and setting constraints
 extension SignatureViewController {
+  
+  @objc func actBtnContinue(_ sender: UIButton) {
+    print("LOTTIE ANIMATION STOPPED")
+    self.lottieAnimationView?.stop()
+  }
+  
   private func playLottieAnimation() {
    
     var name = "signature"
@@ -93,11 +103,17 @@ extension SignatureViewController {
               self.lottieInit(name: name) {[weak self] _ in
                   //      print(finishedAnimation)
                 debugPrint("lottie closure'a girdi")
+//                self?.setupUI()
+//                self?.setupAmaniSignature()
+                self?.clearBtn.isHidden = false
+                self?.confirmBtn.isHidden = false
+                self?.btnContinue.isHidden = true
                 self?.disappearCallback?()
-                self?.setupAmaniSignature()
-                self?.setupUI()
+               
+                
               }
             }
+    self.setConstraints()
             
   }
 
@@ -144,7 +160,6 @@ extension SignatureViewController {
   }
   
    private func setupUI() {
-       DispatchQueue.main.async {
            let appConfig = try! Amani.sharedInstance.appConfig().getApplicationConfig()
            let buttonRadious = CGFloat(appConfig.generalconfigs?.buttonRadius ?? 10)
            
@@ -159,6 +174,17 @@ extension SignatureViewController {
            self.confirmBtn.setTitleColor(UIColor(hexString: appConfig.generalconfigs?.primaryButtonTextColor ?? ThemeColor.whiteColor.toHexString()), for: .normal)
            self.confirmBtn.tintColor = UIColor(hexString: appConfig.generalconfigs?.primaryButtonTextColor ?? ThemeColor.whiteColor.toHexString())
            self.confirmBtn.addCornerRadiousWith(radious: buttonRadious)
+     
+          self.animationView.translatesAutoresizingMaskIntoConstraints = false
+          self.animationView.backgroundColor = .clear
+         
+        btnContinue.translatesAutoresizingMaskIntoConstraints = false
+         btnContinue.backgroundColor = UIColor(hexString: appConfig.generalconfigs?.primaryButtonBackgroundColor ?? ThemeColor.primaryColor.toHexString())
+         btnContinue.layer.borderColor = UIColor(hexString: appConfig.generalconfigs?.primaryButtonBorderColor ?? "#263B5B").cgColor
+         btnContinue.setTitle(appConfig.generalconfigs?.continueText, for: .normal)
+         btnContinue.setTitleColor(UIColor(hexString: appConfig.generalconfigs?.primaryButtonTextColor ?? ThemeColor.whiteColor.toHexString()), for: .normal)
+         btnContinue.tintColor = UIColor(hexString: appConfig.generalconfigs?.primaryButtonTextColor ?? ThemeColor.whiteColor.toHexString())
+         btnContinue.addCornerRadiousWith(radious: buttonRadious)
            
            let secondaryBackgroundColor:UIColor = appConfig.generalconfigs?.secondaryButtonBackgroundColor == nil ? UIColor.clear :UIColor(hexString: (appConfig.generalconfigs?.secondaryButtonBackgroundColor)!)
 
@@ -175,10 +201,10 @@ extension SignatureViewController {
          
          self.clearBtn.addTarget(self, action: #selector(self.clearAct(_:)), for: .touchUpInside)
          self.confirmBtn.addTarget(self, action: #selector(self.confirmAct(_:)), for: .touchUpInside)
-           
           
-       }
-      setConstraints()
+        self.setupAmaniSignature()
+        self.setCanvasConstraints()
+      
         
   //    // For everything else
   //      imgOuterView.isHidden = false
@@ -193,86 +219,117 @@ extension SignatureViewController {
   //
   //
     }
+  
+  private func setConstraints() {
+    DispatchQueue.main.async { [self] in
+      view.addSubview(btnContinue)
+      view.bringSubviewToFront(btnContinue)
+      
+      NSLayoutConstraint.activate([
+        btnContinue.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
+        btnContinue.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
+        btnContinue.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor),
+        btnContinue.heightAnchor.constraint(equalToConstant: 50),
+        
+      ])
+    }
     
-    private func setConstraints() {
-        DispatchQueue.main.async {
-            self.view.addSubviews(self.confirmBtn, self.clearBtn)
+  }
+    
+    private func setCanvasConstraints() {
+        DispatchQueue.main.async { [self] in
+            view.addSubviews(confirmBtn, clearBtn)
+           
          
           guard let signBoard: UIView = self.viewContainer else { return }
           signBoard.layer.borderWidth = 0.7
           signBoard.layer.borderColor = UIColor.lightGray.cgColor
           signBoard.layer.masksToBounds = true
-//          signBoard.backgroundColor = .white
+          signBoard.backgroundColor = .clear
           
           signBoard.translatesAutoresizingMaskIntoConstraints = false
           
 
             NSLayoutConstraint.activate([
-              signBoard.leadingAnchor.constraint(equalTo: self.view.leadingAnchor, constant: 32),
-              signBoard.trailingAnchor.constraint(equalTo: self.view.trailingAnchor, constant: -32),
-              signBoard.bottomAnchor.constraint(equalTo: self.view.bottomAnchor, constant: -125),
-              signBoard.topAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.topAnchor, constant: 32),
-              self.clearBtn.topAnchor.constraint(equalTo: self.view.bottomAnchor, constant: 40),
-              self.confirmBtn.topAnchor.constraint(equalTo: self.view.bottomAnchor, constant: 40),
-             self.clearBtn.bottomAnchor.constraint(equalTo: self.view.bottomAnchor, constant: -40),
-             self.confirmBtn.bottomAnchor.constraint(equalTo: self.view.bottomAnchor, constant: -40),
+              signBoard.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 32),
+              signBoard.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -32),
+              signBoard.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -125),
+              signBoard.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 32),
+              clearBtn.topAnchor.constraint(equalTo: view.bottomAnchor, constant: 40),
+              confirmBtn.topAnchor.constraint(equalTo: view.bottomAnchor, constant: 40),
+             clearBtn.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -40),
+             confirmBtn.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: -40),
               
-             self.clearBtn.leadingAnchor.constraint(equalTo: self.view.leadingAnchor, constant: 20),
-             self.confirmBtn.trailingAnchor.constraint(equalTo: self.view.trailingAnchor, constant: -20),
+             clearBtn.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+             confirmBtn.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
               
-             self.clearBtn.trailingAnchor.constraint(equalTo: self.view.centerXAnchor, constant: -10),
-             self.confirmBtn.leadingAnchor.constraint(equalTo: self.view.centerXAnchor, constant: 10),
+             clearBtn.trailingAnchor.constraint(equalTo: view.centerXAnchor, constant: -10),
+             confirmBtn.leadingAnchor.constraint(equalTo: view.centerXAnchor, constant: 10),
               
-             self.clearBtn.heightAnchor.constraint(equalToConstant: 50),
-             self.confirmBtn.heightAnchor.constraint(equalTo: self.clearBtn.heightAnchor),
+             clearBtn.heightAnchor.constraint(equalToConstant: 50),
+             confirmBtn.heightAnchor.constraint(equalTo: clearBtn.heightAnchor),
               
-             self.clearBtn.widthAnchor.constraint(equalTo: self.confirmBtn.widthAnchor)
+             clearBtn.widthAnchor.constraint(equalTo: confirmBtn.widthAnchor),
               
-              
+             
              
             ])
           
-          self.view.layoutIfNeeded()
+          view.layoutIfNeeded()
         }
     }
   
   
-  private func lottieInit(name:String = "signature", completion: @escaping (_ finishedAnimation:Bool) -> ()) {
+  private func lottieInit(name: String = "signature", completion: @escaping (_ finishedAnimation: Int) -> ()) {
+      //    var animation = LottieAnimation.named(name, bundle: AmaniUI.sharedInstance.getBundle())
     
-    guard let animation = LottieAnimation.named(name, bundle: AmaniUI.sharedInstance.getBundle()) else {
-      debugPrint("Lottie animation not found")
+    guard let animation = LottieAnimation.named(name, bundle: AmaniUI.sharedInstance.getBundle()) else{
+      print("Animation not found")
       return
     }
     
     self.lottieAnimationView = LottieAnimationView(animation: animation)
     guard let lottieAnimationView = self.lottieAnimationView else {
-      debugPrint("Failed to create Lottie animation view")
+      print("Failed to create Lottie animation view")
       return
     }
     
-    lottieAnimationView.frame = view.bounds
-    lottieAnimationView.translatesAutoresizingMaskIntoConstraints = false
-    lottieAnimationView.contentMode = .scaleAspectFit
-    lottieAnimationView.backgroundColor = .white
-    lottieAnimationView.loopMode = .playOnce
-    lottieAnimationView.backgroundBehavior = .pauseAndRestore
-    view.addSubview(lottieAnimationView)
     
-    lottieAnimationView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 0).isActive = true
-    lottieAnimationView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 0).isActive = true
-    lottieAnimationView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: 0).isActive = true
-    lottieAnimationView.bottomAnchor.constraint(equalTo: view.bottomAnchor, constant: 0).isActive = true
-
-      lottieAnimationView.play {[weak self] (isPlayed) in
+    
+    lottieAnimationView.frame = animationView.bounds
+    lottieAnimationView.backgroundColor = .white
+    lottieAnimationView.contentMode = .scaleToFill
+    lottieAnimationView.translatesAutoresizingMaskIntoConstraints = false
+    DispatchQueue.main.async { [self] in
+      view.addSubview(animationView)
+      animationView.addSubview(lottieAnimationView)
+      NSLayoutConstraint.activate([
+        //               animationView.centerXAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.centerXAnchor),
+        //                animationView.centerYAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.centerYAnchor),
+        //               animationView.topAnchor.constraint(equalTo: self.titleDescription.bottomAnchor, constant: 16),
+        //
+        //                animationView.widthAnchor.constraint(equalTo: self.view.widthAnchor),
+        //               animationView.heightAnchor.constraint(equalTo: self.view.heightAnchor, multiplier: 0.5),
+        animationView.topAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.topAnchor, constant: 0),
+        animationView.leadingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.leadingAnchor),
+        animationView.trailingAnchor.constraint(equalTo: self.view.safeAreaLayoutGuide.trailingAnchor),
+        animationView.bottomAnchor.constraint(equalTo: btnContinue.topAnchor, constant: -16),
         
-        debugPrint("lottie animation oynatıldı: \(isPlayed)")
+        lottieAnimationView.leadingAnchor.constraint(equalTo: animationView.leadingAnchor),
+        lottieAnimationView.trailingAnchor.constraint(equalTo: animationView.trailingAnchor),
+        lottieAnimationView.topAnchor.constraint(equalTo: animationView.topAnchor),
+        lottieAnimationView.bottomAnchor.constraint(equalTo: animationView.bottomAnchor)
+      ])
+      
+      animationView.bringSubviewToFront(view)
+      lottieAnimationView.play {[weak self] (_) in
         lottieAnimationView.removeFromSuperview()
         if let isdp = self?.isDissapeared, !isdp{
-          
-          completion(isdp)
+          completion(steps.front.rawValue)
         }
       }
     }
+  }
     
   }
 
