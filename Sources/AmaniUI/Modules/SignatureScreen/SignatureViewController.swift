@@ -280,7 +280,7 @@ extension SignatureViewController {
     }
   
   
-  private func lottieInit(name: String = "signature", completion: @escaping (_ finishedAnimation: Int) -> ()) {
+  private func lottieInit(name: String = "signature", completion: @escaping (_ finishedAnimation: Bool) -> ()) {
       //    var animation = LottieAnimation.named(name, bundle: AmaniUI.sharedInstance.getBundle())
     
     guard let animation = LottieAnimation.named(name, bundle: AmaniUI.sharedInstance.getBundle()) else{
@@ -325,7 +325,7 @@ extension SignatureViewController {
       lottieAnimationView.play {[weak self] (_) in
         lottieAnimationView.removeFromSuperview()
         if let isdp = self?.isDissapeared, !isdp{
-          completion(steps.front.rawValue)
+          completion(isdp)
         }
       }
     }
