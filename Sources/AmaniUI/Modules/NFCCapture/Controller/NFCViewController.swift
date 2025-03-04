@@ -20,6 +20,7 @@ class NFCViewController: BaseViewController {
   let idCaptureModule =  Amani.sharedInstance.IdCapture()
   let amani:Amani = Amani.sharedInstance
   var isDone: Bool = false
+  var maxAttempts: Int = 0
   
   var appConfig: AppConfigModel?  {
           didSet {
@@ -140,7 +141,13 @@ class NFCViewController: BaseViewController {
                 }
                 
           #endif
+          maxAttempts += 1
+          let sdkMaxAttemptValue = (documentVersion?.maxNfcAttempt ?? (documentVersion?.maxAttempt ?? 3))
+          if maxAttempts >= sdkMaxAttemptValue {
             await scanNFC()
+          } else {
+            self.doNext(done: true)
+          }
         }
     }
     
