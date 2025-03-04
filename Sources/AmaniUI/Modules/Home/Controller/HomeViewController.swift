@@ -9,7 +9,7 @@ class HomeViewController: BaseViewController {
     let appConfig = try? Amani.sharedInstance.appConfig().getApplicationConfig()
     var viewAppeared:Bool = false
     
-    var stepModels: [KYCStepViewModel]?
+    var stepModels: [KYCStepViewModel]? = nil
     var customerData: CustomerResponseModel? = nil
     var nonKYCStepManager: NonKYCStepManager? = nil
   
@@ -139,7 +139,10 @@ class HomeViewController: BaseViewController {
           
           // Add only if the identifer equals to kyc
           if (stepModel.identifier == "kyc"||stepModel.identifier == nil ) {
-            return KYCStepViewModel(from: stepModel, initialRule: ruleModel, topController: self)
+            var kycStepViewModel = KYCStepViewModel(from: stepModel, initialRule: ruleModel, topController: self)
+            var documentHandler = DocumentHandlerHelper(for: stepModel.documents!, of: kycStepViewModel)
+            kycStepViewModel.setDocumentHandler(documentHandler)
+            return kycStepViewModel
           }
           
           return nil
@@ -153,15 +156,16 @@ class HomeViewController: BaseViewController {
       stepModels = filteredViewModels.sorted { $0.sortOrder < $1.sortOrder }
     } else {
       rules.forEach { ruleModel in
-//        print("HOME EKRANINDA DELEGATEN GELEN RULE MODEL \(ruleModel)")
         if let stepModel = stepConfig.first(where: { $0.id == ruleModel.id }) {
-          if let stepID = stepModels?.firstIndex(where: {$0.id == ruleModel.id}) {
-              // FIXME: index out of range hatası socketten cevap gelmeyince app crash oluyor.
-            stepModels?.remove(at: stepID)
-//            print("STEP MODELDEN REMOVE EDILEN STEP ID \(stepID)")
-         
-            stepModels?.append(KYCStepViewModel(from: stepModel, initialRule: ruleModel, topController: self))
+          guard let rulemodelStatus:String = ruleModel.status else {return}
+          guard let status:DocumentStatus = DocumentStatus(rawValue: rulemodelStatus) else {return}
+          if let stepModels = stepModels?.first(where: {$0.id == ruleModel.id}){
+            stepModels.updateStatus(status: status)
           }
+//          if let stepID = stepModels?.firstIndex(where: {$0.id == ruleModel.id}) {
+//            stepModels?.remove(at: stepID)
+//            stepModels?.append(KYCStepViewModel(from: stepModel, initialRule: ruleModel, topController: self))
+//          }
         }
       }
       stepModels = stepModels?.sorted{ $0.sortOrder < $1.sortOrder }
@@ -191,9 +195,9 @@ extension HomeViewController {
    */
   func setCustomerInfo(model: CustomerResponseModel) {
     
-    kycStepTblView.showKYCStep(stepModels: stepModels!, onSelectCallback: { kycStepTblViewModel in
+    kycStepTblView.showKYCStep(stepModels: stepModels!, onSelectCallback: { [weak self] kycStepTblViewModel in
       
-      self.kycStepTblView.updateStatus(for: kycStepTblViewModel!, status: .PROCESSING)
+      self?.kycStepTblView.updateStatus(for: kycStepTblViewModel!, status: .PROCESSING)
       kycStepTblViewModel!.upload { (result,args) in
         
 //        if result == true {

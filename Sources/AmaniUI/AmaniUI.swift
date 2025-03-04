@@ -34,7 +34,6 @@ public class AmaniUI {
   
   
   var missingRules:[[String:String]]? = nil
-  var stepsBeforeKYC: [KYCStepViewModel] = []
   var rulesKYC: [KYCRuleModel] = []
   
   
@@ -301,6 +300,37 @@ public class AmaniUI {
     
   }
   
+//  func generateKYCStepViewModels(from rules: [KYCRuleModel]) throws -> [KYCStepViewModel] {
+//    guard let stepConfig = try? Amani.sharedInstance.appConfig().getApplicationConfig().stepConfig else {
+//      throw AppConstants.AmaniError.ConfigError
+//    }
+//    
+//    let viewModels: [KYCStepViewModel] = rules.compactMap{ ruleModel in
+//        if var stepModel = stepConfig.first(where: { $0.id == ruleModel.id }) {
+//          stepModel.documents?.removeAll(where: { $0.id == "OT" })
+//          
+//          if stepModel.documents?.contains(where: { $0.id == "NF" }) == true && !NFCNDEFReaderSession.readingAvailable {
+//            return nil
+//          }
+//          
+//            // Add only if the identifer equals to kyc
+//          if (stepModel.identifier == "kyc"||stepModel.identifier == nil ) {
+//            return KYCStepViewModel(from: stepModel, initialRule: ruleModel, topController: self)
+//          }
+//          
+//          return nil
+//        } else {
+//          return nil
+//        }
+//      }
+//      
+//      
+//      let filteredViewModels = viewModels.filter { $0 != nil && !($0.isHidden ?? false)} as! [KYCStepViewModel]
+//      return filteredViewModels.sorted { $0.sortOrder < $1.sortOrder }
+//    
+//    
+//  }
+  
   private func startKYCHome() {
     DispatchQueue.main.async {
       self.initialVC = HomeViewController()
@@ -323,11 +353,6 @@ public class AmaniUI {
     guard let model = model else {
       return
     }
-
-      // Adding shadow to NavigationBar
-      //        self.sdkNavigationController?.setupNavigationBarShadow()
-
-      
       self.sdkNavigationController.modalPresentationStyle = .fullScreen
         let appearance = UINavigationBarAppearance()
         appearance.configureWithOpaqueBackground()
@@ -335,42 +360,36 @@ public class AmaniUI {
         appearance.titleTextAttributes = [NSAttributedString.Key.foregroundColor: hextoUIColor(hexString: model.topBarFontColor ?? "000000")]
       self.sdkNavigationController.navigationBar.standardAppearance = appearance;
       self.sdkNavigationController.navigationBar.scrollEdgeAppearance = appearance
-     
-  
-    
   }
-  
-  internal func generateStepsBeforeKYCOld() {
-    guard let steps = self.config?.stepConfig else {
-      return
-    }
-    
-    guard let rules = self.customerRespData?.rules else {
-      return
-    }
-    
-    let stepIdentifiers = AppConstants.StepsBeforeKYC.allCases.map { $0.rawValue }
-    
-    let viewModels: [KYCStepViewModel?] = rules.map { ruleModel in
-        // No need to add the step if it's already been approved
-      if ruleModel.status == DocumentStatus.APPROVED.rawValue { return nil }
-      if let stepModel = steps.first(where: { $0.id == ruleModel.id }) {
-        if stepIdentifiers.contains(stepModel.identifier ?? "") {
-            // NOTE(ddnzcn): Since the step model is made for using in Home
-            // DO NOT run the step with KYCStepViewModel#onStepPressed
-            // This is used due to it works as a mapper between rule and step
-            // model.
-            // @see PreKYCStepManager class
-          return KYCStepViewModel(from: stepModel, initialRule: ruleModel, topController: self.parentVC!)
-        }
-      }
-      return nil
-    }
-    
-    let filteredVMs = viewModels.filter { $0 != nil } as! [KYCStepViewModel]
-    self.stepsBeforeKYC = filteredVMs.sorted { $0.sortOrder < $1.sortOrder }
-    
-  }
+
+//  func generateKYCStepViewModels(from rules: [KYCRuleModel]) throws {
+//    guard let stepConfig = try? Amani.sharedInstance.appConfig().getApplicationConfig().stepConfig else {
+//      throw AppConstants.AmaniError.ConfigError
+//    }
+//    
+//    let viewModels: [KYCStepViewModel?] = rules.compactMap { ruleModel in
+//        if var stepModel = stepConfig.first(where: { $0.id == ruleModel.id }) {
+//            // Remove the OT as this SDK doesn't have to do anything with it
+//          stepModel.documents?.removeAll(where: { $0.id == "OT" })
+//          
+//            // Add only if the identifer equals to kyc
+//          if (stepModel.identifier == "kyc"||stepModel.identifier == nil ) {
+//            return KYCStepViewModel(from: stepModel, initialRule: ruleModel)
+//          }
+//          
+//          return nil
+//        } else {
+//          return nil
+//        }
+//      }
+//      
+//      
+//      let filteredViewModels = viewModels.filter { $0 != nil && !($0?.isHidden ?? false)} as! [KYCStepViewModel]
+//      stepModels = filteredViewModels.sorted { $0.sortOrder < $1.sortOrder }
+//    
+//    
+//  }
+
   
   func generateRulesKYC(rules: [KYCRuleModel]?) {
     guard let stepConfig = self.config?.stepConfig else {
@@ -428,8 +447,9 @@ extension AmaniUI: AmaniDelegate {
   
   public func onStepModel(customerId: String, rules: [AmaniSDK.KYCRuleModel]?) {
     let object: [Any?] = [customerId, rules]
-    
-    generateRulesKYC(rules: rules)
+    DispatchQueue.main.async {
+      self.generateRulesKYC(rules: rules)
+    }
     NotificationCenter.default.post(
       name: NSNotification.Name(AppConstants.AmaniDelegateNotifications.onStepModel.rawValue),
       object: object)

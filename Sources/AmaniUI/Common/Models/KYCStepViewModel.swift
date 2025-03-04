@@ -64,11 +64,12 @@ class KYCStepViewModel {
         self.isHidden = docVersion.isHidden ?? false
       }
     }
-    
-    // Interesting note: You can actually use `self` on the init method, just needs to be initialized after all variables are initialized in the class in this case all required parameters are initialized on the KYCStepViewModel.
-    documentHandler = DocumentHandlerHelper(for: stepConfig.documents!, of: self)
+
   }
   
+  func setDocumentHandler(_ documentHandler:DocumentHandlerHelper) {
+    self.documentHandler = documentHandler
+  }
   /// Updates the status of current rule
   func updateStatus(status: DocumentStatus) {
     self.status = status
