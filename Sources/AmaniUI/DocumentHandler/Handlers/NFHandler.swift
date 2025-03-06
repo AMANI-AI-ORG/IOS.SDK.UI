@@ -13,7 +13,7 @@ class NFHandler: DocumentHandler {
         print("bu metod kullanımdan kaldırıldı.")
     }
     
-  var topVC: UIViewController
+  weak var topVC: UIViewController?
   var stepViewModel: KYCStepViewModel
   var docID: DocumentID
   var stepView: UIView?

@@ -26,7 +26,7 @@ extension DocumentsHandler: VNDocumentCameraViewControllerDelegate {
         
         self.stepView?.removeFromSuperview()
         self.callback!(.success(self.stepViewModel))
-        self.topVC.navigationController?.popToViewController(ofClass: HomeViewController.self)
+      self.topVC?.navigationController?.popToViewController(ofClass: HomeViewController.self)
         
 //        if let pdfURL = toPDF(images: images, withFilename: "TUR_IB_0.pdf") {
 //               do {

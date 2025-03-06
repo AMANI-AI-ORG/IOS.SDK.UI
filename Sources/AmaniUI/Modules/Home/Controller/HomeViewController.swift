@@ -259,13 +259,13 @@ extension HomeViewController {
   func onStepModel(rules: [AmaniSDK.KYCRuleModel]?) {
     // CHECK RULES AND OPEN SUCCESS SCREEN
     // Reload customer when upload is complete
-    print("on stepmodel \(AmaniUI.sharedInstance.rulesKYC)")
+//    print("on stepmodel \(AmaniUI.sharedInstance.rulesKYC)")
     if viewAppeared{
       guard let kycStepTblView = kycStepTblView else {return}
 //      guard let rules = rules else {
 //        return
 //      }
-      print(AmaniUI.sharedInstance.rulesKYC)
+//      print(AmaniUI.sharedInstance.rulesKYC)
       
       try? self.generateKYCStepViewModels(from:  AmaniUI.sharedInstance.rulesKYC)
       guard let stepModels = stepModels else {return}

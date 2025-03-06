@@ -15,7 +15,7 @@ import AmaniVoiceAssistant
 class IdHandler: DocumentHandler {
     var stepView: UIView?
 
-    var topVC: UIViewController
+    weak var topVC: UIViewController?
     var stepViewModel: KYCStepViewModel
     var docID: DocumentID
     var frontView: UIView?
@@ -34,7 +34,7 @@ class IdHandler: DocumentHandler {
           if version.nfc == true && NFCNDEFReaderSession.readingAvailable {
                 self.startNFCCapture(docVer: version, completion: completion)
             } else {
-                self.topVC.navigationController?.popToViewController(ofClass: HomeViewController.self)
+              self.topVC?.navigationController?.popToViewController(ofClass: HomeViewController.self)
                 completion(.success(self.stepViewModel))
             }
         }
@@ -79,7 +79,7 @@ class IdHandler: DocumentHandler {
             // Show the front capture view
 //        self.showStepView(navbarHidden: false)
         }
-        topVC.navigationController?.pushViewController(containerVC, animated: true)
+      topVC?.navigationController?.pushViewController(containerVC, animated: true)
     }
 
     public func start(docStep: DocumentStepModel, version: DocumentVersion, workingStepIndex: Int = 0, completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void) {
@@ -137,12 +137,12 @@ class IdHandler: DocumentHandler {
         DispatchQueue.main.async {
             nfcCaptureView.bind(documentVersion: docVer) {
                 // ID is captured return to home!
-                self.topVC.navigationController?.popToViewController(ofClass: HomeViewController.self)
+              self.topVC?.navigationController?.popToViewController(ofClass: HomeViewController.self)
                 // Run the completion
                 completion(.success(self.stepViewModel))
             }
             nfcCaptureView.setNavigationLeftButton()
-            self.topVC.navigationController?.pushViewController(nfcCaptureView, animated: true)
+            self.topVC?.navigationController?.pushViewController(nfcCaptureView, animated: true)
         }
     }
   

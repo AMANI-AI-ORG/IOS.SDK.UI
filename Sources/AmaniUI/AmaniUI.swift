@@ -20,8 +20,8 @@ public class AmaniUI {
   public weak var delegate: AmaniUIDelegate?
     // MARK: - Private setups
     /// Home Screen is the initial view controller
-  private var initialVC: HomeViewController?
-  private var parentVC: UIViewController?
+  private  var initialVC: HomeViewController?
+  private  var parentVC: UIViewController?
   
   var sdkNavigationController: UINavigationController
   
@@ -69,6 +69,10 @@ public class AmaniUI {
   public init() {
     self.sdkNavigationController = UINavigationController()
     setBundle()
+  }
+  deinit {
+    debugPrint("AmaniUI deallocated")
+    config = nil
   }
   
     //  public func setNvi(nvi:NviModel){
@@ -197,20 +201,24 @@ public class AmaniUI {
   fileprivate func getConfig(customerModel: CustomerResponseModel?,
                              error: NetworkError?,
                              completion: ((CustomerResponseModel?, NetworkError?) -> Void)?) {
-    do {
-      self.config = try sharedSDKInstance.appConfig().getApplicationConfig()
-    } catch let error {
-      print("Error while fetching app configuration \(error)")
-    }
-    if let customerResponseModel = customerModel {
-      self.customerRespData = customerResponseModel
-    }
     
-    if let comp = completion {
-      updateConfig(config: self.config!)
-      comp(customerModel, error)
-      
-    }
+      sharedSDKInstance.appConfig().fetchAppConfig { [weak self] result, error in
+        if let error = error {
+          debugPrint(error)
+        } else if let result:AppConfigModel = result {
+          self?.config =  result
+          if let customerResponseModel = customerModel {
+            self?.customerRespData = customerResponseModel
+          }
+          
+          if let comp = completion {
+            self?.updateConfig(config: result)
+            comp(customerModel, error)
+            
+          }
+        }
+      }
+
   }
   
   public func showSDK(on parentViewController: UIViewController,
@@ -266,7 +274,8 @@ public class AmaniUI {
     if let missingRules = missingRules {
       self.delegate?.onKYCFailed(CustomerId: customerId, Rules: missingRules)
     }
-    
+    config = nil
+    rulesKYC = []
     DispatchQueue.main.async {
       self.sdkNavigationController.dismiss(animated: true)
     }
@@ -300,43 +309,11 @@ public class AmaniUI {
     
   }
   
-//  func generateKYCStepViewModels(from rules: [KYCRuleModel]) throws -> [KYCStepViewModel] {
-//    guard let stepConfig = try? Amani.sharedInstance.appConfig().getApplicationConfig().stepConfig else {
-//      throw AppConstants.AmaniError.ConfigError
-//    }
-//    
-//    let viewModels: [KYCStepViewModel] = rules.compactMap{ ruleModel in
-//        if var stepModel = stepConfig.first(where: { $0.id == ruleModel.id }) {
-//          stepModel.documents?.removeAll(where: { $0.id == "OT" })
-//          
-//          if stepModel.documents?.contains(where: { $0.id == "NF" }) == true && !NFCNDEFReaderSession.readingAvailable {
-//            return nil
-//          }
-//          
-//            // Add only if the identifer equals to kyc
-//          if (stepModel.identifier == "kyc"||stepModel.identifier == nil ) {
-//            return KYCStepViewModel(from: stepModel, initialRule: ruleModel, topController: self)
-//          }
-//          
-//          return nil
-//        } else {
-//          return nil
-//        }
-//      }
-//      
-//      
-//      let filteredViewModels = viewModels.filter { $0 != nil && !($0.isHidden ?? false)} as! [KYCStepViewModel]
-//      return filteredViewModels.sorted { $0.sortOrder < $1.sortOrder }
-//    
-//    
-//  }
-  
   private func startKYCHome() {
     DispatchQueue.main.async {
       self.initialVC = HomeViewController()
-
-      self.initialVC!.bind(customerData: self.customerRespData!, nonKYCManager: self.nonKYCStepManager)
-    
+      self.initialVC?.bind(customerData: self.customerRespData!, nonKYCManager: self.nonKYCStepManager)
+      try? self.initialVC?.generateKYCStepViewModels(from: self.rulesKYC)
       self.sdkNavigationController.setViewControllers(
           [self.initialVC!],
           animated: true
@@ -361,35 +338,6 @@ public class AmaniUI {
       self.sdkNavigationController.navigationBar.standardAppearance = appearance;
       self.sdkNavigationController.navigationBar.scrollEdgeAppearance = appearance
   }
-
-//  func generateKYCStepViewModels(from rules: [KYCRuleModel]) throws {
-//    guard let stepConfig = try? Amani.sharedInstance.appConfig().getApplicationConfig().stepConfig else {
-//      throw AppConstants.AmaniError.ConfigError
-//    }
-//    
-//    let viewModels: [KYCStepViewModel?] = rules.compactMap { ruleModel in
-//        if var stepModel = stepConfig.first(where: { $0.id == ruleModel.id }) {
-//            // Remove the OT as this SDK doesn't have to do anything with it
-//          stepModel.documents?.removeAll(where: { $0.id == "OT" })
-//          
-//            // Add only if the identifer equals to kyc
-//          if (stepModel.identifier == "kyc"||stepModel.identifier == nil ) {
-//            return KYCStepViewModel(from: stepModel, initialRule: ruleModel)
-//          }
-//          
-//          return nil
-//        } else {
-//          return nil
-//        }
-//      }
-//      
-//      
-//      let filteredViewModels = viewModels.filter { $0 != nil && !($0?.isHidden ?? false)} as! [KYCStepViewModel]
-//      stepModels = filteredViewModels.sorted { $0.sortOrder < $1.sortOrder }
-//    
-//    
-//  }
-
   
   func generateRulesKYC(rules: [KYCRuleModel]?) {
     guard let stepConfig = self.config?.stepConfig else {
@@ -400,36 +348,21 @@ public class AmaniUI {
       return
     }
     
-    
-    for stepModel in stepConfig {
-      if let ruleModel = rules.first(where: { $0.id == stepModel.id }) {
-          // Remove the OT as this SDK doesn't have to do anything with it
-        
-          // Add only if the identifer equals to kyc
+    for ruleModel in rules {
+      if let stepModel = stepConfig.first(where: {$0.id == ruleModel.id}){
         if (stepModel.identifier == "kyc"||stepModel.identifier == nil ) {
-          var indexOfRulesValue: Int = -1
-          
+          var indexOfRules:Int = -1
           if let indexOfRulesKYC = self.rulesKYC.firstIndex(where: {$0.id == ruleModel.id}) {
+            rulesKYC[indexOfRulesKYC] = ruleModel
+          }else{
+            self.rulesKYC.append(ruleModel)
+          }
             
-            rulesKYC.remove(at: indexOfRulesKYC)
-            indexOfRulesValue = indexOfRulesKYC
-              //          print("RULES KYC ARRAY FIRST INDEX:  \(rulesKYC[0])")
           }
-          if indexOfRulesValue == -1 {
-            rulesKYC.append(ruleModel)
-          } else {
-            rulesKYC.insert(ruleModel, at: indexOfRulesValue)
-          }
-          
-        }
-        
-        
       } else {
         print("Config issue relate with rule model id ")
       }
-      
     }
-    
   }
   
 }
@@ -447,9 +380,8 @@ extension AmaniUI: AmaniDelegate {
   
   public func onStepModel(customerId: String, rules: [AmaniSDK.KYCRuleModel]?) {
     let object: [Any?] = [customerId, rules]
-    DispatchQueue.main.async {
+    debugPrint(rules)
       self.generateRulesKYC(rules: rules)
-    }
     NotificationCenter.default.post(
       name: NSNotification.Name(AppConstants.AmaniDelegateNotifications.onStepModel.rawValue),
       object: object)

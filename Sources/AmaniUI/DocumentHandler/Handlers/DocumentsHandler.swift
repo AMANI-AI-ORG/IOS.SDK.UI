@@ -11,7 +11,7 @@ import CoreServices
 import VisionKit
 
 class DocumentsHandler: NSObject, DocumentHandler{
-  var topVC: UIViewController
+  weak var topVC: UIViewController?
   var stepViewModel: KYCStepViewModel
   var docID: DocumentID
   var stepView: UIView?
@@ -52,15 +52,13 @@ extension DocumentsHandler {
       }
      
            
-            self.topVC.navigationController?.pushViewController(ContainerVC, animated: true)
+      self.topVC?.navigationController?.pushViewController(ContainerVC, animated: true)
             ContainerVC.setLeftNavBarButtonAction {
               DispatchQueue.main.async {
               let documentPicker = UIDocumentPickerViewController(documentTypes: [kUTTypePDF as String ], in: .import)
               documentPicker.delegate = self
-              if #available(iOS 11.0, *) {
-                  documentPicker.allowsMultipleSelection = false
-              }
-                self.ContainerVC.present(documentPicker, animated: true)
+              documentPicker.allowsMultipleSelection = false
+              self.ContainerVC.present(documentPicker, animated: true)
               }
             }
            
@@ -115,7 +113,7 @@ extension DocumentsHandler {
         stepView = try documentsModule.start { [weak self] image in
           self?.stepView?.removeFromSuperview()
           completion(.success(self!.stepViewModel))
-          self?.topVC.navigationController?.popToViewController(ofClass: HomeViewController.self)
+          self?.topVC?.navigationController?.popToViewController(ofClass: HomeViewController.self)
         }
         return stepView
   //      self.showStepView(navbarHidden: false)

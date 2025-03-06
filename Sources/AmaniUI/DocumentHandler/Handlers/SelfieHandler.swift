@@ -9,7 +9,7 @@ import AmaniSDK
 import UIKit
 
 class SelfieHandler: DocumentHandler {
-  var topVC: UIViewController
+  weak var topVC: UIViewController?
   var stepViewModel: KYCStepViewModel
   var docID: DocumentID
   var stepView: UIView?
@@ -35,7 +35,7 @@ class SelfieHandler: DocumentHandler {
 //      bundle: AmaniUI.sharedInstance.getBundle()
 //    )
     animationVC.stepConfig = stepViewModel.stepConfig
-    self.topVC.navigationController?.pushViewController(animationVC, animated: true)
+    self.topVC?.navigationController?.pushViewController(animationVC, animated: true)
     
     animationVC.setDisappearCallback {
       self.stepView?.removeFromSuperview()
@@ -103,7 +103,7 @@ class SelfieHandler: DocumentHandler {
         self?.stepView?.removeFromSuperview()
         self?.startConfirmVC(image: image, docStep: step, docVer: version) { [weak self] () in
           completion(.success(self!.stepViewModel))
-          self?.topVC.navigationController?.popToViewController(ofClass: HomeViewController.self)
+          self?.topVC?.navigationController?.popToViewController(ofClass: HomeViewController.self)
         }
       }
       return stepView
@@ -149,7 +149,7 @@ class SelfieHandler: DocumentHandler {
         self?.stepView?.removeFromSuperview()
         self?.startConfirmVC(image: image, docStep: step, docVer: version) { [weak self] () in
           completion(.success(self!.stepViewModel))
-          self?.topVC.navigationController?.popToViewController(ofClass: HomeViewController.self)
+          self?.topVC?.navigationController?.popToViewController(ofClass: HomeViewController.self)
         }
       }
       return stepView
@@ -215,7 +215,7 @@ class SelfieHandler: DocumentHandler {
         self?.stepView?.removeFromSuperview()
         self?.startConfirmVC(image: image, docStep: step, docVer: version) { [weak self] () in
           completion(.success(self!.stepViewModel))
-          self?.topVC.navigationController?.popToViewController(ofClass: HomeViewController.self)
+          self?.topVC?.navigationController?.popToViewController(ofClass: HomeViewController.self)
         }
       }
 //      self.showStepView(navbarHidden: false)

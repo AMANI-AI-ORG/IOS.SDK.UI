@@ -143,7 +143,7 @@ class NFCViewController: BaseViewController {
           #endif
           maxAttempts += 1
           let sdkMaxAttemptValue = (documentVersion?.maxNfcAttempt ?? (documentVersion?.maxAttempt ?? 3))
-          if maxAttempts >= sdkMaxAttemptValue {
+          if maxAttempts <= sdkMaxAttemptValue {
             await scanNFC()
           } else {
             self.doNext(done: true)

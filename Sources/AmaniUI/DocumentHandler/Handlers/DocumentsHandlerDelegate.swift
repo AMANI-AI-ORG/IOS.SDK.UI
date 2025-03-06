@@ -18,15 +18,14 @@ extension DocumentsHandler: UIDocumentPickerDelegate{
           self.files = [FileWithType(data: fileData, dataType: acceptedFileTypes.pdf.rawValue )]
           self.stepView?.removeFromSuperview()
           self.callback!(.success(self.stepViewModel))
-          self.topVC.navigationController?.popToViewController(ofClass: HomeViewController.self)
+          self.topVC?.navigationController?.popToViewController(ofClass: HomeViewController.self)
 //          self.uploadFile(completion: <#T##StepUploadCallback##StepUploadCallback##(Bool?, [AmaniError]?) -> Void#>)
-        }catch {
+        } catch (let error) {
             print(error)
         }
     }
     func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
-        print("close")
-        controller.dismiss(animated: true, completion: nil)
+      controller.dismiss(animated: true )
     }
 }
 

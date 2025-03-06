@@ -33,7 +33,7 @@ class KYCStepViewModel {
   
   init(from stepConfig: StepConfig, initialRule: KYCRuleModel, topController onVC: UIViewController?) {
     self.stepConfig = stepConfig
-    id = stepConfig.id!
+    id = initialRule.id!
     title = stepConfig.buttonText?.notUploaded ?? stepConfig.title!
       
     if stepConfig.documents?.count ?? 0 > 1 {
