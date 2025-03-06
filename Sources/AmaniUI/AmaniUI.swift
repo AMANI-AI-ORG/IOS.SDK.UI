@@ -381,7 +381,9 @@ extension AmaniUI: AmaniDelegate {
   public func onStepModel(customerId: String, rules: [AmaniSDK.KYCRuleModel]?) {
     let object: [Any?] = [customerId, rules]
     debugPrint(rules)
+    DispatchQueue.main.async {
       self.generateRulesKYC(rules: rules)
+    }
     NotificationCenter.default.post(
       name: NSNotification.Name(AppConstants.AmaniDelegateNotifications.onStepModel.rawValue),
       object: object)

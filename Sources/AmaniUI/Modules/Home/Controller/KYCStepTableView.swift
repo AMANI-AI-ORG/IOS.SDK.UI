@@ -60,9 +60,13 @@ class KYCStepTblView: UITableView {
   
   func updateStatus(for step: KYCStepViewModel, status: DocumentStatus) {
     DispatchQueue.main.async {
-      
-      step.updateStatus(status: status)
-      self.reloadData()
+      if let tableIndex:Int = self.kycSteps.firstIndex(where:{ $0.id == step.id}) {
+        step.updateStatus(status: status)
+        
+        self.reloadRows(at: [IndexPath(row: tableIndex, section: 0)], with: .fade)
+      }
+
+
     }
   }
   
@@ -85,9 +89,6 @@ class KYCStepTblView: UITableView {
 
       }
       self.reloadRows(at:indexpaths, with: .fade)
-
-//      self.kycSteps = stepModels
-//      self.reloadData()
     }
   }
   
@@ -110,7 +111,7 @@ extension KYCStepTblView: UITableViewDelegate, UITableViewDataSource {
     let stepViewModel = self.kycSteps[indexPath.row]
     
     if !stepViewModel.isEnabled() {
-      cell.bind(model: stepViewModel, alpha: 1, isEnabled: false)
+      cell.bind(model: stepViewModel, alpha: 0.8, isEnabled: false)
     } else {
       cell.bind(model: stepViewModel, isEnabled: true)
     }
@@ -127,9 +128,9 @@ extension KYCStepTblView: UITableViewDelegate, UITableViewDataSource {
   }
   
   func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-    let step = self.kycSteps[indexPath.row]
-    
-
+      let step = self.kycSteps[indexPath.row]
+      
+      
       if (step.status != DocumentStatus.APPROVED && step.status != DocumentStatus.PROCESSING && step.isEnabled()) {
         step.onStepPressed { [weak self] result in
           switch result {
@@ -141,7 +142,9 @@ extension KYCStepTblView: UITableViewDelegate, UITableViewDataSource {
           }
         }
       }
+    }
+
     
-  }
+  
 }
 

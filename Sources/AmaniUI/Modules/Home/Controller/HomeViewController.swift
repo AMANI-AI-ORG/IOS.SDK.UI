@@ -37,8 +37,9 @@ class HomeViewController: BaseViewController {
       AppConstants.AmaniDelegateNotifications.onProfileStatus.rawValue
     ), object: nil)
     
-    
-    self.setupUI()
+    DispatchQueue.main.async {
+      self.setupUI()
+    }
   }
   
   override func viewDidAppear(_ animated: Bool) {
@@ -267,10 +268,13 @@ extension HomeViewController {
 //      }
 //      print(AmaniUI.sharedInstance.rulesKYC)
       
-      try? self.generateKYCStepViewModels(from:  AmaniUI.sharedInstance.rulesKYC)
-      guard let stepModels = stepModels else {return}
+      DispatchQueue.main.async {
+        try? self.generateKYCStepViewModels(from:  AmaniUI.sharedInstance.rulesKYC)
+        guard let stepModels = self.stepModels else {return}
+        self.kycStepTblView.updateDataAndReload(stepModels: stepModels)
+
+      }
 //        for stepModel in stepModels {
-          self.kycStepTblView.updateDataAndReload(stepModels: stepModels)
 //            self.kycStepTblView.updateStatus(for: stepModel, status: stepModel.status)
 //        }
         

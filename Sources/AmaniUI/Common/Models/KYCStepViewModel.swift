@@ -73,6 +73,7 @@ class KYCStepViewModel {
   /// Updates the status of current rule
   func updateStatus(status: DocumentStatus) {
     self.status = status
+    rule.status = status.rawValue
     let (buttonColor, textColor) = getColorsForStatus(status: status, stepConfig: stepConfig)
     self.buttonColor = buttonColor
     self.textColor = textColor
@@ -118,7 +119,7 @@ class KYCStepViewModel {
   }
   
   func isEnabled() -> Bool {
-    let status = DocumentStatus(rawValue: rule.status!)
+//    let status = DocumentStatus(rawValue: rule.status!)
     if (mandatoryStepIDs.isEmpty) {
 //      if (status != DocumentStatus.APPROVED || !isPassedMaxAttempt()) {
       if (status != DocumentStatus.APPROVED) {

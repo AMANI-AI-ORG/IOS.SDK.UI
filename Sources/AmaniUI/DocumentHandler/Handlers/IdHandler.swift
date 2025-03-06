@@ -44,13 +44,7 @@ class IdHandler: DocumentHandler {
       
         let containerVC = ContainerViewController()
         containerVC.docID = self.docID
-//        let containerVC = ContainerViewController(
-//            nibName: String(describing: ContainerViewController.self),
-//            bundle:  AmaniUI.sharedInstance.getBundle()
-//        )
         containerVC.stepConfig = stepViewModel.stepConfig
-        // NOTE(ddnzcn): For future refactor consider removing this logic as this
-        // leads to repetition
         containerVC.setDisappearCallback {
           self.frontView?.removeFromSuperview()
         }
