@@ -276,6 +276,8 @@ public class AmaniUI {
     }
     config = nil
     rulesKYC = []
+    sharedSDKInstance.removeDelegates()
+    sharedSDKInstance.disconnectFromSocket()
     DispatchQueue.main.async {
       self.sdkNavigationController.dismiss(animated: true)
     }
@@ -296,7 +298,8 @@ public class AmaniUI {
         
       self.nonKYCStepManager = NonKYCStepManager(for: config.stepConfig!, customer: self.customerRespData!, navigationController: self.sdkNavigationController, vc: self.parentVC!)
         self.nonKYCStepManager!.startFlow(forPreSteps: true) {[weak self] () in
-          self?.startKYCHome()
+          guard let self = self else {return}
+          self.startKYCHome()
         }
         
       } else {
@@ -381,9 +384,9 @@ extension AmaniUI: AmaniDelegate {
   public func onStepModel(customerId: String, rules: [AmaniSDK.KYCRuleModel]?) {
     let object: [Any?] = [customerId, rules]
     debugPrint(rules)
-    DispatchQueue.main.async {
+//    DispatchQueue.main.async {
       self.generateRulesKYC(rules: rules)
-    }
+//    }
     NotificationCenter.default.post(
       name: NSNotification.Name(AppConstants.AmaniDelegateNotifications.onStepModel.rawValue),
       object: object)

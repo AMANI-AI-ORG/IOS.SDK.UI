@@ -129,8 +129,9 @@ class IdHandler: DocumentHandler {
 //            bundle: AmaniUI.sharedInstance.getBundle()
 //        )
         DispatchQueue.main.async {
-            nfcCaptureView.bind(documentVersion: docVer) {
+            nfcCaptureView.bind(documentVersion: docVer) { [weak self] in
                 // ID is captured return to home!
+              guard let self = self else {return}
               self.topVC?.navigationController?.popToViewController(ofClass: HomeViewController.self)
                 // Run the completion
                 completion(.success(self.stepViewModel))

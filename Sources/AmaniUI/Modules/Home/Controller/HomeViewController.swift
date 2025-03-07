@@ -28,7 +28,6 @@ class HomeViewController: BaseViewController {
   
   override func viewWillAppear(_ animated: Bool) {
     super.viewWillAppear(true)
-    
     NotificationCenter.default.addObserver(self, selector: #selector(didReceiveStepModel), name: Notification.Name(
       AppConstants.AmaniDelegateNotifications.onStepModel.rawValue
     ), object: nil)
@@ -37,9 +36,8 @@ class HomeViewController: BaseViewController {
       AppConstants.AmaniDelegateNotifications.onProfileStatus.rawValue
     ), object: nil)
     
-    DispatchQueue.main.async {
       self.setupUI()
-    }
+    
   }
   
   override func viewDidAppear(_ animated: Bool) {
@@ -123,7 +121,7 @@ class HomeViewController: BaseViewController {
     return true
   }
   
-  func generateKYCStepViewModels(from rules: [KYCRuleModel]) throws {
+  func generateKYCStepViewModels(from rules: [KYCRuleModel]) throws ->[KYCStepViewModel]? {
     guard let stepConfig = try? Amani.sharedInstance.appConfig().getApplicationConfig().stepConfig else {
       throw AppConstants.AmaniError.ConfigError
     }
@@ -170,10 +168,11 @@ class HomeViewController: BaseViewController {
         }
       }
       stepModels = stepModels?.sorted{ $0.sortOrder < $1.sortOrder }
+      return stepModels
     }
     
     
-    
+    return nil
   }
   
   func setBackgroundColorOfTableView(color: UIColor) {
@@ -267,18 +266,12 @@ extension HomeViewController {
 //        return
 //      }
 //      print(AmaniUI.sharedInstance.rulesKYC)
-      
+      guard let stepModelleri =  try? self.generateKYCStepViewModels(from:  AmaniUI.sharedInstance.rulesKYC) else {return}
+
       DispatchQueue.main.async {
-        try? self.generateKYCStepViewModels(from:  AmaniUI.sharedInstance.rulesKYC)
-        guard let stepModels = self.stepModels else {return}
-        self.kycStepTblView.updateDataAndReload(stepModels: stepModels)
+        self.kycStepTblView.updateDataAndReload(stepModels: stepModelleri)
 
       }
-//        for stepModel in stepModels {
-//            self.kycStepTblView.updateStatus(for: stepModel, status: stepModel.status)
-//        }
-        
-      
     }
   }
   

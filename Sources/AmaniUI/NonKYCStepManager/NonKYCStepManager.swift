@@ -12,15 +12,15 @@ import UIKit
 class NonKYCStepManager {
   var preSteps: [KYCStepViewModel] = []
   var postSteps: [KYCStepViewModel] = []
-  let customerVC: UIViewController
-  var navigationController: UINavigationController
+  weak var customerVC: UIViewController?
+  weak var navigationController: UINavigationController?
   private var completionHandler: (() -> Void)!
   private let customer: CustomerResponseModel
   private var steps: [KYCStepViewModel] = []
   private var currentStep: KYCStepViewModel!
   private var currentStepViewController: UIViewController?
   
-  init(for steps: [AmaniSDK.StepConfig], customer: CustomerResponseModel,navigationController: UINavigationController, vc: UIViewController) {
+  init(for steps: [AmaniSDK.StepConfig], customer: CustomerResponseModel,navigationController: UINavigationController?, vc: UIViewController) {
     self.customer = customer
     self.navigationController = navigationController
     customerVC = vc
@@ -143,8 +143,9 @@ class NonKYCStepManager {
   }
   
   private func navigate(to viewController: UIViewController) {
+    guard let navigationController = self.navigationController else { return }
     navigationController.setViewControllers([viewController], animated: true)
-    customerVC.present(navigationController, animated: true)
+    customerVC?.present(navigationController, animated: true)
   }
   
   private func generate(for steps: [AmaniSDK.StepConfig], rules: [AmaniSDK.KYCRuleModel]) {
