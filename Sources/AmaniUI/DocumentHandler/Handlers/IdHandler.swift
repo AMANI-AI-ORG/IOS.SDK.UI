@@ -28,7 +28,7 @@ class IdHandler: DocumentHandler {
         self.docID = docID
     }
 
-    fileprivate func goNextStep(version: DocumentVersion, completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void) {
+    func goNextStep(version: DocumentVersion, completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void) {
         // Start the NFC Screen
         DispatchQueue.main.async {
           if version.nfc == true && NFCNDEFReaderSession.readingAvailable {
@@ -51,8 +51,8 @@ class IdHandler: DocumentHandler {
        
       
       
-        containerVC.bind(animationName: version.type!, docStep: version.steps![workingStep], step: steps(rawValue: workingStep) ?? steps.front) {
-          
+        containerVC.bind(animationName: version.type!, docStep: version.steps![workingStep], step: steps(rawValue: workingStep) ?? steps.front) { [weak self]  in
+          guard let self = self else {return}
             print("Animation ended")
             self.frontView = try? self.idCaptureModule.start(stepId: workingStep)  { [weak self] image in
                 DispatchQueue.main.async {

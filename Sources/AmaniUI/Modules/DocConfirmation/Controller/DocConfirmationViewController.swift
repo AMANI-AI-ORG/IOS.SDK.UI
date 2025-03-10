@@ -283,11 +283,8 @@ class DocConfirmationViewController: BaseViewController {
   }
     
     func checkMRZ() {
-      if documentVersion?.nfc ?? false{
-        if (documentVersion?.type?.contains("ID") ?? false && stepid == steps.back.rawValue) ||
-            (documentVersion?.type?.contains("PA") ?? false && stepid == steps.front.rawValue )  {
+
             //         #warning("buraya full ekran indicator koyulacak")
-            
             if !AmaniUI.sharedInstance.isEnabledClientSideMrz {
                 createAnimationView()
                 Amani.sharedInstance.IdCapture().getMrz { mrzDocumentId in
@@ -295,16 +292,6 @@ class DocConfirmationViewController: BaseViewController {
                   
                 }
             }
-        } else {
-          if let confirmCallback = confirmCallback {
-            confirmCallback()
-          }
-        }
-      } else {
-        if let confirmCallback = confirmCallback {
-          confirmCallback()
-        }
-      }
     }
   
   func bind(image: UIImage, documentID: DocumentID, docVer: DocumentVersion, docStep: DocumentStepModel, stepid:Int ,callback: @escaping () -> Void) {
@@ -327,8 +314,16 @@ class DocConfirmationViewController: BaseViewController {
         if (!confirmClicked){
           
           confirmClicked = true
-          if documentID == DocumentID.ID {
-            checkMRZ()
+          if documentVersion?.nfc ?? false{
+
+            if (documentID == DocumentID.ID && stepid == steps.back.rawValue) ||
+                (documentID == DocumentID.PA && stepid == steps.front.rawValue )  {
+              checkMRZ()
+            } else {
+              if let confirmCallback = confirmCallback {
+                confirmCallback()
+              }
+            }
           } else {
             if let confirmCallback = confirmCallback {
               confirmCallback()

@@ -35,8 +35,14 @@ class HomeViewController: BaseViewController {
     NotificationCenter.default.addObserver(self, selector: #selector(didReceiveProfileStatus), name: NSNotification.Name(
       AppConstants.AmaniDelegateNotifications.onProfileStatus.rawValue
     ), object: nil)
-    
+    do {
+      try generateKYCStepViewModels(from: AmaniUI.sharedInstance.rulesKYC)
+    }catch(let error) {
+      debugPrint(error)
+    }
+    DispatchQueue.main.async {
       self.setupUI()
+    }
     
   }
   
@@ -88,11 +94,7 @@ class HomeViewController: BaseViewController {
 //    if(stepModels == nil) {
      
      
-      do {
-        try generateKYCStepViewModels(from: AmaniUI.sharedInstance.rulesKYC)
-      }catch(let error) {
-        debugPrint(error)
-      }
+
       
 //    }
     self.setCustomerInfo(model: customerInfo)
