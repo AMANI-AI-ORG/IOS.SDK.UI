@@ -85,6 +85,13 @@ class SelfieHandler: DocumentHandler {
     
   }
   
+  func goNextStep( completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void) {
+    DispatchQueue.main.async {
+      self.topVC?.navigationController?.popToViewController(ofClass: HomeViewController.self)
+      completion(.success(self.stepViewModel))
+    }
+  }
+  
   private func runManualSelfie(step: DocumentStepModel, version: DocumentVersion, completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void) -> UIView?{
     selfieModule = Amani.sharedInstance.selfie()
     guard let currentSelfieModule = selfieModule as? Selfie else {
@@ -103,10 +110,8 @@ class SelfieHandler: DocumentHandler {
         }
       }
       return stepView
-//      self.showStepView(navbarHidden: false)
     } catch let err {
       print(err)
-      
       completion(.failure(.moduleError))
       return nil
     }
@@ -157,12 +162,7 @@ class SelfieHandler: DocumentHandler {
     }
   }
   
-  func goNextStep( completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void) {
-    DispatchQueue.main.async {
-      self.topVC?.navigationController?.popToViewController(ofClass: HomeViewController.self)
-      completion(.success(self.stepViewModel))
-    }
-  }
+
   
   private func runPoseEstimation(step: DocumentStepModel, version: DocumentVersion, completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void)->UIView? {
     let poseCount = version.selfieType!
@@ -224,7 +224,6 @@ class SelfieHandler: DocumentHandler {
         }
 
       }
-//      self.showStepView(navbarHidden: false)
       return stepView
     } catch let err {
       print(err)

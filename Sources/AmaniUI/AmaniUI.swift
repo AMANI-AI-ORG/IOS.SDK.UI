@@ -266,6 +266,13 @@ public class AmaniUI {
     self.delegate = delegate
   }
   
+  func closeAmaniSDK() {
+    config = nil
+    rulesKYC = []
+    sharedSDKInstance.removeDelegates()
+    sharedSDKInstance.disconnectFromSocket()
+  }
+  
   @objc
   public func popViewController() {
     let customer = sharedSDKInstance.customerInfo().getCustomer()
@@ -274,10 +281,7 @@ public class AmaniUI {
     if let missingRules = missingRules {
       self.delegate?.onKYCFailed(CustomerId: customerId, Rules: missingRules)
     }
-    config = nil
-    rulesKYC = []
-    sharedSDKInstance.removeDelegates()
-    sharedSDKInstance.disconnectFromSocket()
+    closeAmaniSDK()
     DispatchQueue.main.async {
       self.sdkNavigationController.dismiss(animated: true)
     }
@@ -307,9 +311,7 @@ public class AmaniUI {
         self.startKYCHome()
       }
     }
-        
-      
-    
+
   }
   
   private func startKYCHome() {
