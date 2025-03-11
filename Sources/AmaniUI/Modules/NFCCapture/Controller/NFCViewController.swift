@@ -20,6 +20,7 @@ class NFCViewController: BaseViewController {
   let idCaptureModule =  Amani.sharedInstance.IdCapture()
   let amani:Amani = Amani.sharedInstance
   var isDone: Bool = false
+  var maxAttempts: Int = 0
   
   var appConfig: AppConfigModel?  {
           didSet {
@@ -140,7 +141,13 @@ class NFCViewController: BaseViewController {
                 }
                 
           #endif
+          maxAttempts += 1
+          let sdkMaxAttemptValue = (documentVersion?.maxNfcAttempt ?? (documentVersion?.maxAttempt ?? 3))
+          if maxAttempts <= sdkMaxAttemptValue {
             await scanNFC()
+          } else {
+            self.doNext(done: true)
+          }
         }
     }
     
@@ -213,7 +220,7 @@ class NFCViewController: BaseViewController {
       guard let self = self else { return }
       nfcFormView.removeFromSuperview()
       debugPrint("nfc configure ekranından dönen nvi data : \(newNvi)")
-
+      self.maxAttempts += 1
       let isDone = await idCaptureModule.startNFC(nvi: newNvi)
       if isDone {
         self.doNext(done: isDone)
@@ -227,12 +234,20 @@ class NFCViewController: BaseViewController {
     }
   }
   private func animateWithNFCFormUI(nvi: NviModel) async {
-    await animateAsync(withDuration: 0.3) {
+    await animateAsync(withDuration: 0.3) { [weak self] in
       Task {
+        guard let self = self else { return }
 #if canImport(AmaniVoiceAssistantSDK)
         try? await AmaniUI.sharedInstance.voiceAssistant?.stop()
 #endif
-        await self.setNFCFormUIView(nvi: nvi)
+       
+        let sdkMaxAttemptValue = (self.documentVersion?.maxNfcAttempt ?? (self.documentVersion?.maxAttempt ?? 3))
+        if self.maxAttempts <= sdkMaxAttemptValue {
+          await self.setNFCFormUIView(nvi: nvi)
+        } else {
+          self.doNext(done: true)
+        }
+       
       }
     }
   }

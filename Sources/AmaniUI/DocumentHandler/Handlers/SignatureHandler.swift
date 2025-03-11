@@ -9,7 +9,7 @@ import AmaniSDK
 import UIKit
 
 class SignatureHandler: DocumentHandler {
-  var topVC: UIViewController
+  weak var topVC: UIViewController?
   var stepViewModel: KYCStepViewModel
   var docID: DocumentID
   var stepView: UIView?
@@ -36,7 +36,7 @@ class SignatureHandler: DocumentHandler {
         signatureVC.start( docStep: version.steps![steps.front.rawValue], version: version) { [weak self] previewImage in
         self?.startConfirmVC(image: previewImage, docStep: docStep, docVer: version) { [weak self] () in
           completion(.success(self!.stepViewModel))
-          self?.topVC.navigationController?.popToViewController(ofClass: HomeViewController.self)
+          self?.topVC?.navigationController?.popToViewController(ofClass: HomeViewController.self)
         }
 //        //      var selfieView:UIView = UIView()
 //        //      // Manual Selfie
@@ -63,7 +63,7 @@ class SignatureHandler: DocumentHandler {
 //        //      SignatureVC.view.addSubview(selfieView)
 //        //      SignatureVC.view.bringSubviewToFront(selfieView)
       }
-      self.topVC.navigationController?.pushViewController(signatureVC, animated: true)
+      self.topVC?.navigationController?.pushViewController(signatureVC, animated: true)
 
     }
   }
@@ -93,7 +93,7 @@ class SignatureHandler: DocumentHandler {
             workingStep += 1
             
             completion(.success(self!.stepViewModel))
-            self?.topVC.navigationController?.popToViewController(ofClass: HomeViewController.self)
+            self?.topVC?.navigationController?.popToViewController(ofClass: HomeViewController.self)
           } else {
             
           }

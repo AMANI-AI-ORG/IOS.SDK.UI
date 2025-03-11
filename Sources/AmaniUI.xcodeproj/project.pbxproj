@@ -25,6 +25,7 @@
 		1899046F2D5E4A7600CA2F60 /* DocumentsHandlerVNDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1899046B2D5E4A7600CA2F60 /* DocumentsHandlerVNDelegate.swift */; };
 		18E7B2CB2BD271370073C268 /* PrivacyInfo.xcprivacy in Resources */ = {isa = PBXBuildFile; fileRef = 18E7B2CA2BD271370073C268 /* PrivacyInfo.xcprivacy */; };
 		484E26F8295A3DC700839E54 /* AmaniUIDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 484E26F7295A3DC700839E54 /* AmaniUIDelegate.swift */; };
+		487E4A792D78702700C07190 /* AddressHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 487E4A782D78701C00C07190 /* AddressHandler.swift */; };
 		488B08D52D68906800935C5D /* Lottie in Frameworks */ = {isa = PBXBuildFile; productRef = 488B08D42D68906800935C5D /* Lottie */; };
 		488B08D82D68907400935C5D /* AmaniSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 488B08D72D68907400935C5D /* AmaniSDK */; };
 		488B08DA2D68924000935C5D /* AmaniVoiceAssistantSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 488B08D92D68924000935C5D /* AmaniVoiceAssistantSDK */; };
@@ -115,6 +116,7 @@
 		18E7B2CA2BD271370073C268 /* PrivacyInfo.xcprivacy */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.xml; path = PrivacyInfo.xcprivacy; sourceTree = "<group>"; };
 		4830904228900A3800B75529 /* AmaniSDK.xcframework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.xcframework; name = AmaniSDK.xcframework; path = Carthage/Build/AmaniSDK.xcframework; sourceTree = SOURCE_ROOT; };
 		484E26F7295A3DC700839E54 /* AmaniUIDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AmaniUIDelegate.swift; sourceTree = "<group>"; };
+		487E4A782D78701C00C07190 /* AddressHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AddressHandler.swift; sourceTree = "<group>"; };
 		488B08DB2D6892C100935C5D /* NFCConfigureView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NFCConfigureView.swift; sourceTree = "<group>"; };
 		488B08DE2D68B4E900935C5D /* hextoUIColor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = hextoUIColor.swift; sourceTree = "<group>"; };
 		48B4720E27B147870089D42E /* Lottie.xcframework */ = {isa = PBXFileReference; expectedSignature = "SelfSigned:892F1B43047B50538F2F46EAD92900DD3D4811F3582178C061A5FB20F111CB26"; lastKnownFileType = wrapper.xcframework; name = Lottie.xcframework; path = Carthage/Build/Lottie.xcframework; sourceTree = SOURCE_ROOT; };
@@ -570,6 +572,7 @@
 		C5A06F7029127C28009520AF /* Handlers */ = {
 			isa = PBXGroup;
 			children = (
+				487E4A782D78701C00C07190 /* AddressHandler.swift */,
 				C5A06F7129127C47009520AF /* IdHandler.swift */,
 				C5A06F752913ED9E009520AF /* SelfieHandler.swift */,
 				48B90A0329A278E700508E63 /* SignatureHandler.swift */,
@@ -816,6 +819,7 @@
 				C54B58AB28C75279005DBAA9 /* HomeViewController.swift in Sources */,
 				185A2BF72BBD64AE00855F77 /* String+Extension.swift in Sources */,
 				C5A06F762913ED9E009520AF /* SelfieHandler.swift in Sources */,
+				487E4A792D78702700C07190 /* AddressHandler.swift in Sources */,
 				C56169412B84CD8400050A8D /* QuestionSubmitButton.swift in Sources */,
 				C5FD513F2B39BD970057DB87 /* EmailOTPView.swift in Sources */,
 				C52F145228F5B70400D7A5A6 /* DocumentHandler.swift in Sources */,

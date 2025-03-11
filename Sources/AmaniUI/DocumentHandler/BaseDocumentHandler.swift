@@ -9,7 +9,7 @@ import UIKit
 import AmaniSDK
 
 protocol DocumentHandler {
-  var topVC: UIViewController { get set }
+  var topVC: UIViewController? { get set }
   var stepViewModel: KYCStepViewModel { get set }
   var docID: DocumentID { get set }
   var stepView: UIView? { get set }
@@ -33,15 +33,15 @@ extension DocumentHandler {
     
     confirmVC.bind(image: image, documentID: docID, docVer: docVer, docStep: docStep,stepid: stepId, callback: completion)
     
-    self.topVC.navigationController?.pushViewController(confirmVC, animated: true)
+    self.topVC?.navigationController?.pushViewController(confirmVC, animated: true)
   }
   
   func showStepView(navbarHidden: Bool) {
     guard let stepView = stepView else { return }
     DispatchQueue.main.async {
-      self.topVC.view.addSubview(stepView)
-      self.topVC.view.bringSubviewToFront(stepView)
-      self.topVC.navigationController?.setNavigationBarHidden(navbarHidden, animated: false)
+      self.topVC?.view.addSubview(stepView)
+      self.topVC?.view.bringSubviewToFront(stepView)
+      self.topVC?.navigationController?.setNavigationBarHidden(navbarHidden, animated: false)
     }
   }
   

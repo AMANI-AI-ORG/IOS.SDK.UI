@@ -33,7 +33,7 @@ class KYCStepViewModel {
   
   init(from stepConfig: StepConfig, initialRule: KYCRuleModel, topController onVC: UIViewController?) {
     self.stepConfig = stepConfig
-    id = stepConfig.id!
+    id = initialRule.id!
     title = stepConfig.buttonText?.notUploaded ?? stepConfig.title!
       
     if stepConfig.documents?.count ?? 0 > 1 {
@@ -64,14 +64,16 @@ class KYCStepViewModel {
         self.isHidden = docVersion.isHidden ?? false
       }
     }
-    
-    // Interesting note: You can actually use `self` on the init method, just needs to be initialized after all variables are initialized in the class in this case all required parameters are initialized on the KYCStepViewModel.
-    documentHandler = DocumentHandlerHelper(for: stepConfig.documents!, of: self)
+
   }
   
+  func setDocumentHandler(_ documentHandler:DocumentHandlerHelper) {
+    self.documentHandler = documentHandler
+  }
   /// Updates the status of current rule
   func updateStatus(status: DocumentStatus) {
     self.status = status
+    rule.status = status.rawValue
     let (buttonColor, textColor) = getColorsForStatus(status: status, stepConfig: stepConfig)
     self.buttonColor = buttonColor
     self.textColor = textColor
@@ -117,7 +119,7 @@ class KYCStepViewModel {
   }
   
   func isEnabled() -> Bool {
-    let status = DocumentStatus(rawValue: rule.status!)
+//    let status = DocumentStatus(rawValue: rule.status!)
     if (mandatoryStepIDs.isEmpty) {
 //      if (status != DocumentStatus.APPROVED || !isPassedMaxAttempt()) {
       if (status != DocumentStatus.APPROVED) {

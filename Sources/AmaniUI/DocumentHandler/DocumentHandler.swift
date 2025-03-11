@@ -37,25 +37,6 @@ class DocumentHandlerHelper {
       }
     }
   }
-  
-//  init(for documents: [DocumentModel], of stepVM: KYCStepViewModel) {
-//    stepViewModel = stepVM
-//    versionList = []
-//    for eachDoc in documents {
-//      if var docVersions = eachDoc.versions, !docVersions.isEmpty {
-//        docVersions = docVersions.map { model -> DocumentVersion in
-//          var obj = model
-//          obj.docID = eachDoc.id ?? ""
-//          return obj
-//        }
-//        docVersions = docVersions.filter {
-//          $0.isHidden == false || $0.isHidden == nil
-//        }
-//        versionList.append(contentsOf: docVersions)
-//      }
-//    }
-//  }
-
 
   func bind(topVC: UIViewController, callback: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void) {
     completion = callback
@@ -109,6 +90,9 @@ class DocumentHandlerHelper {
 //    case .CO, .IB, .UB:
 //      currentDocumentHandler = DocumentsHandler(topVC: topViewController, stepVM: stepViewModel, docID: DocumentID(rawValue: docID)!)
 //      currentDocumentHandler?.start(docStep: step, version: currentDocumentVersion, workingStepIndex: 1, completion: completion)
+    case .IB:
+      currentDocumentHandler = AddressHandler(topVC: topViewController, stepVM: stepViewModel, docID: DocumentID(rawValue: docID)!)
+      currentDocumentHandler?.start(docStep: step, version: currentDocumentVersion, workingStepIndex: 0, completion: completion)
     case .SG:
       currentDocumentHandler = SignatureHandler(topVC: topViewController, stepVM: stepViewModel, docID: DocumentID(rawValue: docID)!)
       currentDocumentHandler?.start(docStep: step, version: currentDocumentVersion, workingStepIndex: 0, completion: completion)

@@ -1,6 +1,5 @@
 import UIKit
 import AmaniSDK
-import MobileCoreServices
 /**
  This class represents the KYC step list view
  */
@@ -61,17 +60,35 @@ class KYCStepTblView: UITableView {
   
   func updateStatus(for step: KYCStepViewModel, status: DocumentStatus) {
     DispatchQueue.main.async {
-      
-      step.updateStatus(status: status)
-      self.reloadData()
+      if let tableIndex:Int = self.kycSteps.firstIndex(where:{ $0.id == step.id}) {
+        step.updateStatus(status: status)
+        
+        self.reloadRows(at: [IndexPath(row: tableIndex, section: 0)], with: .fade)
+      }
+
+
     }
   }
   
   func updateDataAndReload(stepModels: [KYCStepViewModel]) {
-    
+
     DispatchQueue.main.async {
-      self.kycSteps = stepModels
-      self.reloadData()
+      var indexpaths:[IndexPath] = []
+      for stepModel in stepModels {
+        if let tableIndex:Int = self.kycSteps.firstIndex(where:{ $0.id == stepModel.id}) {
+          self.kycSteps[tableIndex] = stepModel
+          if !stepModel.mandatoryStepIDs.isEmpty {
+            for mandatoryStepId in stepModel.mandatoryStepIDs {
+              if let mandatoryIndex = self.kycSteps.firstIndex(where: {$0.id == mandatoryStepId}) {
+                indexpaths.append(IndexPath(row: mandatoryIndex, section: 0))
+              }
+            }
+          }
+          indexpaths.append(IndexPath(row: tableIndex, section: 0))
+        }
+
+      }
+      self.reloadRows(at:indexpaths, with: .fade)
     }
   }
   
@@ -94,7 +111,7 @@ extension KYCStepTblView: UITableViewDelegate, UITableViewDataSource {
     let stepViewModel = self.kycSteps[indexPath.row]
     
     if !stepViewModel.isEnabled() {
-      cell.bind(model: stepViewModel, alpha: 1, isEnabled: false)
+      cell.bind(model: stepViewModel, alpha: 0.8, isEnabled: false)
     } else {
       cell.bind(model: stepViewModel, isEnabled: true)
     }
@@ -111,18 +128,9 @@ extension KYCStepTblView: UITableViewDelegate, UITableViewDataSource {
   }
   
   func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-    let step = self.kycSteps[indexPath.row]
-    
-    if self.kycSteps[indexPath.row].getRuleModel().documentClasses!.first == "IB" && !((self.kycSteps[indexPath.row].getRuleModel().status == DocumentStatus.APPROVED.rawValue) || (self.kycSteps[indexPath.row].getRuleModel().status == DocumentStatus.PENDING_REVIEW.rawValue))  {
-        // Specify only PDF type
-      let documentPicker = UIDocumentPickerViewController(documentTypes: [kUTTypePDF as String], in: .import)
-      documentPicker.delegate = self
-      documentPicker.allowsMultipleSelection = false
+      let step = self.kycSteps[indexPath.row]
       
-      if let parentViewController = self.findViewController() {
-        parentViewController.present(documentPicker, animated: true)
-      }
-    } else {
+      
       if (step.status != DocumentStatus.APPROVED && step.status != DocumentStatus.PROCESSING && step.isEnabled()) {
         step.onStepPressed { [weak self] result in
           switch result {
@@ -135,83 +143,8 @@ extension KYCStepTblView: UITableViewDelegate, UITableViewDataSource {
         }
       }
     }
-  }
+
+    
+  
 }
 
-extension KYCStepTblView: UIDocumentPickerDelegate {
-  func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
-    guard let filePath = urls.first else { return }
-    guard let step = self.kycSteps.first(where: { $0.getRuleModel().documentClasses?.first == "IB" }) else { return }
-    
-      // Check if the file is actually a PDF
-    guard filePath.pathExtension.lowercased() == "pdf" else {
-      print("Selected file is not a PDF")
-      self.updateStatus(for: step, status: .NOT_UPLOADED)
-      controller.dismiss(animated: true)
-      return
-    }
-    
-    do {
-      let fileData = try Data(contentsOf: filePath)
-      
-      let documentsModule = Amani.sharedInstance.document()
-      documentsModule.setType(type: step.getRuleModel().documentClasses?.first ?? "IB")
-      
-      let files = [FileWithType(data: fileData, dataType: acceptedFileTypes.pdf.rawValue)]
-      
-      self.updateStatus(for: step, status: .PROCESSING)
-      
-        // Upload the file
-      documentsModule.upload(
-        location: AmaniUI.sharedInstance.location,
-        files: files) { [weak self] result, error in
-          DispatchQueue.main.async {
-            if result == true {
-                // Success case
-              self?.updateStatus(for: step, status: .APPROVED)
-              
-                // Call the callback
-              guard let callback = self?.callback else { return }
-              callback(step)
-              
-                // Dismiss and navigate back
-              controller.dismiss(animated: true) {
-                if let parentVC = self?.findViewController(),
-                   let navigationController = parentVC.navigationController {
-                  if let homeVC = navigationController.viewControllers.first(where: { $0 is HomeViewController }) {
-                    navigationController.popToViewController(homeVC, animated: true)
-                  }
-                }
-              }
-            } else {
-                // Error case
-              self?.updateStatus(for: step, status: .NOT_UPLOADED)
-              print("Upload failed: \(error ?? [:])")
-              controller.dismiss(animated: true)
-            }
-          }
-        }
-      
-    } catch {
-      print("Error reading file data: \(error)")
-      self.updateStatus(for: step, status: .NOT_UPLOADED)
-      controller.dismiss(animated: true)
-    }
-  }
-  
-  func documentPickerWasCancelled(_ controller: UIDocumentPickerViewController) {
-    print("Document picker cancelled")
-    controller.dismiss(animated: true)
-  }
-  
-  private func findViewController() -> UIViewController? {
-    var responder: UIResponder? = self
-    while let nextResponder = responder?.next {
-      if let viewController = nextResponder as? UIViewController {
-        return viewController
-      }
-      responder = nextResponder
-    }
-    return nil
-  }
-}

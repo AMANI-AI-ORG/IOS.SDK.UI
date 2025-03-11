@@ -37,7 +37,6 @@ let package = Package(
                 ],
             resources: [
               .process("Assets"),
-              .process("NibFiles"),
               .process("PrivacyInfo.xcprivacy")
             ],
             linkerSettings:[

@@ -15,7 +15,7 @@ import AmaniVoiceAssistant
 class IdHandler: DocumentHandler {
     var stepView: UIView?
 
-    var topVC: UIViewController
+    weak var topVC: UIViewController?
     var stepViewModel: KYCStepViewModel
     var docID: DocumentID
     var frontView: UIView?
@@ -28,13 +28,13 @@ class IdHandler: DocumentHandler {
         self.docID = docID
     }
 
-    fileprivate func goNextStep(version: DocumentVersion, completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void) {
+    func goNextStep(version: DocumentVersion, completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void) {
         // Start the NFC Screen
         DispatchQueue.main.async {
           if version.nfc == true && NFCNDEFReaderSession.readingAvailable {
                 self.startNFCCapture(docVer: version, completion: completion)
             } else {
-                self.topVC.navigationController?.popToViewController(ofClass: HomeViewController.self)
+              self.topVC?.navigationController?.popToViewController(ofClass: HomeViewController.self)
                 completion(.success(self.stepViewModel))
             }
         }
@@ -44,21 +44,15 @@ class IdHandler: DocumentHandler {
       
         let containerVC = ContainerViewController()
         containerVC.docID = self.docID
-//        let containerVC = ContainerViewController(
-//            nibName: String(describing: ContainerViewController.self),
-//            bundle:  AmaniUI.sharedInstance.getBundle()
-//        )
         containerVC.stepConfig = stepViewModel.stepConfig
-        // NOTE(ddnzcn): For future refactor consider removing this logic as this
-        // leads to repetition
         containerVC.setDisappearCallback {
           self.frontView?.removeFromSuperview()
         }
        
       
       
-        containerVC.bind(animationName: version.type!, docStep: version.steps![workingStep], step: steps(rawValue: workingStep) ?? steps.front) {
-          
+        containerVC.bind(animationName: version.type!, docStep: version.steps![workingStep], step: steps(rawValue: workingStep) ?? steps.front) { [weak self]  in
+          guard let self = self else {return}
             print("Animation ended")
             self.frontView = try? self.idCaptureModule.start(stepId: workingStep)  { [weak self] image in
                 DispatchQueue.main.async {
@@ -79,7 +73,7 @@ class IdHandler: DocumentHandler {
             // Show the front capture view
 //        self.showStepView(navbarHidden: false)
         }
-        topVC.navigationController?.pushViewController(containerVC, animated: true)
+      topVC?.navigationController?.pushViewController(containerVC, animated: true)
     }
 
     public func start(docStep: DocumentStepModel, version: DocumentVersion, workingStepIndex: Int = 0, completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void) {
@@ -135,14 +129,15 @@ class IdHandler: DocumentHandler {
 //            bundle: AmaniUI.sharedInstance.getBundle()
 //        )
         DispatchQueue.main.async {
-            nfcCaptureView.bind(documentVersion: docVer) {
+            nfcCaptureView.bind(documentVersion: docVer) { [weak self] in
                 // ID is captured return to home!
-                self.topVC.navigationController?.popToViewController(ofClass: HomeViewController.self)
+              guard let self = self else {return}
+              self.topVC?.navigationController?.popToViewController(ofClass: HomeViewController.self)
                 // Run the completion
                 completion(.success(self.stepViewModel))
             }
             nfcCaptureView.setNavigationLeftButton()
-            self.topVC.navigationController?.pushViewController(nfcCaptureView, animated: true)
+            self.topVC?.navigationController?.pushViewController(nfcCaptureView, animated: true)
         }
     }
   

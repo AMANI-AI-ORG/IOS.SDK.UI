@@ -9,7 +9,7 @@ class HomeViewController: BaseViewController {
     let appConfig = try? Amani.sharedInstance.appConfig().getApplicationConfig()
     var viewAppeared:Bool = false
     
-    var stepModels: [KYCStepViewModel]?
+    var stepModels: [KYCStepViewModel]? = nil
     var customerData: CustomerResponseModel? = nil
     var nonKYCStepManager: NonKYCStepManager? = nil
   
@@ -28,7 +28,6 @@ class HomeViewController: BaseViewController {
   
   override func viewWillAppear(_ animated: Bool) {
     super.viewWillAppear(true)
-    
     NotificationCenter.default.addObserver(self, selector: #selector(didReceiveStepModel), name: Notification.Name(
       AppConstants.AmaniDelegateNotifications.onStepModel.rawValue
     ), object: nil)
@@ -36,9 +35,15 @@ class HomeViewController: BaseViewController {
     NotificationCenter.default.addObserver(self, selector: #selector(didReceiveProfileStatus), name: NSNotification.Name(
       AppConstants.AmaniDelegateNotifications.onProfileStatus.rawValue
     ), object: nil)
+    do {
+      try generateKYCStepViewModels(from: AmaniUI.sharedInstance.rulesKYC)
+    }catch(let error) {
+      debugPrint(error)
+    }
+    DispatchQueue.main.async {
+      self.setupUI()
+    }
     
-    
-    self.setupUI()
   }
   
   override func viewDidAppear(_ animated: Bool) {
@@ -89,11 +94,7 @@ class HomeViewController: BaseViewController {
 //    if(stepModels == nil) {
      
      
-      do {
-        try generateKYCStepViewModels(from: AmaniUI.sharedInstance.rulesKYC)
-      }catch(let error) {
-        debugPrint(error)
-      }
+
       
 //    }
     self.setCustomerInfo(model: customerInfo)
@@ -122,7 +123,7 @@ class HomeViewController: BaseViewController {
     return true
   }
   
-  func generateKYCStepViewModels(from rules: [KYCRuleModel]) throws {
+  func generateKYCStepViewModels(from rules: [KYCRuleModel]) throws ->[KYCStepViewModel]? {
     guard let stepConfig = try? Amani.sharedInstance.appConfig().getApplicationConfig().stepConfig else {
       throw AppConstants.AmaniError.ConfigError
     }
@@ -139,7 +140,10 @@ class HomeViewController: BaseViewController {
           
           // Add only if the identifer equals to kyc
           if (stepModel.identifier == "kyc"||stepModel.identifier == nil ) {
-            return KYCStepViewModel(from: stepModel, initialRule: ruleModel, topController: self)
+            var kycStepViewModel = KYCStepViewModel(from: stepModel, initialRule: ruleModel, topController: self)
+            var documentHandler = DocumentHandlerHelper(for: stepModel.documents!, of: kycStepViewModel)
+            kycStepViewModel.setDocumentHandler(documentHandler)
+            return kycStepViewModel
           }
           
           return nil
@@ -153,22 +157,24 @@ class HomeViewController: BaseViewController {
       stepModels = filteredViewModels.sorted { $0.sortOrder < $1.sortOrder }
     } else {
       rules.forEach { ruleModel in
-//        print("HOME EKRANINDA DELEGATEN GELEN RULE MODEL \(ruleModel)")
         if let stepModel = stepConfig.first(where: { $0.id == ruleModel.id }) {
-          if let stepID = stepModels?.firstIndex(where: {$0.id == ruleModel.id}) {
-              // FIXME: index out of range hatası socketten cevap gelmeyince app crash oluyor.
-            stepModels?.remove(at: stepID)
-//            print("STEP MODELDEN REMOVE EDILEN STEP ID \(stepID)")
-         
-            stepModels?.append(KYCStepViewModel(from: stepModel, initialRule: ruleModel, topController: self))
+          guard let rulemodelStatus:String = ruleModel.status else {return}
+          guard let status:DocumentStatus = DocumentStatus(rawValue: rulemodelStatus) else {return}
+          if let stepModels = stepModels?.first(where: {$0.id == ruleModel.id}){
+            stepModels.updateStatus(status: status)
           }
+//          if let stepID = stepModels?.firstIndex(where: {$0.id == ruleModel.id}) {
+//            stepModels?.remove(at: stepID)
+//            stepModels?.append(KYCStepViewModel(from: stepModel, initialRule: ruleModel, topController: self))
+//          }
         }
       }
       stepModels = stepModels?.sorted{ $0.sortOrder < $1.sortOrder }
+      return stepModels
     }
     
     
-    
+    return nil
   }
   
   func setBackgroundColorOfTableView(color: UIColor) {
@@ -191,9 +197,9 @@ extension HomeViewController {
    */
   func setCustomerInfo(model: CustomerResponseModel) {
     
-    kycStepTblView.showKYCStep(stepModels: stepModels!, onSelectCallback: { kycStepTblViewModel in
+    kycStepTblView.showKYCStep(stepModels: stepModels!, onSelectCallback: { [weak self] kycStepTblViewModel in
       
-      self.kycStepTblView.updateStatus(for: kycStepTblViewModel!, status: .PROCESSING)
+      self?.kycStepTblView.updateStatus(for: kycStepTblViewModel!, status: .PROCESSING)
       kycStepTblViewModel!.upload { (result,args) in
         
 //        if result == true {
@@ -255,22 +261,19 @@ extension HomeViewController {
   func onStepModel(rules: [AmaniSDK.KYCRuleModel]?) {
     // CHECK RULES AND OPEN SUCCESS SCREEN
     // Reload customer when upload is complete
-    print("on stepmodel \(AmaniUI.sharedInstance.rulesKYC)")
+//    print("on stepmodel \(AmaniUI.sharedInstance.rulesKYC)")
     if viewAppeared{
       guard let kycStepTblView = kycStepTblView else {return}
 //      guard let rules = rules else {
 //        return
 //      }
-      print(AmaniUI.sharedInstance.rulesKYC)
-      
-      try? self.generateKYCStepViewModels(from:  AmaniUI.sharedInstance.rulesKYC)
-      guard let stepModels = stepModels else {return}
-//        for stepModel in stepModels {
-          self.kycStepTblView.updateDataAndReload(stepModels: stepModels)
-//            self.kycStepTblView.updateStatus(for: stepModel, status: stepModel.status)
-//        }
-        
-      
+//      print(AmaniUI.sharedInstance.rulesKYC)
+      guard let stepModelleri =  try? self.generateKYCStepViewModels(from:  AmaniUI.sharedInstance.rulesKYC) else {return}
+
+      DispatchQueue.main.async {
+        self.kycStepTblView.updateDataAndReload(stepModels: stepModelleri)
+
+      }
     }
   }
   

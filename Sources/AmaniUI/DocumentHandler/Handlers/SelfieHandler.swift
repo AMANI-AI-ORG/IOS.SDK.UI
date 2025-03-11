@@ -9,7 +9,7 @@ import AmaniSDK
 import UIKit
 
 class SelfieHandler: DocumentHandler {
-  var topVC: UIViewController
+  weak var topVC: UIViewController?
   var stepViewModel: KYCStepViewModel
   var docID: DocumentID
   var stepView: UIView?
@@ -30,17 +30,10 @@ class SelfieHandler: DocumentHandler {
     }
     let animationVC = ContainerViewController()
     animationVC.docID = self.docID
-//    let animationVC = ContainerViewController(
-//      nibName: String(describing: ContainerViewController.self),
-//      bundle: AmaniUI.sharedInstance.getBundle()
-//    )
     animationVC.stepConfig = stepViewModel.stepConfig
-    self.topVC.navigationController?.pushViewController(animationVC, animated: true)
-    
     animationVC.setDisappearCallback {
       self.stepView?.removeFromSuperview()
     }
-    
     animationVC.bind(animationName: version.type!, docStep: version.steps![steps.front.rawValue], step:steps.front) {[weak self] () in
       guard let self = self else {return}
       // Manual Selfie
@@ -68,7 +61,9 @@ class SelfieHandler: DocumentHandler {
         animationVC.view.addSubview(stepView)
         animationVC.view.bringSubviewToFront(stepView)
       }
+      
     }
+    self.topVC?.navigationController?.pushViewController(animationVC, animated: true)
   }
   
   func upload(completion: @escaping ((Bool?, [String : Any]?) -> Void)) {
@@ -90,6 +85,13 @@ class SelfieHandler: DocumentHandler {
     
   }
   
+  func goNextStep( completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void) {
+    DispatchQueue.main.async {
+      self.topVC?.navigationController?.popToViewController(ofClass: HomeViewController.self)
+      completion(.success(self.stepViewModel))
+    }
+  }
+  
   private func runManualSelfie(step: DocumentStepModel, version: DocumentVersion, completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void) -> UIView?{
     selfieModule = Amani.sharedInstance.selfie()
     guard let currentSelfieModule = selfieModule as? Selfie else {
@@ -101,16 +103,15 @@ class SelfieHandler: DocumentHandler {
       
       stepView = try currentSelfieModule.start { [weak self] image in
         self?.stepView?.removeFromSuperview()
-        self?.startConfirmVC(image: image, docStep: step, docVer: version) { [weak self] () in
-          completion(.success(self!.stepViewModel))
-          self?.topVC.navigationController?.popToViewController(ofClass: HomeViewController.self)
+        DispatchQueue.main.async {
+          self?.startConfirmVC(image: image, docStep: step, docVer: version) { [weak self] () in
+            self?.goNextStep(completion: completion)
+          }
         }
       }
       return stepView
-//      self.showStepView(navbarHidden: false)
     } catch let err {
       print(err)
-      
       completion(.failure(.moduleError))
       return nil
     }
@@ -147,9 +148,10 @@ class SelfieHandler: DocumentHandler {
       
       stepView = try currentSelfieModule.start { [weak self]  image in
         self?.stepView?.removeFromSuperview()
-        self?.startConfirmVC(image: image, docStep: step, docVer: version) { [weak self] () in
-          completion(.success(self!.stepViewModel))
-          self?.topVC.navigationController?.popToViewController(ofClass: HomeViewController.self)
+        DispatchQueue.main.async {
+          self?.startConfirmVC(image: image, docStep: step, docVer: version) { [weak self] () in
+            self?.goNextStep(completion: completion)
+          }
         }
       }
       return stepView
@@ -159,6 +161,8 @@ class SelfieHandler: DocumentHandler {
       return nil
     }
   }
+  
+
   
   private func runPoseEstimation(step: DocumentStepModel, version: DocumentVersion, completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void)->UIView? {
     let poseCount = version.selfieType!
@@ -213,12 +217,13 @@ class SelfieHandler: DocumentHandler {
       
       stepView = try currentSelfieModule.start{ [weak self]  image in
         self?.stepView?.removeFromSuperview()
-        self?.startConfirmVC(image: image, docStep: step, docVer: version) { [weak self] () in
-          completion(.success(self!.stepViewModel))
-          self?.topVC.navigationController?.popToViewController(ofClass: HomeViewController.self)
+        DispatchQueue.main.async {
+          self?.startConfirmVC(image: image, docStep: step, docVer: version) { [weak self] () in
+            self?.goNextStep(completion: completion)
+          }
         }
+
       }
-//      self.showStepView(navbarHidden: false)
       return stepView
     } catch let err {
       print(err)

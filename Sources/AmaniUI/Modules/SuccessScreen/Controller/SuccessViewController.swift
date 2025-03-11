@@ -36,6 +36,7 @@ class SuccessViewController: BaseViewController {
   }
   
   override func popViewController() {
+    AmaniUI.sharedInstance.closeAmaniSDK()
     navigationController?.dismiss(animated: true, completion: nil)
   }
     
@@ -43,6 +44,8 @@ class SuccessViewController: BaseViewController {
         let customer = Amani.sharedInstance.customerInfo().getCustomer()
         guard let customerId: String = customer.id else { return }
         AmaniUI.sharedInstance.delegate?.onKYCSuccess(CustomerId: customerId)
+        AmaniUI.sharedInstance.closeAmaniSDK()
+
         navigationController?.dismiss(animated: true, completion: nil)
   }
 
