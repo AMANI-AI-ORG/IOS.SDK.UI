@@ -206,7 +206,23 @@ public class AmaniUI {
         if let error = error {
           debugPrint(error)
         } else if let result:AppConfigModel = result {
+          
           self?.config =  result
+           
+            //    MARK: Initialize AmaniVoiceAssistant
+#if canImport(AmaniVoiceAssistantSDK)
+          if let ttsvoices = result.generalconfigs?.ttsVoices {
+            Task { @MainActor in
+              do {
+                self?.voiceAssistant = try await AmaniVoiceAssistant.init(url: ttsvoices)
+              } catch(let error) {
+                debugPrint("can't init voice assistant \(error)")
+              }
+            }
+          }
+#endif
+          
+          
           if let customerResponseModel = customerModel {
             self?.customerRespData = customerResponseModel
           }
@@ -227,20 +243,7 @@ public class AmaniUI {
     parentVC = parentViewController
       // set the delegate regardless of init method
     self.sharedSDKInstance.setDelegate(delegate: self)
-    
-//    MARK: Initialize AmaniVoiceAssistant
-#if canImport(AmaniVoiceAssistantSDK)
-    Task { @MainActor in
-      do {
-        self.voiceAssistant = try await AmaniVoiceAssistant.init(url: "https://gist.githubusercontent.com/munir-amani/70bbb480b1ea8b761169397004a37a4d/raw/9ad200113d016db661905de94dd822f9609c9623/ttsVoices.json")
-        
-      }catch(let error) {
-        debugPrint("can't init voice assistant \(error)")
-      }
-    }
-    
-#endif
-    
+ 
     if (token != nil){
      
       sharedSDKInstance.initAmani(server: server!, token: token!, sharedSecret: sharedSecret, customer: customer, language: language, apiVersion: apiVersion) {[weak self] (customerModel, error) in
