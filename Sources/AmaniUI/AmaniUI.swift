@@ -211,14 +211,17 @@ public class AmaniUI {
            
             //    MARK: Initialize AmaniVoiceAssistant
 #if canImport(AmaniVoiceAssistantSDK)
-          if let ttsvoices = result.generalconfigs?.ttsVoices {
-            Task { @MainActor in
-              do {
-                self?.voiceAssistant = try await AmaniVoiceAssistant.init(url: ttsvoices)
-              } catch(let error) {
-                debugPrint("can't init voice assistant \(error)")
+          if let generalconfig = result.generalconfigs {
+            if let ttsvoices:String = generalconfig.ttsVoices {
+              Task { @MainActor in
+                do {
+                  AmaniUI.sharedInstance.voiceAssistant = try await AmaniVoiceAssistant.init(url: ttsvoices)
+                } catch(let error) {
+                  debugPrint("can't init voice assistant \(error)")
+                }
               }
             }
+
           }
 #endif
           
