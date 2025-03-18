@@ -19,7 +19,6 @@ class BaseViewController: UIViewController {
     var navBarFontColor: String = "#000000"
     var navbarRightButtonAction:(() -> Void)? = nil
     var navbarLeftButtonAction: (() -> Void)? = nil
-    var nfcConfigureView: UIView?
     
     override open var shouldAutorotate: Bool {
         return true
@@ -70,9 +69,8 @@ class BaseViewController: UIViewController {
         }
     }
     
-    func setNavigationLeftButtonPDF(text: String?, tintColor: String?) {
+    func setNavigationRightButtonPDF(text: String?, tintColor: String?) {
         let leftButton: UIButton = UIButton(type: .custom)
-       
         leftButton.setTitle(text, for: .normal)
 //        leftButton.tintColor = hextoUIColor(hexString: tintColor ?? navBarFontColor)
         leftButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: 10, bottom: 0, right: 0)
@@ -114,13 +112,9 @@ class BaseViewController: UIViewController {
     
     @objc func popViewController() {
         if(self.navigationController?.viewControllers.count == 1) {
-          navigationController?.popViewController(animated: true)
+          AmaniUI.sharedInstance.popViewController()
         } else {
-          if let customView = nfcConfigureView, !customView.isHidden {
-            hideCustomView()
-          } else {
-            navigationController?.popViewController(animated: true) 
-          }
+          navigationController?.popViewController(animated: true)
         }
     }
     
@@ -181,12 +175,6 @@ class BaseViewController: UIViewController {
             self.setPopButton()
         }
     }
-
-      func hideCustomView() {
-      nfcConfigureView?.removeFromSuperview()
-      nfcConfigureView = nil
-      
-      }
     
     /**
      This method set up the theme color

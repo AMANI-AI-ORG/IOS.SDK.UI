@@ -92,11 +92,8 @@ class HomeViewController: BaseViewController {
     }
     self.isSuccess = false
     self.setCustomerInfo(model: customerInfo)
-    if (customerInfo.status?.uppercased() == ProfileStatus.PENDING_REVIEW.rawValue || customerInfo.status?.uppercased() == ProfileStatus.APPROVED.rawValue) {
       goToSuccess()
-      return
-    }
-    
+
   }
   
   // MARK: - Actions
@@ -206,7 +203,12 @@ extension HomeViewController {
   }
   
   func goToSuccess() {
-    if !isSuccess{
+    guard let stepModels = self.stepModels else {
+      print("no model info passed 209")
+      return
+    }
+    var stepResults:[Bool] = stepModels.compactMap({return ($0.identifier == "kyc" || $0.identifier == nil) && ($0.status == .APPROVED || $0.status == .PENDING_REVIEW)})
+    if !isSuccess && !(stepResults.contains(false)) {
       isSuccess = true
       if let nonKYCManager = self.nonKYCStepManager, nonKYCManager.hasPostSteps() {
         nonKYCManager.startFlow(forPreSteps: false) {[weak self] () in
@@ -248,16 +250,14 @@ extension HomeViewController {
 extension HomeViewController {
   
   func onProfileStatus(profile: AmaniSDK.wsProfileStatusModel) {
-    if (profile.status?.uppercased() == ProfileStatus.PENDING_REVIEW.rawValue || profile.status?.uppercased() == ProfileStatus.APPROVED.rawValue) {
-      goToSuccess()
-      return
-    }
+    
   }
   
   func onStepModel(rules: [AmaniSDK.KYCRuleModel]?) {
     // CHECK RULES AND OPEN SUCCESS SCREEN
     // Reload customer when upload is complete
 //    print("on stepmodel \(AmaniUI.sharedInstance.rulesKYC)")
+
     if viewAppeared{
       guard let kycStepTblView = kycStepTblView else {return}
 //      guard let rules = rules else {
@@ -270,6 +270,8 @@ extension HomeViewController {
         self.kycStepTblView.updateDataAndReload(stepModels: stepModelleri)
 
       }
+      goToSuccess()
+
     }
   }
   

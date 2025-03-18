@@ -165,7 +165,7 @@ extension ContainerViewController {
         if animationName == nil {
             self.btnContinue.isHidden = true
             self.titleDescription.isHidden = true
-            self.setNavigationLeftButtonPDF(text: appConfig.generalconfigs?.uploadPdf ?? "Upload PDF" ,tintColor: appConfig.generalconfigs?.topBarFontColor ?? "20202F")
+            self.setNavigationRightButtonPDF(text: appConfig.generalconfigs?.uploadPdf ?? "Upload PDF" ,tintColor: appConfig.generalconfigs?.topBarFontColor ?? "20202F")
           self.setNavigationLeftButton(TintColor: appConfig.generalconfigs?.topBarFontColor ?? "#ffffff")
         } else {
             self.btnContinue.isHidden = false

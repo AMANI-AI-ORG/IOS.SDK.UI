@@ -122,9 +122,7 @@ class NonKYCStepManager {
     
     DispatchQueue.main.async {
       
-      
       let profileInfoVC = ProfileInfoViewController()
-      
       profileInfoVC.bind(with: self.currentStep)
       profileInfoVC.setCompletionHandler {[weak self] in
         self?.stepCompleted()
