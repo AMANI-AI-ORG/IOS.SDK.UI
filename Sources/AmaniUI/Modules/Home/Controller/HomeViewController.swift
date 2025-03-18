@@ -12,7 +12,7 @@ class HomeViewController: BaseViewController {
     var stepModels: [KYCStepViewModel]? = nil
     var customerData: CustomerResponseModel? = nil
     var nonKYCStepManager: NonKYCStepManager? = nil
-  
+    var isSuccess: Bool = false
     
     // MARK: - Properties
     private var descriptionLabel = UILabel()
@@ -90,13 +90,7 @@ class HomeViewController: BaseViewController {
         customerInfo = customerResp
       }
     }
-   
-//    if(stepModels == nil) {
-     
-     
-
-      
-//    }
+    self.isSuccess = false
     self.setCustomerInfo(model: customerInfo)
     if (customerInfo.status?.uppercased() == ProfileStatus.PENDING_REVIEW.rawValue || customerInfo.status?.uppercased() == ProfileStatus.APPROVED.rawValue) {
       goToSuccess()
@@ -184,7 +178,6 @@ class HomeViewController: BaseViewController {
   public func bind(customerData: CustomerResponseModel, nonKYCManager: NonKYCStepManager? = nil) {
     self.customerData = customerData
     self.nonKYCStepManager = nonKYCManager
-   
   }
   
 }
@@ -213,22 +206,25 @@ extension HomeViewController {
   }
   
   func goToSuccess() {
-    
-    if let nonKYCManager = self.nonKYCStepManager, nonKYCManager.hasPostSteps() {
+    if !isSuccess{
+      isSuccess = true
+      if let nonKYCManager = self.nonKYCStepManager, nonKYCManager.hasPostSteps() {
         nonKYCManager.startFlow(forPreSteps: false) {[weak self] () in
           DispatchQueue.main.async {
             let successVC = SuccessViewController()
-//            let successVC = SuccessViewController(nibName: String(describing: SuccessViewController.self), bundle: AmaniUI.sharedInstance.getBundle())
+              //            let successVC = SuccessViewController(nibName: String(describing: SuccessViewController.self), bundle: AmaniUI.sharedInstance.getBundle())
             self?.navigationController?.pushViewController(successVC, animated: true)
           }
         }
-    } else {
-      DispatchQueue.main.async {
+      } else {
+        DispatchQueue.main.async {
           let successVC = SuccessViewController()
-//        let successVC = SuccessViewController(nibName: String(describing: SuccessViewController.self), bundle: AmaniUI.sharedInstance.getBundle())
-        self.navigationController?.pushViewController(successVC, animated: false)
-      }  
+            //        let successVC = SuccessViewController(nibName: String(describing: SuccessViewController.self), bundle: AmaniUI.sharedInstance.getBundle())
+          self.navigationController?.pushViewController(successVC, animated: false)
+        }
+      }
     }
+
   }
   
   @objc
