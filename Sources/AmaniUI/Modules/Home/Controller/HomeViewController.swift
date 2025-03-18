@@ -208,7 +208,7 @@ extension HomeViewController {
       return
     }
     var stepResults:[Bool] = stepModels.compactMap({return ($0.identifier == "kyc" || $0.identifier == nil) && ($0.status == .APPROVED || $0.status == .PENDING_REVIEW)})
-    if !isSuccess && !(stepResults.contains(false)) {
+    if !isSuccess && stepResults.count > 0 && !(stepResults.contains(false)) {
       isSuccess = true
       if let nonKYCManager = self.nonKYCStepManager, nonKYCManager.hasPostSteps() {
         nonKYCManager.startFlow(forPreSteps: false) {[weak self] () in

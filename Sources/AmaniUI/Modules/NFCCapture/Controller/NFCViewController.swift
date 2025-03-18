@@ -49,6 +49,7 @@ class NFCViewController: BaseViewController {
   }
   
   func hideCustomView(){
+    nfcFormView.isHidden = true 
     nfcFormView.removeFromSuperview()
   }
   
