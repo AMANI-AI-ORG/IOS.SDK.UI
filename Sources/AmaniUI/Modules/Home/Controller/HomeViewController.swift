@@ -12,7 +12,7 @@ class HomeViewController: BaseViewController {
     var stepModels: [KYCStepViewModel]? = nil
     var customerData: CustomerResponseModel? = nil
     var nonKYCStepManager: NonKYCStepManager? = nil
-  
+    var isSuccess: Bool = false
     
     // MARK: - Properties
     private var descriptionLabel = UILabel()
@@ -76,7 +76,7 @@ class HomeViewController: BaseViewController {
     guard let appConfig = appConfig else {return}
     self.view.backgroundColor = hextoUIColor(hexString: appConfig.generalconfigs?.appBackground ?? "253C59")
     
-    self.setPopButton(TintColor: appConfig.generalconfigs?.topBarFontColor ?? "000000")
+    self.setNavigationLeftButton(TintColor: appConfig.generalconfigs?.topBarFontColor ?? "000000")
     
     self.setNavigationBarWith(title: (appConfig.generalconfigs?.mainTitleText!)!, textColor: hextoUIColor(hexString: appConfig.generalconfigs?.topBarFontColor ?? "000000"))
       //      onVC.headView.layer.cornerRadius = 25
@@ -90,19 +90,10 @@ class HomeViewController: BaseViewController {
         customerInfo = customerResp
       }
     }
-   
-//    if(stepModels == nil) {
-     
-     
-
-      
-//    }
+    self.isSuccess = false
     self.setCustomerInfo(model: customerInfo)
-    if (customerInfo.status?.uppercased() == ProfileStatus.PENDING_REVIEW.rawValue || customerInfo.status?.uppercased() == ProfileStatus.APPROVED.rawValue) {
       goToSuccess()
-      return
-    }
-    
+
   }
   
   // MARK: - Actions
@@ -184,7 +175,6 @@ class HomeViewController: BaseViewController {
   public func bind(customerData: CustomerResponseModel, nonKYCManager: NonKYCStepManager? = nil) {
     self.customerData = customerData
     self.nonKYCStepManager = nonKYCManager
-   
   }
   
 }
@@ -213,22 +203,30 @@ extension HomeViewController {
   }
   
   func goToSuccess() {
-    
-    if let nonKYCManager = self.nonKYCStepManager, nonKYCManager.hasPostSteps() {
+    guard let stepModels = self.stepModels else {
+      print("no model info passed 209")
+      return
+    }
+    var stepResults:[Bool] = stepModels.compactMap({return ($0.identifier == "kyc" || $0.identifier == nil) && ($0.status == .APPROVED || $0.status == .PENDING_REVIEW)})
+    if !isSuccess && stepResults.count > 0 && !(stepResults.contains(false)) {
+      isSuccess = true
+      if let nonKYCManager = self.nonKYCStepManager, nonKYCManager.hasPostSteps() {
         nonKYCManager.startFlow(forPreSteps: false) {[weak self] () in
           DispatchQueue.main.async {
             let successVC = SuccessViewController()
-//            let successVC = SuccessViewController(nibName: String(describing: SuccessViewController.self), bundle: AmaniUI.sharedInstance.getBundle())
+              //            let successVC = SuccessViewController(nibName: String(describing: SuccessViewController.self), bundle: AmaniUI.sharedInstance.getBundle())
             self?.navigationController?.pushViewController(successVC, animated: true)
           }
         }
-    } else {
-      DispatchQueue.main.async {
+      } else {
+        DispatchQueue.main.async {
           let successVC = SuccessViewController()
-//        let successVC = SuccessViewController(nibName: String(describing: SuccessViewController.self), bundle: AmaniUI.sharedInstance.getBundle())
-        self.navigationController?.pushViewController(successVC, animated: false)
-      }  
+            //        let successVC = SuccessViewController(nibName: String(describing: SuccessViewController.self), bundle: AmaniUI.sharedInstance.getBundle())
+          self.navigationController?.pushViewController(successVC, animated: false)
+        }
+      }
     }
+
   }
   
   @objc
@@ -252,16 +250,14 @@ extension HomeViewController {
 extension HomeViewController {
   
   func onProfileStatus(profile: AmaniSDK.wsProfileStatusModel) {
-    if (profile.status?.uppercased() == ProfileStatus.PENDING_REVIEW.rawValue || profile.status?.uppercased() == ProfileStatus.APPROVED.rawValue) {
-      goToSuccess()
-      return
-    }
+    
   }
   
   func onStepModel(rules: [AmaniSDK.KYCRuleModel]?) {
     // CHECK RULES AND OPEN SUCCESS SCREEN
     // Reload customer when upload is complete
 //    print("on stepmodel \(AmaniUI.sharedInstance.rulesKYC)")
+
     if viewAppeared{
       guard let kycStepTblView = kycStepTblView else {return}
 //      guard let rules = rules else {
@@ -274,6 +270,8 @@ extension HomeViewController {
         self.kycStepTblView.updateDataAndReload(stepModels: stepModelleri)
 
       }
+      goToSuccess()
+
     }
   }
   

@@ -45,10 +45,26 @@ class NonKYCStepManager {
     executeStep()
   }
   
+  func stepNotExpected() {
+    if steps.isEmpty {
+      completionHandler?()
+      return
+    }
+    executeStep()
+  }
+  
   private func executeStep() {
     currentStep = steps.removeFirst()
+    guard let identifier = currentStep.identifier else {
+      stepNotExpected()
+      return
+    }
+    guard let nonKYCStep = AppConstants.StepsBeforeKYC(rawValue: identifier) else {
+      stepNotExpected()
+      return
+    }
     
-    switch AppConstants.StepsBeforeKYC(rawValue: currentStep.identifier!)! {
+    switch nonKYCStep {
     case .phoneOTP:
       startPhoneOTP()
     case .emailOTP:
@@ -58,6 +74,7 @@ class NonKYCStepManager {
     case .questionnaire:
       startQuestionnaire()
     }
+
   }
   
   private func startEmailOTP() {
@@ -105,9 +122,7 @@ class NonKYCStepManager {
     
     DispatchQueue.main.async {
       
-      
       let profileInfoVC = ProfileInfoViewController()
-      
       profileInfoVC.bind(with: self.currentStep)
       profileInfoVC.setCompletionHandler {[weak self] in
         self?.stepCompleted()
@@ -165,7 +180,7 @@ class NonKYCStepManager {
     
     let sorted = allStepModels.sorted { $0.sortOrder < $1.sortOrder }
     
-    let firstKYCIndex = sorted.firstIndex(where: { $0.identifier == "kyc" })
+    let firstKYCIndex = sorted.firstIndex(where: { return $0.identifier == "kyc"  })
     let lastKYCIndex = sorted.lastIndex(where: { $0.identifier == "kyc" })
     
     if firstKYCIndex == 0 {
@@ -173,7 +188,6 @@ class NonKYCStepManager {
     } else {
       preSteps = Array(sorted[0 ... (firstKYCIndex!.advanced(by: -1))])
     }
-    
     postSteps = Array(sorted[lastKYCIndex!.advanced(by: 1)...])
   }
   

@@ -307,7 +307,7 @@ public class AmaniUI {
         // launch the steps before kyc flow
         
       self.nonKYCStepManager = NonKYCStepManager(for: config.stepConfig!, customer: self.customerRespData!, navigationController: self.sdkNavigationController, vc: self.parentVC!)
-        self.nonKYCStepManager!.startFlow(forPreSteps: true) {[weak self] () in
+        self.nonKYCStepManager!.startFlow(forPreSteps: true) { [weak self] () in
           guard let self = self else {return}
           self.startKYCHome()
         }

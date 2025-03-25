@@ -40,6 +40,19 @@ class NFCViewController: BaseViewController {
         
     }
   
+  override func popViewController(){
+    if let customView = nfcFormView, !customView.isHidden {
+      hideCustomView()
+    } else {
+      super.popViewController()
+    }
+  }
+  
+  func hideCustomView(){
+    nfcFormView.isHidden = true 
+    nfcFormView.removeFromSuperview()
+  }
+  
   override func viewWillDisappear(_ animated: Bool) {
     super.viewWillDisappear(animated)
 #if canImport(AmaniVoiceAssistantSDK)
@@ -201,7 +214,6 @@ class NFCViewController: BaseViewController {
   
   private func setNFCFormUIView(nvi: NviModel) async {
     nfcFormView = NFCConfigureView()
-    self.nfcConfigureView = nfcFormView
     nfcFormView.appConfig = appConfig
     nfcFormView.setTextsFrom(nvi: nvi)
     nfcFormView.delegate = self

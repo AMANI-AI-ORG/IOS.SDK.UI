@@ -23,7 +23,7 @@ class QuestionnaireViewController: BaseViewController {
   }
   
   override func viewDidLoad() {
-    self.setPopButton()
+    self.setNavigationLeftButton()
       guard let appConfig = try? Amani.sharedInstance.appConfig().getApplicationConfig() else {
           print("AppConfigError")
           return
