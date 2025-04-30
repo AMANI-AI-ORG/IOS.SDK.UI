@@ -329,7 +329,8 @@ public class AmaniUI {
           [self.initialVC!],
           animated: true
         )
-      
+      guard self.parentVC?.presentedViewController == nil else  { return }
+      guard !self.sdkNavigationController.isBeingPresented else { return }
       self.parentVC?.present(self.sdkNavigationController, animated: true)
     }
   }
