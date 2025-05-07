@@ -12,6 +12,7 @@ import AmaniSDK
 class QuestionnaireViewController: BaseViewController {
   private var questionnaireView: QuestionnaireView!
   private var handler: (() -> Void)? = nil
+  private var stepVM: KYCStepViewModel?
   
   let questionnaireViewModel = QuestionnaireViewModel()
   
@@ -34,7 +35,7 @@ class QuestionnaireViewController: BaseViewController {
     view.addSubview(questionnaireView)
     questionnaireView.translatesAutoresizingMaskIntoConstraints = false
       view.backgroundColor = hextoUIColor(hexString: appConfig.generalconfigs?.appBackground ?? "#EEF4FA")
-    questionnaireView.bind(with: questionnaireViewModel, completionHandler: handler!)
+    questionnaireView.bind(with: questionnaireViewModel, step: stepVM, completionHandler: handler!)
     NSLayoutConstraint.activate([
       questionnaireView.topAnchor.constraint(equalTo: view.topAnchor),
       questionnaireView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
@@ -50,6 +51,7 @@ class QuestionnaireViewController: BaseViewController {
   
   func bind(with stepVM: KYCStepViewModel) {
     self.questionnaireViewModel.setRuleID(stepVM.getRuleModel().id!)
+    self.stepVM = stepVM
     DispatchQueue.main.async {
       self.title = stepVM.documents.first?.versions?.first?.steps?.first?.captureTitle ?? "Questionnaire"
     }
