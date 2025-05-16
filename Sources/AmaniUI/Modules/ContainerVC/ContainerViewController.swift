@@ -157,7 +157,7 @@ extension ContainerViewController {
       self.titleDescription.font = UIFont.systemFont(ofSize: 16.0, weight: .light)
       self.titleDescription.numberOfLines = 0
       self.titleDescription.lineBreakMode = .byWordWrapping
-      self.titleDescription.textColor = hextoUIColor(hexString: "#20202F")
+      self.titleDescription.textColor = hextoUIColor(hexString: appConfig.generalconfigs?.appFontColor ?? "#20202F")
       
       self.animationView.translatesAutoresizingMaskIntoConstraints = false
       self.animationView.backgroundColor = .clear
