@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		1801C8E92DC2673400F53343 /* AmaniSDK in Frameworks */ = {isa = PBXBuildFile; productRef = 1801C8E82DC2673400F53343 /* AmaniSDK */; };
 		185A2BF72BBD64AE00855F77 /* String+Extension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 185A2BE52BBD64AE00855F77 /* String+Extension.swift */; };
 		185A2BF82BBD64AE00855F77 /* UIStackView+Extension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 185A2BE62BBD64AE00855F77 /* UIStackView+Extension.swift */; };
 		185A2BF92BBD64AE00855F77 /* UIView+Extension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 185A2BE72BBD64AE00855F77 /* UIView+Extension.swift */; };
@@ -193,6 +194,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				488B08DA2D68924000935C5D /* AmaniVoiceAssistantSDK in Frameworks */,
+				1801C8E92DC2673400F53343 /* AmaniSDK in Frameworks */,
 				C5319C9528C63C0200153D50 /* CryptoTokenKit.framework in Frameworks */,
 				488B08D82D68907400935C5D /* AmaniSDK in Frameworks */,
 				C5319C9328C63BEB00153D50 /* CoreNFC.framework in Frameworks */,
@@ -718,6 +720,9 @@
 			dependencies = (
 			);
 			name = AmaniUI;
+			packageProductDependencies = (
+				1801C8E82DC2673400F53343 /* AmaniSDK */,
+			);
 			productName = AmaniUIv1;
 			productReference = C544FEE328C2303700C0B406 /* AmaniUI.framework */;
 			productType = "com.apple.product-type.framework";
@@ -749,7 +754,7 @@
 			packageReferences = (
 				488B08D22D68905B00935C5D /* XCRemoteSwiftPackageReference "AmaniVoiceAssistantSDK" */,
 				488B08D32D68906800935C5D /* XCRemoteSwiftPackageReference "lottie-spm" */,
-				488B08D62D68907400935C5D /* XCRemoteSwiftPackageReference "Mobile_SDK_Repo" */,
+				1801C8E72DC2673400F53343 /* XCRemoteSwiftPackageReference "AmaniSDK-ios" */,
 			);
 			productRefGroup = 489D406E26BBE5DD0009AB39 /* Products */;
 			projectDirPath = "";
@@ -1078,6 +1083,14 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
+		1801C8E72DC2673400F53343 /* XCRemoteSwiftPackageReference "AmaniSDK-ios" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/munir-amani/AmaniSDK-ios";
+			requirement = {
+				branch = main;
+				kind = branch;
+			};
+		};
 		488B08D22D68905B00935C5D /* XCRemoteSwiftPackageReference "AmaniVoiceAssistantSDK" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/munir-amani/AmaniVoiceAssistantSDK";
@@ -1105,6 +1118,11 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
+		1801C8E82DC2673400F53343 /* AmaniSDK */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 1801C8E72DC2673400F53343 /* XCRemoteSwiftPackageReference "AmaniSDK-ios" */;
+			productName = AmaniSDK;
+		};
 		488B08D42D68906800935C5D /* Lottie */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 488B08D32D68906800935C5D /* XCRemoteSwiftPackageReference "lottie-spm" */;
