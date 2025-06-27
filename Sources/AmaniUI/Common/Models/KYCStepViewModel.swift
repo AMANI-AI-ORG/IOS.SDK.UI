@@ -101,7 +101,9 @@ class KYCStepViewModel {
     }
     
     // Bind the callback to the runner.
-    let isSingleVersion = ((documents.first?.versions!.count == 1) && (documents.count == 1) ) ? true : false
+    let fullList = documents.filter({$0.versions!.count != 0})
+    let isSingleVersion = ((fullList.first?.versions!.count == 1 && fullList.count == 1))
+
     if (isSingleVersion) {
       documentHandler.bind(topVC: topViewController, callback: completion)
       documentHandler.start(for: (documents.first?.id)!)
