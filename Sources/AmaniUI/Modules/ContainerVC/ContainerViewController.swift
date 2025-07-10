@@ -153,7 +153,13 @@ extension ContainerViewController {
       
       self.btnContinue.translatesAutoresizingMaskIntoConstraints = false
       self.titleDescription.translatesAutoresizingMaskIntoConstraints = false
-      self.titleDescription.text = stepConfig?.documents?[0].versions?[0].informationScreenDesc1 ?? "\(stepConfig?.documents?[0].versions?[0].steps?[0].captureDescription ?? "Click continue to take a photo within the specified area")"
+      if stepConfig?.documents?[0].versions?.count != 0 {
+        self.titleDescription.text = stepConfig?.documents?[0].versions?[0].informationScreenDesc1 ?? "\(stepConfig?.documents?[0].versions?[0].steps?[0].captureDescription ?? "Click continue to take a photo within the specified area")"
+      } else {
+        self.titleDescription.text = stepConfig?.documents?[1].versions?[0].steps?[0].captureDescription
+      }
+      
+     
       self.titleDescription.font = UIFont.systemFont(ofSize: 16.0, weight: .light)
       self.titleDescription.numberOfLines = 0
       self.titleDescription.lineBreakMode = .byWordWrapping
