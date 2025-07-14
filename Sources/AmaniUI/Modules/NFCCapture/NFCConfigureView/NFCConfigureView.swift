@@ -134,7 +134,8 @@ class NFCConfigureView: UIView {
     
     Task {
       if let nviData = self.newNviData {
-        await setButtonCb!(nviData)
+        guard let setButtonCb = self.setButtonCb else { return }
+        await setButtonCb(nviData)
       }
      
     }

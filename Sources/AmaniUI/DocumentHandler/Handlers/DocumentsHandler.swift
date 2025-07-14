@@ -66,7 +66,7 @@ extension DocumentsHandler {
               self.stepView?.removeFromSuperview()
             }
             
-            ContainerVC.bind(animationName:nil, docStep: version.steps![steps.front.rawValue], step:steps.front) { [weak self] () in
+            ContainerVC.bind(animationName:nil, docStep: version.steps![steps.front.rawValue], step:steps.front, docID: docID) { [weak self] () in
               self?.stepView = self?.runDocumentsScan(
                 step: docStep,
                 version: version,

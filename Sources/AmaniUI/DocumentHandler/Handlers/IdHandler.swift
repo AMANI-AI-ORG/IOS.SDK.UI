@@ -43,7 +43,6 @@ class IdHandler: DocumentHandler {
     func showContainerVC(version: DocumentVersion, workingStep: Int, completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void) {
       
         let containerVC = ContainerViewController()
-        containerVC.docID = self.docID
         containerVC.stepConfig = stepViewModel.stepConfig
         containerVC.setDisappearCallback {
           self.frontView?.removeFromSuperview()
@@ -51,7 +50,7 @@ class IdHandler: DocumentHandler {
        
       
       
-        containerVC.bind(animationName: version.type!, docStep: version.steps![workingStep], step: steps(rawValue: workingStep) ?? steps.front) { [weak self]  in
+        containerVC.bind(animationName: version.type!, docStep: version.steps![workingStep], step: steps(rawValue: workingStep) ?? steps.front, docID: docID) { [weak self]  in
           guard let self = self else {return}
             print("Animation ended")
             self.frontView = try? self.idCaptureModule.start(stepId: workingStep)  { [weak self] image in

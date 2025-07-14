@@ -34,7 +34,7 @@ class SelfieHandler: DocumentHandler {
     animationVC.setDisappearCallback {
       self.stepView?.removeFromSuperview()
     }
-    animationVC.bind(animationName: version.type!, docStep: version.steps![steps.front.rawValue], step:steps.front) {[weak self] () in
+    animationVC.bind(animationName: version.type!, docStep: version.steps![steps.front.rawValue], step:steps.front, docID: docID) {[weak self] () in
       guard let self = self else {return}
       // Manual Selfie
       if selfieType == -1 {

@@ -32,11 +32,13 @@ class ContainerViewController: BaseViewController {
   func bind(animationName:String?,
             docStep:DocumentStepModel,
             step:steps,
+            docID:DocumentID,
             callback: @escaping (() -> Void)) {
     self.animationName = animationName
     self.callback = callback
     self.step = step
     self.docStep = docStep
+    self.docID = docID
   }
     
    
@@ -153,13 +155,11 @@ extension ContainerViewController {
       
       self.btnContinue.translatesAutoresizingMaskIntoConstraints = false
       self.titleDescription.translatesAutoresizingMaskIntoConstraints = false
-      if stepConfig?.documents?[0].versions?.count != 0 {
-        self.titleDescription.text = stepConfig?.documents?[0].versions?[0].informationScreenDesc1 ?? "\(stepConfig?.documents?[0].versions?[0].steps?[0].captureDescription ?? "Click continue to take a photo within the specified area")"
-      } else {
-        self.titleDescription.text = stepConfig?.documents?[1].versions?[0].steps?[0].captureDescription
+      var titleDescriptiontext = "Click continue to take a photo within the specified area"
+      if let document = stepConfig?.documents?.first(where: {$0.id == docID!.getDocumentType() && $0.versions!.count>0}){
+        titleDescriptiontext = document.versions?[0].informationScreenDesc1 ?? "\(document.versions?[0].steps?[0].captureDescription ?? "Click continue to take a photo within the specified area" )"
       }
-      
-     
+      self.titleDescription.text = titleDescriptiontext
       self.titleDescription.font = UIFont.systemFont(ofSize: 16.0, weight: .light)
       self.titleDescription.numberOfLines = 0
       self.titleDescription.lineBreakMode = .byWordWrapping
