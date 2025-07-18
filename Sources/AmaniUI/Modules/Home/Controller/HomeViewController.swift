@@ -151,6 +151,7 @@ class HomeViewController: BaseViewController {
         if let stepModel = stepConfig.first(where: { $0.id == ruleModel.id }) {
           guard let rulemodelStatus:String = ruleModel.status else {return}
           guard let status:DocumentStatus = DocumentStatus(rawValue: rulemodelStatus) else {return}
+        
           if let stepModels = stepModels?.first(where: {$0.id == ruleModel.id}){
             stepModels.updateStatus(status: status)
           }
@@ -188,8 +189,12 @@ extension HomeViewController {
   func setCustomerInfo(model: CustomerResponseModel) {
     
     kycStepTblView.showKYCStep(stepModels: stepModels!, onSelectCallback: { [weak self] kycStepTblViewModel in
+      DispatchQueue.main.async {
+        self?.kycStepTblView.updateStatus(for: kycStepTblViewModel!, status: .PROCESSING)
+      }
+        
       
-      self?.kycStepTblView.updateStatus(for: kycStepTblViewModel!, status: .PROCESSING)
+      
       kycStepTblViewModel!.upload { (result,args) in
         
 //        if result == true {
@@ -257,22 +262,26 @@ extension HomeViewController {
     // CHECK RULES AND OPEN SUCCESS SCREEN
     // Reload customer when upload is complete
 //    print("on stepmodel \(AmaniUI.sharedInstance.rulesKYC)")
-
-    if viewAppeared{
-      guard let kycStepTblView = kycStepTblView else {return}
-//      guard let rules = rules else {
-//        return
-//      }
-//      print(AmaniUI.sharedInstance.rulesKYC)
-      guard let stepModelleri =  try? self.generateKYCStepViewModels(from:  AmaniUI.sharedInstance.rulesKYC) else {return}
-
-      DispatchQueue.main.async {
+    DispatchQueue.main.async {
+      if self.viewAppeared{
+        
+        guard let kycStepTblView = self.kycStepTblView else {return}
+          //      guard let rules = rules else {
+          //        return
+          //      }
+          //      print(AmaniUI.sharedInstance.rulesKYC)
+        guard let stepModelleri =  try? self.generateKYCStepViewModels(from:  AmaniUI.sharedInstance.rulesKYC) else {return}
+        
+        
         self.kycStepTblView.updateDataAndReload(stepModels: stepModelleri)
-
+        
+        
+        self.goToSuccess()
+        
       }
-      goToSuccess()
-
     }
+ 
+    
   }
   
 }
