@@ -62,8 +62,10 @@ class QuestionViewCell: UITableViewCell {
     selectionStyle = .none
     
     if question.answerType == "text"{
-      configureTextInput(question: question, selectedAnswers: selectedAnswers)
-    }else{
+      configureTextInput(question: question, selectedAnswers: selectedAnswers, answerTypeIsNumber: false)
+    }else if question.answerType == "number" {
+      configureTextInput(question: question, selectedAnswers: selectedAnswers, answerTypeIsNumber: true)
+    } else {
       if question.answers.count > 1 {
         configureDropDown(question: question, selectedAnswers: selectedAnswers)
       } else {
@@ -72,9 +74,11 @@ class QuestionViewCell: UITableViewCell {
     }
   }
   
-  func configureTextInput(question: QuestionModel, selectedAnswers: QuestionAnswerRequestModel? = nil) {
+  func configureTextInput(question: QuestionModel, selectedAnswers: QuestionAnswerRequestModel? = nil, answerTypeIsNumber: Bool = false) {
     if textInputView == nil {
       textInputView = QuestionTextInputView()
+      
+      textInputView!.answerTypeIsNumber = answerTypeIsNumber
       textInputView!.translatesAutoresizingMaskIntoConstraints = false
       
       if let textAnswer = selectedAnswers?.typedAnswer {
@@ -168,6 +172,11 @@ class QuestionViewCell: UITableViewCell {
 
 class QuestionTextInputView: UIView {
   private var textChangedCallback: ((String) -> Void)?
+  var answerTypeIsNumber: Bool = false {
+    didSet {
+      setKeyboardType()
+    }
+  }
   
   private lazy var textField: UITextField = {
     let field = UITextField()
@@ -198,7 +207,15 @@ class QuestionTextInputView: UIView {
       textField.bottomAnchor.constraint(equalTo: bottomAnchor),
       textField.heightAnchor.constraint(equalToConstant: 44)
     ])
+    enableDoneButton()
   }
+  private func setKeyboardType() {
+    textField.keyboardType = answerTypeIsNumber ? .numberPad : .default
+    if textField.isFirstResponder {
+      textField.reloadInputViews()
+    }
+  }
+
   
   func bind(_ callback: @escaping (String) -> Void) {
     textChangedCallback = callback
@@ -210,6 +227,20 @@ class QuestionTextInputView: UIView {
   
   @objc private func textFieldDidChange() {
     textChangedCallback?(textField.text ?? "")
+  }
+  
+  private func enableDoneButton() {
+    let tb = UIToolbar()
+    tb.sizeToFit()
+    tb.items = [
+      UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil),
+      UIBarButtonItem(barButtonSystemItem: .done, target: self, action: #selector(doneTapped))
+    ]
+    textField.inputAccessoryView = tb
+  }
+  
+  @objc private func doneTapped() {
+    textField.resignFirstResponder()
   }
 }
 
