@@ -36,6 +36,7 @@
 		48DF761029699A8F000D519A /* ContainerViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48DF760F29699A8F000D519A /* ContainerViewController.swift */; };
 		48E081172C7F662400EAD39B /* AnimationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48E081152C7F662400EAD39B /* AnimationView.swift */; };
 		48EAA84E29E37C9B001A2A35 /* SignatureViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48B90A0129A2656100508E63 /* SignatureViewController.swift */; };
+		48F461D52E5DC4EA0066297B /* QuestionTextInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48F461D42E5DC4EA0066297B /* QuestionTextInputView.swift */; };
 		C523DEF72B3A740B00F68E32 /* CheckSMSViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C523DEF62B3A740B00F68E32 /* CheckSMSViewController.swift */; };
 		C523DEFA2B3A745F00F68E32 /* CheckSMSView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C523DEF92B3A745F00F68E32 /* CheckSMSView.swift */; };
 		C523DEFD2B3A747100F68E32 /* CheckSMSViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C523DEFC2B3A747100F68E32 /* CheckSMSViewModel.swift */; };
@@ -125,6 +126,7 @@
 		48B90A0329A278E700508E63 /* SignatureHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignatureHandler.swift; sourceTree = "<group>"; };
 		48DF760F29699A8F000D519A /* ContainerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerViewController.swift; sourceTree = "<group>"; };
 		48E081152C7F662400EAD39B /* AnimationView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnimationView.swift; sourceTree = "<group>"; };
+		48F461D42E5DC4EA0066297B /* QuestionTextInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionTextInputView.swift; sourceTree = "<group>"; };
 		C523DEF62B3A740B00F68E32 /* CheckSMSViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckSMSViewController.swift; sourceTree = "<group>"; };
 		C523DEF92B3A745F00F68E32 /* CheckSMSView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckSMSView.swift; sourceTree = "<group>"; };
 		C523DEFC2B3A747100F68E32 /* CheckSMSViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckSMSViewModel.swift; sourceTree = "<group>"; };
@@ -518,6 +520,7 @@
 			isa = PBXGroup;
 			children = (
 				C56169362B84CD8400050A8D /* QuestionView.swift */,
+				48F461D42E5DC4EA0066297B /* QuestionTextInputView.swift */,
 				C56169372B84CD8400050A8D /* QuestionSubmitButton.swift */,
 				C56169382B84CD8400050A8D /* QuestionDropdownView.swift */,
 				C56169392B84CD8400050A8D /* SingleAnswerButton.swift */,
@@ -846,6 +849,7 @@
 				C5A4506C2B3A33820064AAA7 /* PhoneOTPViewController.swift in Sources */,
 				185A2BF82BBD64AE00855F77 /* UIStackView+Extension.swift in Sources */,
 				C5A06F7429127C55009520AF /* BaseDocumentHandler.swift in Sources */,
+				48F461D52E5DC4EA0066297B /* QuestionTextInputView.swift in Sources */,
 				48DF761029699A8F000D519A /* ContainerViewController.swift in Sources */,
 				C561693E2B84CD8400050A8D /* QuestionnaireViewModel.swift in Sources */,
 				C53C475528C8D9C800FA10B6 /* UtilityModels.swift in Sources */,
