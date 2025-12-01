@@ -77,8 +77,8 @@ class IdHandler: DocumentHandler {
 
     public func start(docStep: DocumentStepModel, version: DocumentVersion, workingStepIndex: Int = 0, completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void) {
       idCaptureModule.setType(type: version.type!)
-      idCaptureModule.setVideoRecording(enabled: AmaniUI.sharedInstance.idVideoRecord)
-      idCaptureModule.setIdHologramDetection(enabled:AmaniUI.sharedInstance.idHologramDetection)
+      idCaptureModule.setVideoRecording(enabled: AmaniUI.sharedInstance.idVideoRecord ?? false)
+      idCaptureModule.setIdHologramDetection(enabled:AmaniUI.sharedInstance.idHologramDetection ?? false)
       idCaptureModule.setClientSideMRZ(enabled: AmaniUI.sharedInstance.isEnabledClientSideMrz)
         var workingStep = workingStepIndex
       

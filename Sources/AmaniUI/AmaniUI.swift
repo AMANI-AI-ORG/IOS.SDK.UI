@@ -53,9 +53,9 @@ public class AmaniUI {
   public var nviData: NviModel? = nil
   public var location: CLLocation? = nil
   
-  public var idVideoRecord:Bool = false
-  public var idHologramDetection:Bool = false
-  public var poseEstimationRecord:Bool = false
+  public var idVideoRecord:Bool? = nil
+  public var idHologramDetection:Bool? = nil
+  public var poseEstimationRecord:Bool? = nil
   public var isEnabledClientSideMrz: Bool = false
   
   /**
@@ -224,6 +224,46 @@ public class AmaniUI {
 
           }
 #endif
+          
+          //Setting here features from config model.
+          let allSteps: [DocumentModel] = result.stepConfig?
+            .compactMap { $0.documents }
+            .flatMap { $0 } ?? []
+          
+          let idDocumentStep: DocumentModel? = allSteps.first { $0.id == "ID" }
+          let selfieDocumentStep: DocumentModel? = allSteps.first { $0.id == "SE" }
+          
+          
+          if self!.idVideoRecord == nil {
+            for idVideoRecord in idDocumentStep?.versions ?? [] {
+              if let isRecordActive = idVideoRecord.recordVideo {
+                self?.idVideoRecord = isRecordActive
+                
+              }
+              
+            }
+            
+          }
+          
+          if self!.idHologramDetection == nil {
+            for idhologram in idDocumentStep?.versions ?? [] {
+              if let isHoloActive = idhologram.hologramDetection {
+                self?.idHologramDetection = idhologram.hologramDetection
+                
+              }
+              
+            }
+          }
+          
+          if self!.poseEstimationRecord == nil {
+            
+            for poseRecord in selfieDocumentStep?.versions ?? [] {
+              if let isRecordActive = poseRecord.recordVideo {
+                self?.poseEstimationRecord = poseRecord.recordVideo
+              }
+              
+            }
+          }
           
           
           if let customerResponseModel = customerModel {

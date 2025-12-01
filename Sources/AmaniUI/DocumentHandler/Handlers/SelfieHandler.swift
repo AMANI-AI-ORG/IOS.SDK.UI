@@ -213,7 +213,7 @@ class SelfieHandler: DocumentHandler {
       
       currentSelfieModule.setInfoMessages(infoMessages: infoMessages)
       currentSelfieModule.setScreenConfig(screenConfig: screenConfig)
-      currentSelfieModule.setVideoRecording(enabled: AmaniUI.sharedInstance.poseEstimationRecord)
+      currentSelfieModule.setVideoRecording(enabled: AmaniUI.sharedInstance.poseEstimationRecord ?? false)
       
       stepView = try currentSelfieModule.start{ [weak self]  image in
         self?.stepView?.removeFromSuperview()
