@@ -34,6 +34,13 @@ class DocConfirmationViewController: BaseViewController {
   private var documentStep: DocumentStepModel?
   private var mrzDocumentId: String?
   private var confirmClicked:Bool = false
+  
+  private var isLastStepOfDocument: Bool {
+    guard let totalStep = documentVersion?.steps?.count else { return false }
+    guard totalStep > 0 else { return false }
+    
+    return stepid >= totalStep - 1
+  }
     
   let appConfig = try? Amani.sharedInstance.appConfig().getApplicationConfig()
   
@@ -316,8 +323,7 @@ class DocConfirmationViewController: BaseViewController {
           confirmClicked = true
           if documentVersion?.nfc ?? false{
 
-            if (documentID == DocumentID.ID && stepid == steps.back.rawValue) ||
-                (documentID == DocumentID.PA && stepid == steps.front.rawValue )  {
+            if isLastStepOfDocument {
               checkMRZ()
             } else {
               if let confirmCallback = confirmCallback {
