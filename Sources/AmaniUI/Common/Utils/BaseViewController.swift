@@ -20,9 +20,13 @@ class BaseViewController: UIViewController {
     var navbarRightButtonAction:(() -> Void)? = nil
     var navbarLeftButtonAction: (() -> Void)? = nil
     
-    override open var shouldAutorotate: Bool {
-        return true
-    }
+  override open var shouldAutorotate: Bool {
+    return true
+  }
+  
+  override open var supportedInterfaceOrientations: UIInterfaceOrientationMask {
+    return .portrait
+  }
     
     //  override open var supportedInterfaceOrientations: UIInterfaceOrientationMask {
     //    return orientation

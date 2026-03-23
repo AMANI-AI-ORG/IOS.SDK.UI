@@ -33,11 +33,11 @@ class KYCStepViewModel {
   
   init(from stepConfig: StepConfig, initialRule: KYCRuleModel, topController onVC: UIViewController?) {
     self.stepConfig = stepConfig
-    id = initialRule.id!
-    title = stepConfig.buttonText?.notUploaded ?? stepConfig.title!
+    id = initialRule.id ?? ""
+    title = stepConfig.buttonText?.notUploaded ?? stepConfig.title ?? ""
       
-    if stepConfig.documents?.count ?? 0 > 1 {
-          title = stepConfig.buttonText?.notUploaded ?? stepConfig.title!
+    if (stepConfig.documents?.count ?? 0) > 1 {
+          title = stepConfig.buttonText?.notUploaded ?? stepConfig.title ?? ""
     }
       
     mandatoryStepIDs = stepConfig.mandatoryStepIDs ?? []
@@ -48,7 +48,7 @@ class KYCStepViewModel {
     rule = initialRule
     self.identifier = stepConfig.identifier
     
-    let (buttonColor, textColor) = getColorsForStatus(status: DocumentStatus(rawValue: initialRule.status!)!, stepConfig: stepConfig)
+    let (buttonColor, textColor) = getColorsForStatus(status: DocumentStatus(rawValue: initialRule.status ?? "NOT_UPLOADED")!, stepConfig: stepConfig)
     self.buttonColor = buttonColor
     self.textColor = textColor
     
@@ -56,7 +56,7 @@ class KYCStepViewModel {
     self.documentSelectionDescription = stepConfig.documentSelectionDescription ?? ""
     
     topViewController = onVC
-    documents = stepConfig.documents!
+    documents = stepConfig.documents ?? []
     
     // ??
     if (documents.count == 1) {

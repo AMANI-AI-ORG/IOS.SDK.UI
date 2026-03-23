@@ -73,6 +73,8 @@ class NonKYCStepManager {
       startProfileInfo()
     case .questionnaire:
       startQuestionnaire()
+    case .termsAndConditions:
+      startTermsAndConditions()
     }
 
   }
@@ -149,6 +151,18 @@ class NonKYCStepManager {
     }
   }
   
+  private func startTermsAndConditions() {
+    DispatchQueue.main.async {
+      let tcVC = TermsAndConditionsViewController()
+      tcVC.bind(stepVM: self.currentStep)
+      tcVC.setCompletionHandler { [weak self] in
+        self?.stepCompleted()
+      }
+      self.currentStepViewController = tcVC
+      self.navigate(to: self.currentStepViewController!)
+    }
+  }
+  
   private func stepCompleted() {
     if steps.isEmpty {
       completionHandler()
@@ -178,8 +192,22 @@ class NonKYCStepManager {
       return
     }
     
-    let sorted = allStepModels.sorted { $0.sortOrder < $1.sortOrder }
+    var sorted = allStepModels.sorted { $0.sortOrder < $1.sortOrder }
     
+    // Inject T&C if active and not already accepted
+    let appConfig = try? Amani.sharedInstance.appConfig().getApplicationConfig()
+    if appConfig?.generalconfigs?.showTermsAndConditions == true && customer.termsAcceptedAt == nil {
+        // Create a dummy config/rule for T&C if it doesn't exist in rules
+        if !sorted.contains(where: { $0.identifier == AppConstants.StepsBeforeKYC.termsAndConditions.rawValue }) {
+            var tcStepConfig = StepConfig(id: "TC", sortOrder: -1, identifier: AppConstants.StepsBeforeKYC.termsAndConditions.rawValue)
+            tcStepConfig.title = "Terms and Conditions"
+            tcStepConfig.documents = []
+            let tcRule = KYCRuleModel(id: "TC", sortOrder: -1, status: DocumentStatus.NOT_UPLOADED.rawValue)
+            let tcStepVM = KYCStepViewModel(from: tcStepConfig, initialRule: tcRule, topController: customerVC)
+            sorted.insert(tcStepVM, at: 0)
+        }
+    }
+
     let firstKYCIndex = sorted.firstIndex(where: { return $0.identifier == "kyc"  })
     let lastKYCIndex = sorted.lastIndex(where: { $0.identifier == "kyc" })
     

@@ -28,6 +28,7 @@ enum AppConstants {
     case emailOTP = "email_otp"
     case profileInfo = "profile_info"
     case questionnaire = "questionnaire"
+    case termsAndConditions = "terms_and_conditions"
   }
   
 }
