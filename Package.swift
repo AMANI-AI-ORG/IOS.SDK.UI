@@ -24,8 +24,7 @@ let package = Package(
         ),
         .package(
             name: "AmaniRepo",
-            url: "https://github.com/AmaniTechnologiesLtd/Mobile_SDK_Repo.git",
-            .branch("main")
+            path: "/Users/yyerdogmus/Documents/GitHub/IOS_SDK_V2" 
         )
     ],
     targets: [

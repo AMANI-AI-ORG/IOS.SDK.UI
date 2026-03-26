@@ -25,6 +25,8 @@ class ContainerViewController: BaseViewController {
   private var lottieAnimationView:LottieAnimationView?
   private var step:steps = .front
   private var isDissapeared = false
+  private var selfieInstructionSteps: [(animation: String, text: String)] = []
+  private var currentSelfieStepIndex = 0
   
   var stepConfig: StepConfig?
   var docID: DocumentID?
@@ -61,7 +63,11 @@ class ContainerViewController: BaseViewController {
       
       isDissapeared = false
 
-    if let animationName = animationName {
+    if docID?.getDocumentType() == "SE" && !selfieInstructionSteps.isEmpty {
+      currentSelfieStepIndex = 0
+      self.setConstraints()
+      playCurrentSelfieInstruction()
+    } else if let animationName = animationName {
       var side:String = "front"
       switch step {
       case .front:
@@ -155,11 +161,42 @@ extension ContainerViewController {
       
       self.btnContinue.translatesAutoresizingMaskIntoConstraints = false
       self.titleDescription.translatesAutoresizingMaskIntoConstraints = false
-      var titleDescriptiontext = "Click continue to take a photo within the specified area"
-      if let document = stepConfig?.documents?.first(where: {$0.id == docID!.getDocumentType() && $0.versions!.count>0}){
-        titleDescriptiontext = document.versions?[0].informationScreenDesc1 ?? "\(document.versions?[0].steps?[0].captureDescription ?? "Click continue to take a photo within the specified area" )"
+      
+      if docID?.getDocumentType() == "SE" {
+        let defaultDesc1 = "Doğrulamaya başlamak için, yüzünü alanın içinde tut"
+        let defaultDesc2 = "Güneş gözlüğü, şapka veya maske takmadığına emin ol"
+
+        if let document = stepConfig?.documents?.first(where: {$0.id == docID!.getDocumentType() && $0.versions!.count>0}) {
+          let v = document.versions?[0]
+          let selfieType = v?.selfieType ?? -1
+          
+          if selfieType > 0 {
+            // Pose Estimation: 2 animations
+            selfieInstructionSteps = [
+              ("xxx_se_0_front", v?.informationScreenDesc1 ?? defaultDesc1),
+              ("animation_second_selfie_instruction", v?.informationScreenDesc2 ?? defaultDesc2)
+            ]
+          } else {
+            // Manual or Auto: 1 animation
+            selfieInstructionSteps = [
+              ("xxx_se_0_front", v?.informationScreenDesc1 ?? defaultDesc1)
+            ]
+          }
+        } else {
+          // Fallback to 1 step if config is completely missing
+          selfieInstructionSteps = [
+            ("xxx_se_0_front", defaultDesc1)
+          ]
+        }
+        self.titleDescription.text = selfieInstructionSteps[0].text
+      } else {
+        var titleDescriptiontext = "Click continue to take a photo within the specified area"
+        if let document = stepConfig?.documents?.first(where: {$0.id == docID!.getDocumentType() && $0.versions!.count>0}){
+          titleDescriptiontext = document.versions?[0].informationScreenDesc1 ?? "\(document.versions?[0].steps?[0].captureDescription ?? "Click continue to take a photo within the specified area" )"
+        }
+        self.titleDescription.text = titleDescriptiontext
       }
-      self.titleDescription.text = titleDescriptiontext
+      
       self.titleDescription.font = UIFont.systemFont(ofSize: 16.0, weight: .light)
       self.titleDescription.numberOfLines = 0
       self.titleDescription.lineBreakMode = .byWordWrapping
@@ -206,6 +243,30 @@ extension ContainerViewController {
   //
     }
   
+  private func playCurrentSelfieInstruction() {
+      guard currentSelfieStepIndex < selfieInstructionSteps.count else {
+          // Finished all steps
+          lottieAnimationView?.removeFromSuperview()
+          self.callback?()
+          return
+      }
+      
+      let stepData = selfieInstructionSteps[currentSelfieStepIndex]
+      self.titleDescription.text = stepData.text
+      
+      let name = stepData.animation
+      
+      self.lottieAnimationView?.removeFromSuperview()
+      
+      DispatchQueue.main.async {
+          self.lottieInit(name: name) { [weak self] _ in
+              if self?.isDissapeared == true { return }
+              self?.currentSelfieStepIndex += 1
+              self?.playCurrentSelfieInstruction()
+          }
+      }
+  }
+
   private func lottieInit(name: String, completion: @escaping (_ finishedAnimation: Int) -> ()) {
 //    var animation = LottieAnimation.named(name, bundle: AmaniUI.sharedInstance.getBundle())
     
