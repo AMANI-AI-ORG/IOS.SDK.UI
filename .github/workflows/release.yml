@@ -1,0 +1,348 @@
+name: Release Pipeline
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. 1.4.0)'
+        required: true
+        type: string
+      release_notes:
+        description: |
+          Release notes — one item per line.
+          Prefix keywords (case-insensitive) auto-badge:
+            fix / fixed / fixes  →  Fix 🐛
+            feature              →  Feature ✨
+            improvement          →  Improvement 🛠️
+            update / updated     →  Update 🔄
+            change / changed     →  Change ♻️
+        required: true
+        type: string
+      dry_run:
+        description: 'Dry run — run tests only, skip tag/version bump/release'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  XCODE_PROJECT: 'Sources/AmaniUI.xcodeproj'
+  XCODE_SCHEME: 'AmaniUI'
+  XCODE_DESTINATION: 'platform=iOS Simulator,name=iPhone 16,OS=latest'
+
+  VERSION_BUMP_FILE: 'AmaniUI.podspec'
+
+jobs:
+  unit-tests:
+    name: Unit Tests
+    runs-on: macos-latest
+
+    outputs:
+      unit_test_target: ${{ steps.detect_targets.outputs.unit_test_target }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Resolve package dependencies
+        run: xcodebuild -resolvePackageDependencies -project "${XCODE_PROJECT}"
+
+      - name: Detect unit test target
+        id: detect_targets
+        shell: bash
+        run: |
+          TARGET=$(
+            grep -Eo 'name = [^;]*Tests;' "${XCODE_PROJECT}/project.pbxproj" \
+            | grep -v 'UITests' \
+            | head -1 \
+            | sed 's/name = //; s/;$//'
+          )
+
+          echo "Detected unit test target: ${TARGET}"
+
+          {
+            echo "unit_test_target=${TARGET}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Run unit tests
+        shell: bash
+        run: |
+          set -eo pipefail
+          mkdir -p build
+
+          EXTRA_ARGS=()
+          if [ -n "${{ steps.detect_targets.outputs.unit_test_target }}" ]; then
+            EXTRA_ARGS+=("-only-testing:${{ steps.detect_targets.outputs.unit_test_target }}")
+          else
+            echo "::notice title=Unit test target not found::Ayrı bir unit test target tespit edilemedi. Scheme içindeki testler çalıştırılacak."
+          fi
+
+          xcodebuild \
+            -project "${XCODE_PROJECT}" \
+            -scheme "${XCODE_SCHEME}" \
+            -destination "${XCODE_DESTINATION}" \
+            -resultBundlePath build/UnitTests.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            "${EXTRA_ARGS[@]}" \
+            test \
+            | tee build/unit-tests.log
+
+      - name: Write unit test summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Unit Tests summary"
+            echo ""
+            echo "- Project: \`${XCODE_PROJECT}\`"
+            echo "- Scheme: \`${XCODE_SCHEME}\`"
+            echo "- Destination: \`${XCODE_DESTINATION}\`"
+            echo "- Detected Unit Test Target: \`${{ steps.detect_targets.outputs.unit_test_target || 'Not detected' }}\`"
+            echo "- Result Bundle: \`build/UnitTests.xcresult\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload unit-test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: |
+            build/UnitTests.xcresult
+            build/unit-tests.log
+
+  ios-simulator-tests:
+    name: iOS Simulator Tests
+    needs: unit-tests
+    runs-on: macos-latest
+
+    outputs:
+      ui_test_target: ${{ steps.detect_ui.outputs.ui_test_target }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Resolve package dependencies
+        run: xcodebuild -resolvePackageDependencies -project "${XCODE_PROJECT}"
+
+      - name: Detect UI test target
+        id: detect_ui
+        shell: bash
+        run: |
+          TARGET=$(
+            grep -Eo 'name = [^;]*UITests;' "${XCODE_PROJECT}/project.pbxproj" \
+            | head -1 \
+            | sed 's/name = //; s/;$//'
+          )
+
+          echo "Detected UI test target: ${TARGET}"
+
+          {
+            echo "ui_test_target=${TARGET}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: UI test target not found
+        if: ${{ steps.detect_ui.outputs.ui_test_target == '' }}
+        run: |
+          echo "::notice title=UI test target not found::UITests target bulunamadı. Bu job parity için pass edildi."
+
+      - name: Run iOS simulator tests
+        if: ${{ steps.detect_ui.outputs.ui_test_target != '' }}
+        shell: bash
+        run: |
+          set -eo pipefail
+          mkdir -p build
+
+          xcodebuild \
+            -project "${XCODE_PROJECT}" \
+            -scheme "${XCODE_SCHEME}" \
+            -destination "${XCODE_DESTINATION}" \
+            -resultBundlePath build/SimulatorTests.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            -only-testing:"${{ steps.detect_ui.outputs.ui_test_target }}" \
+            test \
+            | tee build/simulator-tests.log
+
+      - name: Write simulator test summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## iOS Simulator Tests summary"
+            echo ""
+            echo "- Project: \`${XCODE_PROJECT}\`"
+            echo "- Scheme: \`${XCODE_SCHEME}\`"
+            echo "- Destination: \`${XCODE_DESTINATION}\`"
+            echo "- Detected UI Test Target: \`${{ steps.detect_ui.outputs.ui_test_target || 'Not detected' }}\`"
+            echo "- Result Bundle: \`build/SimulatorTests.xcresult\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload simulator-test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-test-results
+          path: |
+            build/SimulatorTests.xcresult
+            build/simulator-tests.log
+
+  release:
+    name: Tag & Publish Release
+    needs: ios-simulator-tests
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout (full history)
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Dry-run notice
+        if: ${{ inputs.dry_run == true }}
+        run: |
+          echo "::notice title=Dry Run::Tests passed ✅ Tag, version bump and GitHub Release were skipped."
+
+      - name: Verify version bump file exists
+        if: ${{ inputs.dry_run != true }}
+        shell: bash
+        run: |
+          if [ ! -f "${VERSION_BUMP_FILE}" ]; then
+            echo "::error file=${VERSION_BUMP_FILE}::Version bump file not found."
+            exit 1
+          fi
+
+      - name: Bump library version to ${{ inputs.version }}
+        if: ${{ inputs.dry_run != true }}
+        shell: bash
+        env:
+          NEW_VERSION: ${{ inputs.version }}
+        run: |
+          python3 - <<'PY'
+          import os
+          import pathlib
+          import re
+          import sys
+
+          path = pathlib.Path(os.environ["VERSION_BUMP_FILE"])
+          version = os.environ["NEW_VERSION"]
+
+          text = path.read_text()
+
+          patterns = [
+              r'((?:s\.)?version\s*=\s*["\'])[^"\']+(["\'])',   # podspec / ruby style
+              r'((?:MARKETING_VERSION\s*=\s*))[^;]+(;)',        # pbxproj style
+          ]
+
+          updated = text
+          replaced = False
+
+          for pattern in patterns:
+              new_text, count = re.subn(pattern, rf'\g<1>{version}\g<2>', updated, count=1)
+              if count > 0:
+                  updated = new_text
+                  replaced = True
+                  break
+
+          if not replaced:
+              print(f"::error file={path}::Supported version pattern not found")
+              sys.exit(1)
+
+          path.write_text(updated)
+          print(f"Updated {path} to version {version}")
+          PY
+
+      - name: Commit version bump
+        if: ${{ inputs.dry_run != true }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add "${VERSION_BUMP_FILE}"
+
+          if git diff --cached --quiet; then
+            echo "::error::No version change detected."
+            exit 1
+          fi
+
+          git commit -m "chore(release): bump version to ${{ inputs.version }}"
+          git push
+
+      - name: Create tag v${{ inputs.version }}
+        if: ${{ inputs.dry_run != true }}
+        run: |
+          if git rev-parse "v${{ inputs.version }}" >/dev/null 2>&1; then
+            echo "::error::Tag v${{ inputs.version }} already exists."
+            exit 1
+          fi
+
+          git tag "v${{ inputs.version }}"
+          git push origin "v${{ inputs.version }}"
+
+      - name: Process release notes → badges
+        if: ${{ inputs.dry_run != true }}
+        id: notes
+        shell: python3 {0}
+        env:
+          RAW_NOTES: ${{ inputs.release_notes }}
+        run: |
+          import os
+          import re
+
+          raw = os.environ.get("RAW_NOTES", "")
+
+          BADGES = [
+              (r"\bfix(?:es|ed)?\b",    "![Fix](https://img.shields.io/badge/Fix-🐛-e74c3c)"),
+              (r"\bfeature\b",          "![Feature](https://img.shields.io/badge/Feature-✨-8c730d)"),
+              (r"\bimprovement\b",      "![Improvement](https://img.shields.io/badge/Improvement-🛠️-8e44ad)"),
+              (r"\bupdate[sd]?\b",      "![Update](https://img.shields.io/badge/Update-🔄-2980b9)"),
+              (r"\bchange[sd]?\b",      "![Change](https://img.shields.io/badge/Change-♻️-136634)"),
+          ]
+
+          lines = raw.strip().splitlines()
+          decorated = []
+
+          for line in lines:
+              line = line.strip().lstrip("*-• ").strip()
+              if not line:
+                  continue
+
+              badge = ""
+              for pattern, token in BADGES:
+                  if re.search(pattern, line, re.IGNORECASE):
+                      badge = token + " "
+                      break
+
+              decorated.append(f"* {badge}{line}")
+
+          body = "\n".join(decorated)
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
+              fh.write("body<<__DELIMITER__\n")
+              fh.write(body + "\n")
+              fh.write("__DELIMITER__\n")
+
+      - name: Create GitHub Release
+        if: ${{ inputs.dry_run != true }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ inputs.version }}
+          name: v${{ inputs.version }}
+          body: |
+            ## What's Changed?
+            ${{ steps.notes.outputs.body }}
+            ---
+            **Full Changelog**: ${{ github.server_url }}/${{ github.repository }}/compare/v${{ inputs.version }}...HEAD
+          draft: false
+          prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+
