@@ -46,12 +46,40 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Select Xcode 16
+        shell: bash
+        run: |
+          XCODE_PATH=$(ls /Applications/ | grep "^Xcode_16" | sort -V | tail -1)
+          if [ -n "$XCODE_PATH" ]; then
+            sudo xcode-select -s "/Applications/${XCODE_PATH}"
+            echo "Selected: /Applications/${XCODE_PATH}"
+          else
+            echo "Xcode 16 not found, using default: $(xcode-select -p)"
+          fi
+          xcodebuild -version
+          swift --version
+
       - name: Print toolchain info
+        shell: bash
         run: |
           sw_vers
           uname -m
+          xcode-select -p
           xcodebuild -version
           swift --version
+
+      - name: List available simulators
+        shell: bash
+        run: |
+          xcrun simctl list devices available || true
+
+      - name: Show test destinations
+        shell: bash
+        run: |
+          xcodebuild \
+            -project "${XCODE_PROJECT}" \
+            -scheme "${UNIT_TEST_SCHEME}" \
+            -showdestinations || true
 
       - name: Cache SwiftPM dependencies
         uses: actions/cache@v4
@@ -62,6 +90,7 @@ jobs:
             ${{ runner.os }}-spm-
 
       - name: Resolve package dependencies
+        shell: bash
         run: |
           mkdir -p "${SPM_CACHE_DIR}"
           xcodebuild \
@@ -85,29 +114,44 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             test \
-            | tee build/unit-tests.log
+            2>&1 | tee build/unit-tests.log
 
-      - name: Print Swift compiler errors
+      - name: Print failure diagnostics
         if: failure()
         shell: bash
         run: |
           echo "---- error lines ----"
-          grep -n "error:" build/unit-tests.log || true
-          echo "---- warning lines ----"
-          grep -n "warning:" build/unit-tests.log || true
-          echo "---- NonKYCStepManager references ----"
-          grep -n "NonKYCStepManager.swift" build/unit-tests.log || true
-          echo "---- Last 250 log lines ----"
-          tail -n 250 build/unit-tests.log || true
+          grep -nE "error:|fatal error:" build/unit-tests.log || true
+
+          echo "---- note lines ----"
+          grep -n "note:" build/unit-tests.log || true
+
+          echo "---- test failure lines ----"
+          grep -nE "Test Case '-\\[|\\*\\* TEST FAILED \\*\\*|Assertion|failed \\(" build/unit-tests.log || true
+
+          echo "---- AmaniUnitTests references ----"
+          grep -n "AmaniUnitTests.swift" build/unit-tests.log || true
+
+          echo "---- AmaniUI target references ----"
+          grep -n "in target 'AmaniUI'" build/unit-tests.log || true
+
+          echo "---- xcresult json extract ----"
+          xcrun xcresulttool get --path build/UnitTests.xcresult --format json > build/xcresult.json || true
+          grep -nE '"message"|error:|warning:' build/xcresult.json | head -200 || true
+
+          echo "---- Last 300 log lines ----"
+          tail -n 300 build/unit-tests.log || true
 
       - name: Upload unit-test results
         if: ${{ always() && env.LOCAL_ACT != 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: unit-test-results
+          if-no-files-found: warn
           path: |
             build/UnitTests.xcresult
             build/unit-tests.log
+            build/xcresult.json
 
   version-bump:
     name: Verify/Bump Version in AmaniUI.podspec & Push Commit
