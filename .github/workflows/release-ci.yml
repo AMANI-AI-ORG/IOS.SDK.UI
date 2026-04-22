@@ -7,9 +7,11 @@ on:
 
 env:
   XCODE_PROJECT: 'Sources/AmaniUI.xcodeproj'
-  XCODE_SCHEME: 'AmaniUI'
+  UNIT_TEST_SCHEME: 'AmaniUnitTests'
   XCODE_DESTINATION: 'platform=iOS Simulator,name=iPhone 16,OS=latest'
   VERSION_BUMP_FILE: 'AmaniUI.podspec'
+  SPM_CACHE_DIR: '.spm-cache'
+  LOCAL_ACT: 'false'
 
 jobs:
   check-release:
@@ -47,22 +49,21 @@ jobs:
       - name: Show Xcode version
         run: xcodebuild -version
 
+      - name: Cache SwiftPM dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.SPM_CACHE_DIR }}
+          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+
       - name: Resolve package dependencies
-        run: xcodebuild -resolvePackageDependencies -project "${XCODE_PROJECT}"
-
-      - name: Detect unit test target
-        id: detect_targets
-        shell: bash
         run: |
-          TARGET=$(
-            grep -Eo 'name = [^;]*Tests;' "${XCODE_PROJECT}/project.pbxproj" \
-            | grep -v 'UITests' \
-            | head -1 \
-            | sed 's/name = //; s/;$//'
-          )
-
-          echo "Detected unit test target: ${TARGET}"
-          echo "unit_test_target=${TARGET}" >> "$GITHUB_OUTPUT"
+          mkdir -p "${SPM_CACHE_DIR}"
+          xcodebuild \
+            -resolvePackageDependencies \
+            -project "${XCODE_PROJECT}" \
+            -clonedSourcePackagesDirPath "${SPM_CACHE_DIR}"
 
       - name: Run unit tests
         shell: bash
@@ -70,26 +71,20 @@ jobs:
           set -eo pipefail
           mkdir -p build
 
-          EXTRA_ARGS=()
-          if [ -n "${{ steps.detect_targets.outputs.unit_test_target }}" ]; then
-            EXTRA_ARGS+=("-only-testing:${{ steps.detect_targets.outputs.unit_test_target }}")
-          else
-            echo "::notice title=Unit test target not found::Ayrı bir unit test target tespit edilemedi. Scheme içindeki testler çalıştırılacak."
-          fi
-
           xcodebuild \
             -project "${XCODE_PROJECT}" \
-            -scheme "${XCODE_SCHEME}" \
+            -scheme "${UNIT_TEST_SCHEME}" \
             -destination "${XCODE_DESTINATION}" \
+            -clonedSourcePackagesDirPath "${SPM_CACHE_DIR}" \
+            -disableAutomaticPackageResolution \
             -resultBundlePath build/UnitTests.xcresult \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            "${EXTRA_ARGS[@]}" \
             test \
             | tee build/unit-tests.log
 
       - name: Upload unit-test results
-        if: always()
+        if: ${{ always() && env.LOCAL_ACT != 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: unit-test-results
@@ -97,70 +92,9 @@ jobs:
             build/UnitTests.xcresult
             build/unit-tests.log
 
-  ios-simulator-tests:
-    name: Run iOS Simulator Tests
-    needs: [check-release, unit-tests]
-    if: needs.check-release.outputs.is_release == 'true'
-    runs-on: macos-latest
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Show Xcode version
-        run: xcodebuild -version
-
-      - name: Resolve package dependencies
-        run: xcodebuild -resolvePackageDependencies -project "${XCODE_PROJECT}"
-
-      - name: Detect UI test target
-        id: detect_ui
-        shell: bash
-        run: |
-          TARGET=$(
-            grep -Eo 'name = [^;]*UITests;' "${XCODE_PROJECT}/project.pbxproj" \
-            | head -1 \
-            | sed 's/name = //; s/;$//'
-          )
-
-          echo "Detected UI test target: ${TARGET}"
-          echo "ui_test_target=${TARGET}" >> "$GITHUB_OUTPUT"
-
-      - name: UI test target not found
-        if: ${{ steps.detect_ui.outputs.ui_test_target == '' }}
-        run: |
-          echo "::notice title=UI test target not found::UITests target bulunamadı. Bu job parity için pass edildi."
-
-      - name: Run iOS simulator tests
-        if: ${{ steps.detect_ui.outputs.ui_test_target != '' }}
-        shell: bash
-        run: |
-          set -eo pipefail
-          mkdir -p build
-
-          xcodebuild \
-            -project "${XCODE_PROJECT}" \
-            -scheme "${XCODE_SCHEME}" \
-            -destination "${XCODE_DESTINATION}" \
-            -resultBundlePath build/SimulatorTests.xcresult \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            -only-testing:"${{ steps.detect_ui.outputs.ui_test_target }}" \
-            test \
-            | tee build/simulator-tests.log
-
-      - name: Upload simulator-test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-simulator-test-results
-          path: |
-            build/SimulatorTests.xcresult
-            build/simulator-tests.log
-
   version-bump:
     name: Verify/Bump Version in AmaniUI.podspec & Push Commit
-    needs: [check-release, ios-simulator-tests]
+    needs: [check-release, unit-tests]
     if: needs.check-release.outputs.is_release == 'true'
     runs-on: ubuntu-latest
     permissions:
@@ -192,20 +126,21 @@ jobs:
           import os
           import pathlib
           import re
-          import sys
 
           path = pathlib.Path(os.environ["VERSION_BUMP_FILE"])
           version = os.environ["VERSION"]
           text = path.read_text()
 
           pattern = r's\.version\s*=\s*["\']' + re.escape(version) + r'["\']'
+          output_path = os.environ["GITHUB_OUTPUT"]
 
-          if re.search(pattern, text):
-              print("already_bumped=true", file=open(os.environ["GITHUB_OUTPUT"], "a"))
-              print(f"✅ Version already set to {version} — skipping bump.")
-          else:
-              print("already_bumped=false", file=open(os.environ["GITHUB_OUTPUT"], "a"))
-              print(f"📝 Will bump version to {version}.")
+          with open(output_path, "a") as fh:
+              if re.search(pattern, text):
+                  fh.write("already_bumped=true\n")
+                  print(f"✅ Version already set to {version} — skipping bump.")
+              else:
+                  fh.write("already_bumped=false\n")
+                  print(f"📝 Will bump version to {version}.")
           PY
 
       - name: Bump library version to ${{ needs.check-release.outputs.version }}

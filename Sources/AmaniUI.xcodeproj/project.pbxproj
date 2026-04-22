@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 60;
+	objectVersion = 70;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -37,6 +37,7 @@
 		48E081172C7F662400EAD39B /* AnimationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48E081152C7F662400EAD39B /* AnimationView.swift */; };
 		48EAA84E29E37C9B001A2A35 /* SignatureViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48B90A0129A2656100508E63 /* SignatureViewController.swift */; };
 		48F461D52E5DC4EA0066297B /* QuestionTextInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48F461D42E5DC4EA0066297B /* QuestionTextInputView.swift */; };
+		9197F9342F990C72005C1088 /* AmaniUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C544FEE328C2303700C0B406 /* AmaniUI.framework */; };
 		C523DEF72B3A740B00F68E32 /* CheckSMSViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C523DEF62B3A740B00F68E32 /* CheckSMSViewController.swift */; };
 		C523DEFA2B3A745F00F68E32 /* CheckSMSView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C523DEF92B3A745F00F68E32 /* CheckSMSView.swift */; };
 		C523DEFD2B3A747100F68E32 /* CheckSMSViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C523DEFC2B3A747100F68E32 /* CheckSMSViewModel.swift */; };
@@ -98,6 +99,16 @@
 		C5FD514A2B39BF240057DB87 /* CheckMailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C5FD51472B39BF240057DB87 /* CheckMailViewModel.swift */; };
 /* End PBXBuildFile section */
 
+/* Begin PBXContainerItemProxy section */
+		9197F9352F990C72005C1088 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 489D406526BBE5DD0009AB39 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = C544FEE228C2303700C0B406;
+			remoteInfo = AmaniUI;
+		};
+/* End PBXContainerItemProxy section */
+
 /* Begin PBXFileReference section */
 		185A2BE52BBD64AE00855F77 /* String+Extension.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "String+Extension.swift"; sourceTree = "<group>"; };
 		185A2BE62BBD64AE00855F77 /* UIStackView+Extension.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "UIStackView+Extension.swift"; sourceTree = "<group>"; };
@@ -127,6 +138,7 @@
 		48DF760F29699A8F000D519A /* ContainerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerViewController.swift; sourceTree = "<group>"; };
 		48E081152C7F662400EAD39B /* AnimationView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnimationView.swift; sourceTree = "<group>"; };
 		48F461D42E5DC4EA0066297B /* QuestionTextInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionTextInputView.swift; sourceTree = "<group>"; };
+		9197F9302F990C72005C1088 /* AmaniUnitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AmaniUnitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C523DEF62B3A740B00F68E32 /* CheckSMSViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckSMSViewController.swift; sourceTree = "<group>"; };
 		C523DEF92B3A745F00F68E32 /* CheckSMSView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckSMSView.swift; sourceTree = "<group>"; };
 		C523DEFC2B3A747100F68E32 /* CheckSMSViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckSMSViewModel.swift; sourceTree = "<group>"; };
@@ -190,7 +202,19 @@
 		C5FD51472B39BF240057DB87 /* CheckMailViewModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CheckMailViewModel.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
+/* Begin PBXFileSystemSynchronizedRootGroup section */
+		9197F9312F990C72005C1088 /* AmaniUnitTests */ = {isa = PBXFileSystemSynchronizedRootGroup; explicitFileTypes = {}; explicitFolders = (); path = AmaniUnitTests; sourceTree = "<group>"; };
+/* End PBXFileSystemSynchronizedRootGroup section */
+
 /* Begin PBXFrameworksBuildPhase section */
+		9197F92D2F990C72005C1088 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				9197F9342F990C72005C1088 /* AmaniUI.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C544FEE028C2303700C0B406 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
@@ -248,6 +272,7 @@
 			isa = PBXGroup;
 			children = (
 				C544FEE428C2303700C0B406 /* AmaniUI */,
+				9197F9312F990C72005C1088 /* AmaniUnitTests */,
 				489D41C526BC04F80009AB39 /* Frameworks */,
 				489D406E26BBE5DD0009AB39 /* Products */,
 			);
@@ -257,6 +282,7 @@
 			isa = PBXGroup;
 			children = (
 				C544FEE328C2303700C0B406 /* AmaniUI.framework */,
+				9197F9302F990C72005C1088 /* AmaniUnitTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -709,6 +735,29 @@
 /* End PBXHeadersBuildPhase section */
 
 /* Begin PBXNativeTarget section */
+		9197F92F2F990C72005C1088 /* AmaniUnitTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 9197F9392F990C72005C1088 /* Build configuration list for PBXNativeTarget "AmaniUnitTests" */;
+			buildPhases = (
+				9197F92C2F990C72005C1088 /* Sources */,
+				9197F92D2F990C72005C1088 /* Frameworks */,
+				9197F92E2F990C72005C1088 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				9197F9362F990C72005C1088 /* PBXTargetDependency */,
+			);
+			fileSystemSynchronizedGroups = (
+				9197F9312F990C72005C1088 /* AmaniUnitTests */,
+			);
+			name = AmaniUnitTests;
+			packageProductDependencies = (
+			);
+			productName = AmaniUnitTests;
+			productReference = 9197F9302F990C72005C1088 /* AmaniUnitTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
 		C544FEE228C2303700C0B406 /* AmaniUI */ = {
 			isa = PBXNativeTarget;
 			buildConfigurationList = C544FEED28C2303700C0B406 /* Build configuration list for PBXNativeTarget "AmaniUI" */;
@@ -736,9 +785,12 @@
 		489D406526BBE5DD0009AB39 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
-				LastSwiftUpdateCheck = 1400;
+				LastSwiftUpdateCheck = 1610;
 				LastUpgradeCheck = 1250;
 				TargetAttributes = {
+					9197F92F2F990C72005C1088 = {
+						CreatedOnToolsVersion = 16.1;
+					};
 					C544FEE228C2303700C0B406 = {
 						CreatedOnToolsVersion = 13.4.1;
 						LastSwiftMigration = 1340;
@@ -764,11 +816,19 @@
 			projectRoot = "";
 			targets = (
 				C544FEE228C2303700C0B406 /* AmaniUI */,
+				9197F92F2F990C72005C1088 /* AmaniUnitTests */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
+		9197F92E2F990C72005C1088 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C544FEE128C2303700C0B406 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -781,6 +841,13 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
+		9197F92C2F990C72005C1088 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 		C544FEDF28C2303700C0B406 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
@@ -868,6 +935,14 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		9197F9362F990C72005C1088 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = C544FEE228C2303700C0B406 /* AmaniUI */;
+			targetProxy = 9197F9352F990C72005C1088 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		489D407F26BBE5DE0009AB39 /* Debug */ = {
@@ -986,6 +1061,51 @@
 			};
 			name = Release;
 		};
+		9197F9372F990C72005C1088 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 24V9HW64Y3;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = ai.amani.AmaniUnitTests.AmaniUnitTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		9197F9382F990C72005C1088 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = 24V9HW64Y3;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.1;
+				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = ai.amani.AmaniUnitTests.AmaniUnitTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
 		C544FEEB28C2303700C0B406 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -1071,6 +1191,15 @@
 			buildConfigurations = (
 				489D407F26BBE5DE0009AB39 /* Debug */,
 				489D408026BBE5DE0009AB39 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		9197F9392F990C72005C1088 /* Build configuration list for PBXNativeTarget "AmaniUnitTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				9197F9372F990C72005C1088 /* Debug */,
+				9197F9382F990C72005C1088 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;

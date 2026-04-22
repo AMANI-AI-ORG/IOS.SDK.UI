@@ -27,17 +27,16 @@ on:
 env:
   MAIN_BRANCH: 'main'
   XCODE_PROJECT: 'Sources/AmaniUI.xcodeproj'
-  XCODE_SCHEME: 'AmaniUI'
+  UNIT_TEST_SCHEME: 'AmaniUnitTests'
   XCODE_DESTINATION: 'platform=iOS Simulator,name=iPhone 16,OS=latest'
   VERSION_BUMP_FILE: 'AmaniUI.podspec'
+  SPM_CACHE_DIR: '.spm-cache'
+  LOCAL_ACT: 'false'
 
 jobs:
   unit-tests:
     name: Run Unit Tests
     runs-on: macos-latest
-
-    outputs:
-      unit_test_target: ${{ steps.detect_targets.outputs.unit_test_target }}
 
     steps:
       - name: Checkout
@@ -46,22 +45,21 @@ jobs:
       - name: Show Xcode version
         run: xcodebuild -version
 
+      - name: Cache SwiftPM dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.SPM_CACHE_DIR }}
+          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+
       - name: Resolve package dependencies
-        run: xcodebuild -resolvePackageDependencies -project "${XCODE_PROJECT}"
-
-      - name: Detect unit test target
-        id: detect_targets
-        shell: bash
         run: |
-          TARGET=$(
-            grep -Eo 'name = [^;]*Tests;' "${XCODE_PROJECT}/project.pbxproj" \
-            | grep -v 'UITests' \
-            | head -1 \
-            | sed 's/name = //; s/;$//'
-          )
-
-          echo "Detected unit test target: ${TARGET}"
-          echo "unit_test_target=${TARGET}" >> "$GITHUB_OUTPUT"
+          mkdir -p "${SPM_CACHE_DIR}"
+          xcodebuild \
+            -resolvePackageDependencies \
+            -project "${XCODE_PROJECT}" \
+            -clonedSourcePackagesDirPath "${SPM_CACHE_DIR}"
 
       - name: Run unit tests
         shell: bash
@@ -69,21 +67,15 @@ jobs:
           set -eo pipefail
           mkdir -p build
 
-          EXTRA_ARGS=()
-          if [ -n "${{ steps.detect_targets.outputs.unit_test_target }}" ]; then
-            EXTRA_ARGS+=("-only-testing:${{ steps.detect_targets.outputs.unit_test_target }}")
-          else
-            echo "::notice title=Unit test target not found::Ayrı bir unit test target tespit edilemedi. Scheme içindeki testler çalıştırılacak."
-          fi
-
           xcodebuild \
             -project "${XCODE_PROJECT}" \
-            -scheme "${XCODE_SCHEME}" \
+            -scheme "${UNIT_TEST_SCHEME}" \
             -destination "${XCODE_DESTINATION}" \
+            -clonedSourcePackagesDirPath "${SPM_CACHE_DIR}" \
+            -disableAutomaticPackageResolution \
             -resultBundlePath build/UnitTests.xcresult \
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
-            "${EXTRA_ARGS[@]}" \
             test \
             | tee build/unit-tests.log
 
@@ -95,14 +87,14 @@ jobs:
             echo "## Unit Tests summary"
             echo ""
             echo "- Project: \`${XCODE_PROJECT}\`"
-            echo "- Scheme: \`${XCODE_SCHEME}\`"
+            echo "- Unit Test Scheme: \`${UNIT_TEST_SCHEME}\`"
             echo "- Destination: \`${XCODE_DESTINATION}\`"
-            echo "- Detected Unit Test Target: \`${{ steps.detect_targets.outputs.unit_test_target || 'Not detected' }}\`"
+            echo "- SwiftPM Cache Dir: \`${SPM_CACHE_DIR}\`"
             echo "- Result Bundle: \`build/UnitTests.xcresult\`"
           } >> "$GITHUB_STEP_SUMMARY"
 
       - name: Upload unit-test results
-        if: always()
+        if: ${{ always() && env.LOCAL_ACT != 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: unit-test-results
@@ -110,86 +102,9 @@ jobs:
             build/UnitTests.xcresult
             build/unit-tests.log
 
-  ios-simulator-tests:
-    name: Run iOS Simulator Tests
-    needs: unit-tests
-    runs-on: macos-latest
-
-    outputs:
-      ui_test_target: ${{ steps.detect_ui.outputs.ui_test_target }}
-
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Show Xcode version
-        run: xcodebuild -version
-
-      - name: Resolve package dependencies
-        run: xcodebuild -resolvePackageDependencies -project "${XCODE_PROJECT}"
-
-      - name: Detect UI test target
-        id: detect_ui
-        shell: bash
-        run: |
-          TARGET=$(
-            grep -Eo 'name = [^;]*UITests;' "${XCODE_PROJECT}/project.pbxproj" \
-            | head -1 \
-            | sed 's/name = //; s/;$//'
-          )
-
-          echo "Detected UI test target: ${TARGET}"
-          echo "ui_test_target=${TARGET}" >> "$GITHUB_OUTPUT"
-
-      - name: UI test target not found
-        if: ${{ steps.detect_ui.outputs.ui_test_target == '' }}
-        run: |
-          echo "::notice title=UI test target not found::UITests target bulunamadı. Bu job parity için pass edildi."
-
-      - name: Run iOS simulator tests
-        if: ${{ steps.detect_ui.outputs.ui_test_target != '' }}
-        shell: bash
-        run: |
-          set -eo pipefail
-          mkdir -p build
-
-          xcodebuild \
-            -project "${XCODE_PROJECT}" \
-            -scheme "${XCODE_SCHEME}" \
-            -destination "${XCODE_DESTINATION}" \
-            -resultBundlePath build/SimulatorTests.xcresult \
-            CODE_SIGNING_ALLOWED=NO \
-            CODE_SIGNING_REQUIRED=NO \
-            -only-testing:"${{ steps.detect_ui.outputs.ui_test_target }}" \
-            test \
-            | tee build/simulator-tests.log
-
-      - name: Write simulator test summary
-        if: always()
-        shell: bash
-        run: |
-          {
-            echo "## iOS Simulator Tests summary"
-            echo ""
-            echo "- Project: \`${XCODE_PROJECT}\`"
-            echo "- Scheme: \`${XCODE_SCHEME}\`"
-            echo "- Destination: \`${XCODE_DESTINATION}\`"
-            echo "- Detected UI Test Target: \`${{ steps.detect_ui.outputs.ui_test_target || 'Not detected' }}\`"
-            echo "- Result Bundle: \`build/SimulatorTests.xcresult\`"
-          } >> "$GITHUB_STEP_SUMMARY"
-
-      - name: Upload simulator-test results
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ios-simulator-test-results
-          path: |
-            build/SimulatorTests.xcresult
-            build/simulator-tests.log
-
   create-release-pr:
     name: Create Release Branch, Bump Version & Open PR
-    needs: ios-simulator-tests
+    needs: unit-tests
     if: ${{ inputs.dry_run != true }}
     runs-on: ubuntu-latest
     permissions:
@@ -328,7 +243,7 @@ jobs:
 
   dry-run-notice:
     name: Dry Run — Skip Version Bump & PR
-    needs: ios-simulator-tests
+    needs: unit-tests
     if: ${{ inputs.dry_run == true }}
     runs-on: ubuntu-latest
     steps:
