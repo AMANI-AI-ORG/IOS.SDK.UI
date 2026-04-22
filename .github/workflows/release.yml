@@ -1,4 +1,4 @@
-name: Release Pipeline
+name: Start Release — Run Tests & Open Release PR
 
 on:
   workflow_dispatch:
@@ -10,30 +10,30 @@ on:
       release_notes:
         description: |
           Release notes — one item per line.
-          Prefix keywords (case-insensitive) auto-badge:
-            fix / fixed / fixes  →  Fix 🐛
-            feature              →  Feature ✨
-            improvement          →  Improvement 🛠️
-            update / updated     →  Update 🔄
-            change / changed     →  Change ♻️
+          Prefix keywords (case-insensitive) auto-badge on publish:
+            fix / fixed / fixes  →  Fix
+            feature              →  Feature
+            improvement          →  Improvement
+            update / updated     →  Update
+            change / changed     →  Change
         required: true
         type: string
       dry_run:
-        description: 'Dry run — run tests only, skip tag/version bump/release'
+        description: 'Dry run — run tests only, skip version bump & PR creation'
         required: false
         default: false
         type: boolean
 
 env:
+  MAIN_BRANCH: 'main'
   XCODE_PROJECT: 'Sources/AmaniUI.xcodeproj'
   XCODE_SCHEME: 'AmaniUI'
   XCODE_DESTINATION: 'platform=iOS Simulator,name=iPhone 16,OS=latest'
-
   VERSION_BUMP_FILE: 'AmaniUI.podspec'
 
 jobs:
   unit-tests:
-    name: Unit Tests
+    name: Run Unit Tests
     runs-on: macos-latest
 
     outputs:
@@ -61,10 +61,7 @@ jobs:
           )
 
           echo "Detected unit test target: ${TARGET}"
-
-          {
-            echo "unit_test_target=${TARGET}"
-          } >> "$GITHUB_OUTPUT"
+          echo "unit_test_target=${TARGET}" >> "$GITHUB_OUTPUT"
 
       - name: Run unit tests
         shell: bash
@@ -114,7 +111,7 @@ jobs:
             build/unit-tests.log
 
   ios-simulator-tests:
-    name: iOS Simulator Tests
+    name: Run iOS Simulator Tests
     needs: unit-tests
     runs-on: macos-latest
 
@@ -142,10 +139,7 @@ jobs:
           )
 
           echo "Detected UI test target: ${TARGET}"
-
-          {
-            echo "ui_test_target=${TARGET}"
-          } >> "$GITHUB_OUTPUT"
+          echo "ui_test_target=${TARGET}" >> "$GITHUB_OUTPUT"
 
       - name: UI test target not found
         if: ${{ steps.detect_ui.outputs.ui_test_target == '' }}
@@ -193,27 +187,51 @@ jobs:
             build/SimulatorTests.xcresult
             build/simulator-tests.log
 
-  release:
-    name: Tag & Publish Release
+  create-release-pr:
+    name: Create Release Branch, Bump Version & Open PR
     needs: ios-simulator-tests
+    if: ${{ inputs.dry_run != true }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
+      pull-requests: write
+      issues: write
 
     steps:
-      - name: Checkout (full history)
+      - name: Sanitize & validate version
+        id: sanitize
+        env:
+          RAW_VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          VERSION=$(echo "$RAW_VERSION" | sed -E 's/^(release:\s*v?|v)//I' | xargs)
+
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([a-zA-Z0-9._-]*)?$ ]]; then
+            echo "::error::Invalid version '${VERSION}'. Expected format: X.Y.Z or X.Y.Z-suffix"
+            exit 1
+          fi
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "✅ Sanitized version: ${VERSION}"
+
+      - name: Checkout main (full history)
         uses: actions/checkout@v4
         with:
+          ref: ${{ env.MAIN_BRANCH }}
           fetch-depth: 0
           token: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Dry-run notice
-        if: ${{ inputs.dry_run == true }}
+      - name: Check release branch does not already exist
+        env:
+          VERSION: ${{ steps.sanitize.outputs.version }}
+        shell: bash
         run: |
-          echo "::notice title=Dry Run::Tests passed ✅ Tag, version bump and GitHub Release were skipped."
+          if git ls-remote --heads origin "release/${VERSION}" | grep -q .; then
+            echo "::error::release/${VERSION} branch already exists."
+            exit 1
+          fi
 
       - name: Verify version bump file exists
-        if: ${{ inputs.dry_run != true }}
         shell: bash
         run: |
           if [ ! -f "${VERSION_BUMP_FILE}" ]; then
@@ -221,12 +239,13 @@ jobs:
             exit 1
           fi
 
-      - name: Bump library version to ${{ inputs.version }}
-        if: ${{ inputs.dry_run != true }}
-        shell: bash
+      - name: Create release branch & bump version
         env:
-          NEW_VERSION: ${{ inputs.version }}
+          VERSION: ${{ steps.sanitize.outputs.version }}
+        shell: bash
         run: |
+          git checkout -b "release/${VERSION}"
+
           python3 - <<'PY'
           import os
           import pathlib
@@ -234,39 +253,26 @@ jobs:
           import sys
 
           path = pathlib.Path(os.environ["VERSION_BUMP_FILE"])
-          version = os.environ["NEW_VERSION"]
+          version = os.environ["VERSION"]
 
           text = path.read_text()
+          new_text, count = re.subn(
+              r'(s\.version\s*=\s*["\'])[^"\']+(["\'])',
+              rf'\g<1>{version}\g<2>',
+              text,
+              count=1
+          )
 
-          patterns = [
-              r'((?:s\.)?version\s*=\s*["\'])[^"\']+(["\'])',   # podspec / ruby style
-              r'((?:MARKETING_VERSION\s*=\s*))[^;]+(;)',        # pbxproj style
-          ]
-
-          updated = text
-          replaced = False
-
-          for pattern in patterns:
-              new_text, count = re.subn(pattern, rf'\g<1>{version}\g<2>', updated, count=1)
-              if count > 0:
-                  updated = new_text
-                  replaced = True
-                  break
-
-          if not replaced:
-              print(f"::error file={path}::Supported version pattern not found")
+          if count == 0:
+              print(f"::error file={path}::Could not find 's.version = \"...\"' in podspec")
               sys.exit(1)
 
-          path.write_text(updated)
+          path.write_text(new_text)
           print(f"Updated {path} to version {version}")
           PY
 
-      - name: Commit version bump
-        if: ${{ inputs.dry_run != true }}
-        run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-
           git add "${VERSION_BUMP_FILE}"
 
           if git diff --cached --quiet; then
@@ -274,75 +280,58 @@ jobs:
             exit 1
           fi
 
-          git commit -m "chore(release): bump version to ${{ inputs.version }}"
-          git push
+          git commit -m "chore(release): bump version to ${VERSION}"
+          git push origin "release/${VERSION}"
 
-      - name: Create tag v${{ inputs.version }}
-        if: ${{ inputs.dry_run != true }}
+      - name: Check release PR does not already exist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.sanitize.outputs.version }}
+          MAIN_BRANCH: ${{ env.MAIN_BRANCH }}
+        shell: bash
         run: |
-          if git rev-parse "v${{ inputs.version }}" >/dev/null 2>&1; then
-            echo "::error::Tag v${{ inputs.version }} already exists."
+          COUNT=$(gh pr list \
+            --base "${MAIN_BRANCH}" \
+            --head "release/${VERSION}" \
+            --state open \
+            --json number \
+            --jq 'length')
+
+          if [ "$COUNT" -gt 0 ]; then
+            echo "::error::An open PR already exists for release/${VERSION}"
             exit 1
           fi
 
-          git tag "v${{ inputs.version }}"
-          git push origin "v${{ inputs.version }}"
-
-      - name: Process release notes → badges
-        if: ${{ inputs.dry_run != true }}
-        id: notes
-        shell: python3 {0}
+      - name: Create Pull Request
         env:
-          RAW_NOTES: ${{ inputs.release_notes }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.sanitize.outputs.version }}
+          RELEASE_NOTES: ${{ inputs.release_notes }}
+          MAIN_BRANCH: ${{ env.MAIN_BRANCH }}
+        shell: bash
         run: |
-          import os
-          import re
+          cat > /tmp/pr-body.md <<EOF
+          ## Release ${VERSION}
 
-          raw = os.environ.get("RAW_NOTES", "")
+          ### Release Notes
+          ${RELEASE_NOTES}
+          EOF
 
-          BADGES = [
-              (r"\bfix(?:es|ed)?\b",    "![Fix](https://img.shields.io/badge/Fix-🐛-e74c3c)"),
-              (r"\bfeature\b",          "![Feature](https://img.shields.io/badge/Feature-✨-8c730d)"),
-              (r"\bimprovement\b",      "![Improvement](https://img.shields.io/badge/Improvement-🛠️-8e44ad)"),
-              (r"\bupdate[sd]?\b",      "![Update](https://img.shields.io/badge/Update-🔄-2980b9)"),
-              (r"\bchange[sd]?\b",      "![Change](https://img.shields.io/badge/Change-♻️-136634)"),
-          ]
+          gh label create "release" --color "0E8A16" --description "Release PR" 2>/dev/null || true
 
-          lines = raw.strip().splitlines()
-          decorated = []
+          gh pr create \
+            --base "${MAIN_BRANCH}" \
+            --head "release/${VERSION}" \
+            --title "release: ${VERSION}" \
+            --body-file /tmp/pr-body.md \
+            --label "release"
 
-          for line in lines:
-              line = line.strip().lstrip("*-• ").strip()
-              if not line:
-                  continue
-
-              badge = ""
-              for pattern, token in BADGES:
-                  if re.search(pattern, line, re.IGNORECASE):
-                      badge = token + " "
-                      break
-
-              decorated.append(f"* {badge}{line}")
-
-          body = "\n".join(decorated)
-
-          with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
-              fh.write("body<<__DELIMITER__\n")
-              fh.write(body + "\n")
-              fh.write("__DELIMITER__\n")
-
-      - name: Create GitHub Release
-        if: ${{ inputs.dry_run != true }}
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: v${{ inputs.version }}
-          name: v${{ inputs.version }}
-          body: |
-            ## What's Changed?
-            ${{ steps.notes.outputs.body }}
-            ---
-            **Full Changelog**: ${{ github.server_url }}/${{ github.repository }}/compare/v${{ inputs.version }}...HEAD
-          draft: false
-          prerelease: false
-          token: ${{ secrets.GITHUB_TOKEN }}
-
+  dry-run-notice:
+    name: Dry Run — Skip Version Bump & PR
+    needs: ios-simulator-tests
+    if: ${{ inputs.dry_run == true }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summary
+        run: |
+          echo "::notice title=Dry Run::Tests passed ✅ Version bump and PR creation were skipped."
