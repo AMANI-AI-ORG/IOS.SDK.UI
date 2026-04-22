@@ -36,14 +36,18 @@ env:
 jobs:
   unit-tests:
     name: Run Unit Tests
-    runs-on: macos-latest
+    runs-on: macos-15
 
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Show Xcode version
-        run: xcodebuild -version
+      - name: Print toolchain info
+        run: |
+          sw_vers
+          uname -m
+          xcodebuild -version
+          swift --version
 
       - name: Cache SwiftPM dependencies
         uses: actions/cache@v4
@@ -78,6 +82,19 @@ jobs:
             CODE_SIGNING_REQUIRED=NO \
             test \
             | tee build/unit-tests.log
+
+      - name: Print Swift compiler errors
+        if: failure()
+        shell: bash
+        run: |
+          echo "---- error lines ----"
+          grep -n "error:" build/unit-tests.log || true
+          echo "---- warning lines ----"
+          grep -n "warning:" build/unit-tests.log || true
+          echo "---- NonKYCStepManager references ----"
+          grep -n "NonKYCStepManager.swift" build/unit-tests.log || true
+          echo "---- Last 250 log lines ----"
+          tail -n 250 build/unit-tests.log || true
 
       - name: Write unit test summary
         if: always()
