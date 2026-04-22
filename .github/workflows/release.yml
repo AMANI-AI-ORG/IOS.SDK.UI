@@ -1,0 +1,337 @@
+name: Start Release — Run Tests & Open Release PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. 1.4.0)'
+        required: true
+        type: string
+      release_notes:
+        description: |
+          Release notes — one item per line.
+          Prefix keywords (case-insensitive) auto-badge on publish:
+            fix / fixed / fixes  →  Fix
+            feature              →  Feature
+            improvement          →  Improvement
+            update / updated     →  Update
+            change / changed     →  Change
+        required: true
+        type: string
+      dry_run:
+        description: 'Dry run — run tests only, skip version bump & PR creation'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  MAIN_BRANCH: 'main'
+  XCODE_PROJECT: 'Sources/AmaniUI.xcodeproj'
+  XCODE_SCHEME: 'AmaniUI'
+  XCODE_DESTINATION: 'platform=iOS Simulator,name=iPhone 16,OS=latest'
+  VERSION_BUMP_FILE: 'AmaniUI.podspec'
+
+jobs:
+  unit-tests:
+    name: Run Unit Tests
+    runs-on: macos-latest
+
+    outputs:
+      unit_test_target: ${{ steps.detect_targets.outputs.unit_test_target }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Resolve package dependencies
+        run: xcodebuild -resolvePackageDependencies -project "${XCODE_PROJECT}"
+
+      - name: Detect unit test target
+        id: detect_targets
+        shell: bash
+        run: |
+          TARGET=$(
+            grep -Eo 'name = [^;]*Tests;' "${XCODE_PROJECT}/project.pbxproj" \
+            | grep -v 'UITests' \
+            | head -1 \
+            | sed 's/name = //; s/;$//'
+          )
+
+          echo "Detected unit test target: ${TARGET}"
+          echo "unit_test_target=${TARGET}" >> "$GITHUB_OUTPUT"
+
+      - name: Run unit tests
+        shell: bash
+        run: |
+          set -eo pipefail
+          mkdir -p build
+
+          EXTRA_ARGS=()
+          if [ -n "${{ steps.detect_targets.outputs.unit_test_target }}" ]; then
+            EXTRA_ARGS+=("-only-testing:${{ steps.detect_targets.outputs.unit_test_target }}")
+          else
+            echo "::notice title=Unit test target not found::Ayrı bir unit test target tespit edilemedi. Scheme içindeki testler çalıştırılacak."
+          fi
+
+          xcodebuild \
+            -project "${XCODE_PROJECT}" \
+            -scheme "${XCODE_SCHEME}" \
+            -destination "${XCODE_DESTINATION}" \
+            -resultBundlePath build/UnitTests.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            "${EXTRA_ARGS[@]}" \
+            test \
+            | tee build/unit-tests.log
+
+      - name: Write unit test summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Unit Tests summary"
+            echo ""
+            echo "- Project: \`${XCODE_PROJECT}\`"
+            echo "- Scheme: \`${XCODE_SCHEME}\`"
+            echo "- Destination: \`${XCODE_DESTINATION}\`"
+            echo "- Detected Unit Test Target: \`${{ steps.detect_targets.outputs.unit_test_target || 'Not detected' }}\`"
+            echo "- Result Bundle: \`build/UnitTests.xcresult\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload unit-test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: |
+            build/UnitTests.xcresult
+            build/unit-tests.log
+
+  ios-simulator-tests:
+    name: Run iOS Simulator Tests
+    needs: unit-tests
+    runs-on: macos-latest
+
+    outputs:
+      ui_test_target: ${{ steps.detect_ui.outputs.ui_test_target }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Show Xcode version
+        run: xcodebuild -version
+
+      - name: Resolve package dependencies
+        run: xcodebuild -resolvePackageDependencies -project "${XCODE_PROJECT}"
+
+      - name: Detect UI test target
+        id: detect_ui
+        shell: bash
+        run: |
+          TARGET=$(
+            grep -Eo 'name = [^;]*UITests;' "${XCODE_PROJECT}/project.pbxproj" \
+            | head -1 \
+            | sed 's/name = //; s/;$//'
+          )
+
+          echo "Detected UI test target: ${TARGET}"
+          echo "ui_test_target=${TARGET}" >> "$GITHUB_OUTPUT"
+
+      - name: UI test target not found
+        if: ${{ steps.detect_ui.outputs.ui_test_target == '' }}
+        run: |
+          echo "::notice title=UI test target not found::UITests target bulunamadı. Bu job parity için pass edildi."
+
+      - name: Run iOS simulator tests
+        if: ${{ steps.detect_ui.outputs.ui_test_target != '' }}
+        shell: bash
+        run: |
+          set -eo pipefail
+          mkdir -p build
+
+          xcodebuild \
+            -project "${XCODE_PROJECT}" \
+            -scheme "${XCODE_SCHEME}" \
+            -destination "${XCODE_DESTINATION}" \
+            -resultBundlePath build/SimulatorTests.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            -only-testing:"${{ steps.detect_ui.outputs.ui_test_target }}" \
+            test \
+            | tee build/simulator-tests.log
+
+      - name: Write simulator test summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## iOS Simulator Tests summary"
+            echo ""
+            echo "- Project: \`${XCODE_PROJECT}\`"
+            echo "- Scheme: \`${XCODE_SCHEME}\`"
+            echo "- Destination: \`${XCODE_DESTINATION}\`"
+            echo "- Detected UI Test Target: \`${{ steps.detect_ui.outputs.ui_test_target || 'Not detected' }}\`"
+            echo "- Result Bundle: \`build/SimulatorTests.xcresult\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload simulator-test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ios-simulator-test-results
+          path: |
+            build/SimulatorTests.xcresult
+            build/simulator-tests.log
+
+  create-release-pr:
+    name: Create Release Branch, Bump Version & Open PR
+    needs: ios-simulator-tests
+    if: ${{ inputs.dry_run != true }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Sanitize & validate version
+        id: sanitize
+        env:
+          RAW_VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          VERSION=$(echo "$RAW_VERSION" | sed -E 's/^(release:\s*v?|v)//I' | xargs)
+
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([a-zA-Z0-9._-]*)?$ ]]; then
+            echo "::error::Invalid version '${VERSION}'. Expected format: X.Y.Z or X.Y.Z-suffix"
+            exit 1
+          fi
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "✅ Sanitized version: ${VERSION}"
+
+      - name: Checkout main (full history)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.MAIN_BRANCH }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check release branch does not already exist
+        env:
+          VERSION: ${{ steps.sanitize.outputs.version }}
+        shell: bash
+        run: |
+          if git ls-remote --heads origin "release/${VERSION}" | grep -q .; then
+            echo "::error::release/${VERSION} branch already exists."
+            exit 1
+          fi
+
+      - name: Verify version bump file exists
+        shell: bash
+        run: |
+          if [ ! -f "${VERSION_BUMP_FILE}" ]; then
+            echo "::error file=${VERSION_BUMP_FILE}::Version bump file not found."
+            exit 1
+          fi
+
+      - name: Create release branch & bump version
+        env:
+          VERSION: ${{ steps.sanitize.outputs.version }}
+        shell: bash
+        run: |
+          git checkout -b "release/${VERSION}"
+
+          python3 - <<'PY'
+          import os
+          import pathlib
+          import re
+          import sys
+
+          path = pathlib.Path(os.environ["VERSION_BUMP_FILE"])
+          version = os.environ["VERSION"]
+
+          text = path.read_text()
+          new_text, count = re.subn(
+              r'(s\.version\s*=\s*["\'])[^"\']+(["\'])',
+              rf'\g<1>{version}\g<2>',
+              text,
+              count=1
+          )
+
+          if count == 0:
+              print(f"::error file={path}::Could not find 's.version = \"...\"' in podspec")
+              sys.exit(1)
+
+          path.write_text(new_text)
+          print(f"Updated {path} to version {version}")
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "${VERSION_BUMP_FILE}"
+
+          if git diff --cached --quiet; then
+            echo "::error::No version change detected."
+            exit 1
+          fi
+
+          git commit -m "chore(release): bump version to ${VERSION}"
+          git push origin "release/${VERSION}"
+
+      - name: Check release PR does not already exist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.sanitize.outputs.version }}
+          MAIN_BRANCH: ${{ env.MAIN_BRANCH }}
+        shell: bash
+        run: |
+          COUNT=$(gh pr list \
+            --base "${MAIN_BRANCH}" \
+            --head "release/${VERSION}" \
+            --state open \
+            --json number \
+            --jq 'length')
+
+          if [ "$COUNT" -gt 0 ]; then
+            echo "::error::An open PR already exists for release/${VERSION}"
+            exit 1
+          fi
+
+      - name: Create Pull Request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.sanitize.outputs.version }}
+          RELEASE_NOTES: ${{ inputs.release_notes }}
+          MAIN_BRANCH: ${{ env.MAIN_BRANCH }}
+        shell: bash
+        run: |
+          cat > /tmp/pr-body.md <<EOF
+          ## Release ${VERSION}
+
+          ### Release Notes
+          ${RELEASE_NOTES}
+          EOF
+
+          gh label create "release" --color "0E8A16" --description "Release PR" 2>/dev/null || true
+
+          gh pr create \
+            --base "${MAIN_BRANCH}" \
+            --head "release/${VERSION}" \
+            --title "release: ${VERSION}" \
+            --body-file /tmp/pr-body.md \
+            --label "release"
+
+  dry-run-notice:
+    name: Dry Run — Skip Version Bump & PR
+    needs: ios-simulator-tests
+    if: ${{ inputs.dry_run == true }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summary
+        run: |
+          echo "::notice title=Dry Run::Tests passed ✅ Version bump and PR creation were skipped."
