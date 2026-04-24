@@ -37,6 +37,8 @@
 		48E081172C7F662400EAD39B /* AnimationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48E081152C7F662400EAD39B /* AnimationView.swift */; };
 		48EAA84E29E37C9B001A2A35 /* SignatureViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48B90A0129A2656100508E63 /* SignatureViewController.swift */; };
 		48F461D52E5DC4EA0066297B /* QuestionTextInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48F461D42E5DC4EA0066297B /* QuestionTextInputView.swift */; };
+		911EC4D82F9B9D1A000C80F9 /* TermsAndConditionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 911EC4D52F9B9D1A000C80F9 /* TermsAndConditionsView.swift */; };
+		911EC4D92F9B9D1A000C80F9 /* TermsAndConditionsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 911EC4D62F9B9D1A000C80F9 /* TermsAndConditionsViewController.swift */; };
 		9197F9342F990C72005C1088 /* AmaniUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C544FEE328C2303700C0B406 /* AmaniUI.framework */; };
 		C523DEF72B3A740B00F68E32 /* CheckSMSViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C523DEF62B3A740B00F68E32 /* CheckSMSViewController.swift */; };
 		C523DEFA2B3A745F00F68E32 /* CheckSMSView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C523DEF92B3A745F00F68E32 /* CheckSMSView.swift */; };
@@ -138,6 +140,8 @@
 		48DF760F29699A8F000D519A /* ContainerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerViewController.swift; sourceTree = "<group>"; };
 		48E081152C7F662400EAD39B /* AnimationView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnimationView.swift; sourceTree = "<group>"; };
 		48F461D42E5DC4EA0066297B /* QuestionTextInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionTextInputView.swift; sourceTree = "<group>"; };
+		911EC4D52F9B9D1A000C80F9 /* TermsAndConditionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsAndConditionsView.swift; sourceTree = "<group>"; };
+		911EC4D62F9B9D1A000C80F9 /* TermsAndConditionsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsAndConditionsViewController.swift; sourceTree = "<group>"; };
 		9197F9302F990C72005C1088 /* AmaniUnitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AmaniUnitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C523DEF62B3A740B00F68E32 /* CheckSMSViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckSMSViewController.swift; sourceTree = "<group>"; };
 		C523DEF92B3A745F00F68E32 /* CheckSMSView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckSMSView.swift; sourceTree = "<group>"; };
@@ -324,6 +328,15 @@
 			path = AnimationView;
 			sourceTree = "<group>";
 		};
+		911EC4D72F9B9D1A000C80F9 /* TermsAndConditions */ = {
+			isa = PBXGroup;
+			children = (
+				911EC4D52F9B9D1A000C80F9 /* TermsAndConditionsView.swift */,
+				911EC4D62F9B9D1A000C80F9 /* TermsAndConditionsViewController.swift */,
+			);
+			path = TermsAndConditions;
+			sourceTree = "<group>";
+		};
 		C523DEF52B3A73EC00F68E32 /* ChecklSMSScreen */ = {
 			isa = PBXGroup;
 			children = (
@@ -438,6 +451,7 @@
 		C544FEF328C2573200C0B406 /* Modules */ = {
 			isa = PBXGroup;
 			children = (
+				911EC4D72F9B9D1A000C80F9 /* TermsAndConditions */,
 				C56169472B84CDE200050A8D /* ProfileInfo */,
 				C56169312B84CD8400050A8D /* Questtionairre */,
 				C5FD512F2B39BCA30057DB87 /* OTPScreens */,
@@ -902,6 +916,8 @@
 				185A2BFD2BBD64AE00855F77 /* ColorCompatibility.swift in Sources */,
 				C54B58B128C76160005DBAA9 /* BaseViewController.swift in Sources */,
 				C5FD514A2B39BF240057DB87 /* CheckMailViewModel.swift in Sources */,
+				911EC4D82F9B9D1A000C80F9 /* TermsAndConditionsView.swift in Sources */,
+				911EC4D92F9B9D1A000C80F9 /* TermsAndConditionsViewController.swift in Sources */,
 				C56169512B84CEB600050A8D /* String+Extensions.swift in Sources */,
 				C523DEF72B3A740B00F68E32 /* CheckSMSViewController.swift in Sources */,
 				488B08DF2D68B4EA00935C5D /* hextoUIColor.swift in Sources */,
