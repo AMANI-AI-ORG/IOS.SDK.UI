@@ -201,9 +201,8 @@ jobs:
         env:
           VERSION: ${{ steps.version.outputs.value }}
           REPO_URL: ${{ env.PODSPEC_SOURCE_GIT_URL }}
+          SPEC_PATH: ${{ env.MOBILE_SDK_REPO_PATH }}/Specs/${{ env.POD_NAME }}/${{ steps.version.outputs.value }}/${{ env.POD_NAME }}.podspec.json
         run: |
-          SPEC_PATH="${MOBILE_SDK_REPO_PATH}/Specs/${POD_NAME}/${VERSION}/${POD_NAME}.podspec.json"
-
           python3 - <<'PY'
           import json, os, pathlib, sys
 
@@ -228,8 +227,6 @@ jobs:
 
           print(f"Verified spec: {spec_path}")
           PY
-        env:
-          SPEC_PATH: ${{ env.MOBILE_SDK_REPO_PATH }}/Specs/${{ env.POD_NAME }}/${{ steps.version.outputs.value }}/${{ env.POD_NAME }}.podspec.json
 
       - name: Commit and push Mobile_SDK_Repo
         shell: bash
