@@ -81,7 +81,7 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             CODE_SIGNING_REQUIRED=NO \
             test \
-            | tee build/unit-tests.log
+            | 2>&1 | tee build/unit-tests.log
 
       - name: Print Swift compiler errors
         if: failure()
