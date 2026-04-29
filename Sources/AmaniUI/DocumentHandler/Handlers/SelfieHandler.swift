@@ -31,8 +31,8 @@ class SelfieHandler: DocumentHandler {
     let animationVC = ContainerViewController()
     animationVC.docID = self.docID
     animationVC.stepConfig = stepViewModel.stepConfig
-    animationVC.setDisappearCallback {
-      self.stepView?.removeFromSuperview()
+    animationVC.setDisappearCallback { [weak self] in
+      self?.stepView?.removeFromSuperview()
     }
     animationVC.bind(animationName: version.type!, docStep: version.steps![steps.front.rawValue], step:steps.front, docID: docID) {[weak self] () in
       guard let self = self else {return}
@@ -66,6 +66,10 @@ class SelfieHandler: DocumentHandler {
     self.topVC?.navigationController?.pushViewController(animationVC, animated: true)
   }
   
+  deinit {
+    selfieModule = nil
+  }
+
   func upload(completion: @escaping ((Bool?, [String : Any]?) -> Void)) {
     guard let selfieModule = selfieModule else { return }
     
@@ -137,12 +141,12 @@ class SelfieHandler: DocumentHandler {
       infoMessages[.faceTooSmall] = version.faceIsTooFarText
       infoMessages[.notInArea] = version.faceNotInsideText
       infoMessages[.captureDescription] = step.captureDescription
-      infoMessages[.completed] = ""
-      infoMessages[.faceIsOk] = ""
+      infoMessages[.completed] = version.completedText
+      infoMessages[.faceIsOk] = version.faceIsOkText
 
       screenConfig[.ovalBorderColor] = version.ovalViewStartColor
       screenConfig[.ovalBorderSuccessColor] = version.ovalViewSuccessColor
-      
+
       currentSelfieModule.setScreenConfigs(screenConfig: screenConfig)
       currentSelfieModule.setInfoMessages(infoMessages: infoMessages)
       
@@ -202,9 +206,9 @@ class SelfieHandler: DocumentHandler {
       infoMessages[.descriptionHeader] = step.captureTitle
       infoMessages[.errorTitle] = version.selfieAlertTitle
       infoMessages[.errorMessage] = version.selfieAlertDescription
-      infoMessages[.closedEyes] = ""
-      infoMessages[.completed] = ""
-      infoMessages[.faceIsOk] = ""
+      infoMessages[.closedEyes] = version.closedEyesText
+      infoMessages[.completed] = version.completedText
+      infoMessages[.faceIsOk] = version.faceIsOkText
 
       screenConfig[.ovalBorderColor] = version.ovalViewStartColor
       screenConfig[.ovalBorderSuccessColor] = version.ovalViewSuccessColor
