@@ -1,0 +1,210 @@
+name: Release Branch CI — Validate Tests & Verify/Bump Version
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+    branches: [main]
+
+env:
+  XCODE_PROJECT: 'Sources/AmaniUI.xcodeproj'
+  UNIT_TEST_SCHEME: 'AmaniUnitTests'
+  XCODE_DESTINATION: 'platform=iOS Simulator,name=iPhone 16,OS=latest'
+  VERSION_BUMP_FILE: 'AmaniUI.podspec'
+  SPM_CACHE_DIR: '.spm-cache'
+  LOCAL_ACT: 'false'
+
+jobs:
+  check-release:
+    name: Detect Release Branch & Extract Version
+    runs-on: ubuntu-latest
+    outputs:
+      is_release: ${{ steps.check.outputs.is_release }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - name: Detect release branch
+        id: check
+        env:
+          BRANCH: ${{ github.head_ref }}
+        shell: bash
+        run: |
+          if [[ "$BRANCH" =~ ^release/([0-9]+\.[0-9]+\.[0-9]+([a-zA-Z0-9._-]*)?)$ ]]; then
+            echo "is_release=true" >> "$GITHUB_OUTPUT"
+            echo "version=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+            echo "✅ Release branch detected: $BRANCH → version ${BASH_REMATCH[1]}"
+          else
+            echo "is_release=false" >> "$GITHUB_OUTPUT"
+            echo "ℹ️ Not a valid release branch ($BRANCH) — skipping release CI."
+          fi
+
+  unit-tests:
+    name: Run Unit Tests
+    needs: check-release
+    if: needs.check-release.outputs.is_release == 'true'
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Print toolchain info
+        run: |
+          sw_vers
+          uname -m
+          xcodebuild -version
+          swift --version
+
+      - name: Cache SwiftPM dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.SPM_CACHE_DIR }}
+          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+
+      - name: Resolve package dependencies
+        run: |
+          mkdir -p "${SPM_CACHE_DIR}"
+          xcodebuild \
+            -resolvePackageDependencies \
+            -project "${XCODE_PROJECT}" \
+            -clonedSourcePackagesDirPath "${SPM_CACHE_DIR}"
+
+      - name: Run unit tests
+        shell: bash
+        run: |
+          set -eo pipefail
+          mkdir -p build
+
+          xcodebuild \
+            -project "${XCODE_PROJECT}" \
+            -scheme "${UNIT_TEST_SCHEME}" \
+            -destination "${XCODE_DESTINATION}" \
+            -clonedSourcePackagesDirPath "${SPM_CACHE_DIR}" \
+            -disableAutomaticPackageResolution \
+            -resultBundlePath build/UnitTests.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            test \
+            | 2>&1 | tee build/unit-tests.log
+
+      - name: Print Swift compiler errors
+        if: failure()
+        shell: bash
+        run: |
+          echo "---- error lines ----"
+          grep -n "error:" build/unit-tests.log || true
+          echo "---- warning lines ----"
+          grep -n "warning:" build/unit-tests.log || true
+          echo "---- NonKYCStepManager references ----"
+          grep -n "NonKYCStepManager.swift" build/unit-tests.log || true
+          echo "---- Last 250 log lines ----"
+          tail -n 250 build/unit-tests.log || true
+
+      - name: Upload unit-test results
+        if: ${{ always() && env.LOCAL_ACT != 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: |
+            build/UnitTests.xcresult
+            build/unit-tests.log
+
+  version-bump:
+    name: Verify/Bump Version in AmaniUI.podspec & Push Commit
+    needs: [check-release, unit-tests]
+    if: needs.check-release.outputs.is_release == 'true'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout PR branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.head_ref }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Verify version bump file exists
+        shell: bash
+        run: |
+          if [ ! -f "${VERSION_BUMP_FILE}" ]; then
+            echo "::error file=${VERSION_BUMP_FILE}::Version bump file not found."
+            exit 1
+          fi
+
+      - name: Check if version already bumped
+        id: check_bump
+        env:
+          VERSION: ${{ needs.check-release.outputs.version }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os
+          import pathlib
+          import re
+
+          path = pathlib.Path(os.environ["VERSION_BUMP_FILE"])
+          version = os.environ["VERSION"]
+          text = path.read_text()
+
+          pattern = r's\.version\s*=\s*["\']' + re.escape(version) + r'["\']'
+          output_path = os.environ["GITHUB_OUTPUT"]
+
+          with open(output_path, "a") as fh:
+              if re.search(pattern, text):
+                  fh.write("already_bumped=true\n")
+                  print(f"✅ Version already set to {version} — skipping bump.")
+              else:
+                  fh.write("already_bumped=false\n")
+                  print(f"📝 Will bump version to {version}.")
+          PY
+
+      - name: Bump library version to ${{ needs.check-release.outputs.version }}
+        if: steps.check_bump.outputs.already_bumped == 'false'
+        env:
+          VERSION: ${{ needs.check-release.outputs.version }}
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os
+          import pathlib
+          import re
+          import sys
+
+          path = pathlib.Path(os.environ["VERSION_BUMP_FILE"])
+          version = os.environ["VERSION"]
+          text = path.read_text()
+
+          new_text, count = re.subn(
+              r'(s\.version\s*=\s*["\'])[^"\']+(["\'])',
+              rf'\g<1>{version}\g<2>',
+              text,
+              count=1
+          )
+
+          if count == 0:
+              print(f"::error file={path}::Could not find 's.version = \"...\"' in podspec")
+              sys.exit(1)
+
+          path.write_text(new_text)
+          print(f"Updated {path} to version {version}")
+          PY
+
+      - name: Commit & push version bump
+        if: steps.check_bump.outputs.already_bumped == 'false'
+        env:
+          VERSION: ${{ needs.check-release.outputs.version }}
+        shell: bash
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "${VERSION_BUMP_FILE}"
+
+          if git diff --cached --quiet; then
+            echo "::error::No version change detected."
+            exit 1
+          fi
+
+          git commit -m "chore(release): bump version to ${VERSION}"
+          git push

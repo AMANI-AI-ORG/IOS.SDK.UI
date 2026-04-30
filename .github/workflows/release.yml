@@ -1,0 +1,269 @@
+name: Start Release — Run Tests & Open Release PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release version (e.g. 1.4.0)'
+        required: true
+        type: string
+      release_notes:
+        description: |
+          Release notes — one item per line.
+          Prefix keywords (case-insensitive) auto-badge on publish:
+            fix / fixed / fixes  →  Fix
+            feature              →  Feature
+            improvement          →  Improvement
+            update / updated     →  Update
+            change / changed     →  Change
+        required: true
+        type: string
+      dry_run:
+        description: 'Dry run — run tests only, skip version bump & PR creation'
+        required: false
+        default: false
+        type: boolean
+
+env:
+  MAIN_BRANCH: 'main'
+  XCODE_PROJECT: 'Sources/AmaniUI.xcodeproj'
+  UNIT_TEST_SCHEME: 'AmaniUnitTests'
+  XCODE_DESTINATION: 'platform=iOS Simulator,name=iPhone 16,OS=latest'
+  VERSION_BUMP_FILE: 'AmaniUI.podspec'
+  SPM_CACHE_DIR: '.spm-cache'
+  LOCAL_ACT: 'false'
+
+jobs:
+  unit-tests:
+    name: Run Unit Tests
+    runs-on: macos-15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Print toolchain info
+        run: |
+          sw_vers
+          uname -m
+          xcodebuild -version
+          swift --version
+
+      - name: Cache SwiftPM dependencies
+        uses: actions/cache@v4
+        with:
+          path: ${{ env.SPM_CACHE_DIR }}
+          key: ${{ runner.os }}-spm-${{ hashFiles('**/Package.resolved') }}
+          restore-keys: |
+            ${{ runner.os }}-spm-
+
+      - name: Resolve package dependencies
+        run: |
+          mkdir -p "${SPM_CACHE_DIR}"
+          xcodebuild \
+            -resolvePackageDependencies \
+            -project "${XCODE_PROJECT}" \
+            -clonedSourcePackagesDirPath "${SPM_CACHE_DIR}"
+
+      - name: Run unit tests
+        shell: bash
+        run: |
+          set -eo pipefail
+          mkdir -p build
+
+          xcodebuild \
+            -project "${XCODE_PROJECT}" \
+            -scheme "${UNIT_TEST_SCHEME}" \
+            -destination "${XCODE_DESTINATION}" \
+            -clonedSourcePackagesDirPath "${SPM_CACHE_DIR}" \
+            -disableAutomaticPackageResolution \
+            -resultBundlePath build/UnitTests.xcresult \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            test \
+            | 2>&1 | tee build/unit-tests.log
+
+      - name: Print Swift compiler errors
+        if: failure()
+        shell: bash
+        run: |
+          echo "---- error lines ----"
+          grep -n "error:" build/unit-tests.log || true
+          echo "---- warning lines ----"
+          grep -n "warning:" build/unit-tests.log || true
+          echo "---- NonKYCStepManager references ----"
+          grep -n "NonKYCStepManager.swift" build/unit-tests.log || true
+          echo "---- Last 250 log lines ----"
+          tail -n 250 build/unit-tests.log || true
+
+      - name: Write unit test summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Unit Tests summary"
+            echo ""
+            echo "- Project: \`${XCODE_PROJECT}\`"
+            echo "- Unit Test Scheme: \`${UNIT_TEST_SCHEME}\`"
+            echo "- Destination: \`${XCODE_DESTINATION}\`"
+            echo "- SwiftPM Cache Dir: \`${SPM_CACHE_DIR}\`"
+            echo "- Result Bundle: \`build/UnitTests.xcresult\`"
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload unit-test results
+        if: ${{ always() && env.LOCAL_ACT != 'true' }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-results
+          path: |
+            build/UnitTests.xcresult
+            build/unit-tests.log
+
+  create-release-pr:
+    name: Create Release Branch, Bump Version & Open PR
+    needs: unit-tests
+    if: ${{ inputs.dry_run != true }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+      issues: write
+
+    steps:
+      - name: Sanitize & validate version
+        id: sanitize
+        env:
+          RAW_VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          VERSION=$(echo "$RAW_VERSION" | sed -E 's/^(release:\s*v?|v)//I' | xargs)
+
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([a-zA-Z0-9._-]*)?$ ]]; then
+            echo "::error::Invalid version '${VERSION}'. Expected format: X.Y.Z or X.Y.Z-suffix"
+            exit 1
+          fi
+
+          echo "version=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "✅ Sanitized version: ${VERSION}"
+
+      - name: Checkout main (full history)
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ env.MAIN_BRANCH }}
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Check release branch does not already exist
+        env:
+          VERSION: ${{ steps.sanitize.outputs.version }}
+        shell: bash
+        run: |
+          if git ls-remote --heads origin "release/${VERSION}" | grep -q .; then
+            echo "::error::release/${VERSION} branch already exists."
+            exit 1
+          fi
+
+      - name: Verify version bump file exists
+        shell: bash
+        run: |
+          if [ ! -f "${VERSION_BUMP_FILE}" ]; then
+            echo "::error file=${VERSION_BUMP_FILE}::Version bump file not found."
+            exit 1
+          fi
+
+      - name: Create release branch & bump version
+        env:
+          VERSION: ${{ steps.sanitize.outputs.version }}
+        shell: bash
+        run: |
+          git checkout -b "release/${VERSION}"
+
+          python3 - <<'PY'
+          import os
+          import pathlib
+          import re
+          import sys
+
+          path = pathlib.Path(os.environ["VERSION_BUMP_FILE"])
+          version = os.environ["VERSION"]
+
+          text = path.read_text()
+          new_text, count = re.subn(
+              r'(s\.version\s*=\s*["\'])[^"\']+(["\'])',
+              rf'\g<1>{version}\g<2>',
+              text,
+              count=1
+          )
+
+          if count == 0:
+              print(f"::error file={path}::Could not find 's.version = \"...\"' in podspec")
+              sys.exit(1)
+
+          path.write_text(new_text)
+          print(f"Updated {path} to version {version}")
+          PY
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "${VERSION_BUMP_FILE}"
+
+          if git diff --cached --quiet; then
+            echo "::error::No version change detected."
+            exit 1
+          fi
+
+          git commit -m "chore(release): bump version to ${VERSION}"
+          git push origin "release/${VERSION}"
+
+      - name: Check release PR does not already exist
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.sanitize.outputs.version }}
+          MAIN_BRANCH: ${{ env.MAIN_BRANCH }}
+        shell: bash
+        run: |
+          COUNT=$(gh pr list \
+            --base "${MAIN_BRANCH}" \
+            --head "release/${VERSION}" \
+            --state open \
+            --json number \
+            --jq 'length')
+
+          if [ "$COUNT" -gt 0 ]; then
+            echo "::error::An open PR already exists for release/${VERSION}"
+            exit 1
+          fi
+
+      - name: Create Pull Request
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          VERSION: ${{ steps.sanitize.outputs.version }}
+          RELEASE_NOTES: ${{ inputs.release_notes }}
+          MAIN_BRANCH: ${{ env.MAIN_BRANCH }}
+        shell: bash
+        run: |
+          cat > /tmp/pr-body.md <<EOF
+          ## Release ${VERSION}
+
+          ### Release Notes
+          ${RELEASE_NOTES}
+          EOF
+
+          gh label create "release" --color "0E8A16" --description "Release PR" 2>/dev/null || true
+
+          gh pr create \
+            --base "${MAIN_BRANCH}" \
+            --head "release/${VERSION}" \
+            --title "release: ${VERSION}" \
+            --body-file /tmp/pr-body.md \
+            --label "release"
+
+  dry-run-notice:
+    name: Dry Run — Skip Version Bump & PR
+    needs: unit-tests
+    if: ${{ inputs.dry_run == true }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Summary
+        run: |
+          echo "::notice title=Dry Run::Tests passed ✅ Version bump and PR creation were skipped."

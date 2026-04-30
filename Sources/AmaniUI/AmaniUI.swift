@@ -57,6 +57,7 @@ public class AmaniUI {
   public var idHologramDetection:Bool? = nil
   public var poseEstimationRecord:Bool? = nil
   public var isEnabledClientSideMrz: Bool = false
+  public var preparationVideoURL: URL? = nil
   
   /**
    This method used to get SDK bundle
@@ -188,6 +189,10 @@ public class AmaniUI {
   
   public func setClientSideMrz(enabled: Bool) {
     isEnabledClientSideMrz = enabled
+  }
+  
+  public func setSelfiePreparationVideoURL(_ url: URL?) {
+    preparationVideoURL = url
   }
   
   public func setSSLPinning(certificate:URL) throws{

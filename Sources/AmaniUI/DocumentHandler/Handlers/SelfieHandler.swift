@@ -23,46 +23,102 @@ class SelfieHandler: DocumentHandler {
     self.docID = docID
   }
   
-  func start(docStep: AmaniSDK.DocumentStepModel, version: AmaniSDK.DocumentVersion, workingStepIndex: Int,completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void) {
+  func start(
+    docStep: AmaniSDK.DocumentStepModel,
+    version: AmaniSDK.DocumentVersion,
+    workingStepIndex: Int,
+    completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
+  ) {
     guard let selfieType = version.selfieType else {
       completion(.failure(.configError))
       return
     }
+    
+     //Only for posev2 bypassing intro animation
+    if selfieType == -2 {
+      let containerVC = ContainerViewController()
+      containerVC.docID = self.docID
+      containerVC.stepConfig = stepViewModel.stepConfig
+      containerVC.bypassIntroForPoseV2 = true
+      containerVC.setDisappearCallback { [weak self] in
+        self?.stepView?.removeFromSuperview()
+      }
+      
+      containerVC.bind(
+        animationName: nil,
+        docStep: version.steps![steps.front.rawValue],
+        step: .front,
+        docID: docID
+      ) { [weak self, weak containerVC] in
+        guard let self = self, let containerVC = containerVC else { return }
+        
+        guard let stepView = self.runPoseEstimationV2(
+          step: docStep,
+          version: version,
+          completion: completion
+        ) else {
+          completion(.failure(.moduleError))
+          return
+        }
+        
+        self.stepView = stepView
+        containerVC.view.addSubview(stepView)
+        containerVC.view.bringSubviewToFront(stepView)
+      }
+      
+      self.topVC?.navigationController?.pushViewController(containerVC, animated: true)
+      return
+    }
+    
     let animationVC = ContainerViewController()
     animationVC.docID = self.docID
     animationVC.stepConfig = stepViewModel.stepConfig
     animationVC.setDisappearCallback { [weak self] in
       self?.stepView?.removeFromSuperview()
     }
-    animationVC.bind(animationName: version.type!, docStep: version.steps![steps.front.rawValue], step:steps.front, docID: docID) {[weak self] () in
-      guard let self = self else {return}
-      // Manual Selfie
+    
+    animationVC.bind(
+      animationName: version.type!,
+      docStep: version.steps![steps.front.rawValue],
+      step: steps.front,
+      docID: docID
+    ) { [weak self] in
+      guard let self = self else { return }
+      
+      let producedStepView: UIView?
+      
       if selfieType == -1 {
-        self.stepView = self.runManualSelfie(
+        producedStepView = self.runManualSelfie(
           step: docStep,
           version: version,
           completion: completion
-        )!
-      }
-      else if selfieType == 0 {
-        self.stepView = self.runAutoSelfie(
+        )
+      } else if selfieType == 0 {
+        producedStepView = self.runAutoSelfie(
           step: docStep,
           version: version,
           completion: completion
-        )!
+        )
       } else if selfieType >= 1 {
-        self.stepView = self.runPoseEstimation(
+        producedStepView = self.runPoseEstimation(
           step: docStep,
           version: version,
           completion: completion
-        )!
-      }
-      if let stepView = self.stepView {
-        animationVC.view.addSubview(stepView)
-        animationVC.view.bringSubviewToFront(stepView)
+        )
+      } else {
+        producedStepView = nil
       }
       
+      guard let stepView = producedStepView else {
+        completion(.failure(.moduleError))
+        return
+      }
+      
+      self.stepView = stepView
+      animationVC.view.addSubview(stepView)
+      animationVC.view.bringSubviewToFront(stepView)
     }
+    
     self.topVC?.navigationController?.pushViewController(animationVC, animated: true)
   }
   
@@ -167,29 +223,28 @@ class SelfieHandler: DocumentHandler {
   }
   
 
-  
-  private func runPoseEstimation(step: DocumentStepModel, version: DocumentVersion, completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void)->UIView? {
-    let poseCount = version.selfieType!
+  private func runPoseEstimation(
+    step: DocumentStepModel,
+    version: DocumentVersion,
+    completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
+  ) -> UIView? {
+    let poseCount = version.selfieType ?? 1
     
-    selfieModule = Amani.sharedInstance.poseEstimation()
-    guard let currentSelfieModule = selfieModule as? PoseEstimation else {
-      print("cant return")
-      return nil
-    }
     do {
-      var infoMessages:[poseState:String] = [:]
-      var screenConfig:[poseConfigState:String] = [:]
-      if let generalConfig =  try Amani.sharedInstance.appConfig().getApplicationConfig().generalconfigs{
+      var infoMessages: [poseState: String] = [:]
+      var screenConfig: [poseConfigState: String] = [:]
+      
+      if let generalConfig = try Amani.sharedInstance.appConfig().getApplicationConfig().generalconfigs {
         infoMessages[.next] = generalConfig.continueText
         infoMessages[.confirm] = generalConfig.confirmText
         infoMessages[.tryAgain] = generalConfig.tryAgainText
-        screenConfig[.buttonRadius] = String(generalConfig.buttonRadius!)
+        screenConfig[.buttonRadius] = String(generalConfig.buttonRadius ?? 10)
         screenConfig[.primaryButtonBackgroundColor] = generalConfig.primaryButtonBackgroundColor
         screenConfig[.primaryButtonTextColor] = generalConfig.primaryButtonTextColor
         screenConfig[.appBackgroundColor] = generalConfig.appBackground
         screenConfig[.appFontColor] = generalConfig.appFontColor
       }
-     
+      
       infoMessages[.lookStraight] = version.keepStraightText
       infoMessages[.wrongPose] = version.faceNotStraightText
       infoMessages[.faceTooSmall] = version.faceIsTooFarText
@@ -215,26 +270,85 @@ class SelfieHandler: DocumentHandler {
       screenConfig[.poseCount] = String(poseCount)
       screenConfig[.secondaryGuideVisibility] = "\(version.showOnlyArrow ?? true)"
       
-      currentSelfieModule.setInfoMessages(infoMessages: infoMessages)
-      currentSelfieModule.setScreenConfig(screenConfig: screenConfig)
-      currentSelfieModule.setVideoRecording(enabled: AmaniUI.sharedInstance.poseEstimationRecord ?? false)
+      let poseModule = Amani.sharedInstance.poseEstimation()
+      self.selfieModule = poseModule
       
-      stepView = try currentSelfieModule.start{ [weak self]  image in
+      let builder = poseModule.v1
+        .setInfoMessages(infoMessages: infoMessages)
+        .setScreenConfig(screenConfig: screenConfig)
+        .setVideoRecording(enabled: AmaniUI.sharedInstance.poseEstimationRecord ?? false)
+      
+      stepView = try builder.start { [weak self] image in
         self?.stepView?.removeFromSuperview()
         DispatchQueue.main.async {
-          self?.startConfirmVC(image: image, docStep: step, docVer: version) { [weak self] () in
+          self?.startConfirmVC(image: image, docStep: step, docVer: version) { [weak self] in
             self?.goNextStep(completion: completion)
           }
         }
-
       }
+      
       return stepView
-    } catch let err {
-      print(err)
+    } catch {
+      print("runPoseEstimation error:", error)
       completion(.failure(.moduleError))
       return nil
     }
-    
+  }
+      
+  private func runPoseEstimationV2(
+    step: DocumentStepModel,
+    version: DocumentVersion,
+    completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
+  ) -> UIView? {
+    do {
+      var infoMessages: [PoseEstimationV2TextKey: String] = [:]
+      var screenConfig: [PoseEstimationV2ColorKey: String] = [:]
+      
+      if let generalConfig = try Amani.sharedInstance.appConfig().getApplicationConfig().generalconfigs {
+//        infoMessages[.] = generalConfig.tryAgainText
+        
+        screenConfig[.appBackgroundColor] = generalConfig.appBackground
+        screenConfig[.appFontColor] = generalConfig.appFontColor
+      }
+      
+      infoMessages[.lookStraight] = version.keepStraightText
+      infoMessages[.turnLeft] = version.turnLeftText
+      infoMessages[.turnRight] = version.turnRightText
+      infoMessages[.notInArea] = version.faceNotInsideText
+      infoMessages[.faceTooFar] = version.faceIsTooFarText
+      infoMessages[.holdPhoneVertically] = version.holdStable
+      infoMessages[.keepRotating] = step.captureDescription
+//      infoMessages[.alertTitle] = version.selfieAlertTitle
+//      infoMessages[.alertDescription] = version.selfieAlertDescription
+      infoMessages[.completed] = ""
+      
+      screenConfig[.progressRingColor] = version.ovalViewStartColor
+      screenConfig[.progressRingTrackColor] = version.ovalViewSuccessColor
+      
+      let poseModule = Amani.sharedInstance.poseEstimation()
+      self.selfieModule = poseModule
+      
+      let builder = poseModule.v2
+        .setSelfiePreparationVideoURL(AmaniUI.sharedInstance.preparationVideoURL)
+        .setInfoMessages(infoMessages: infoMessages)
+        .setScreenConfig(screenConfig: screenConfig)
+        .setVideoRecording(enabled: AmaniUI.sharedInstance.poseEstimationRecord ?? false)
+      
+      stepView = try builder.start { [weak self] image in
+        self?.stepView?.removeFromSuperview()
+        DispatchQueue.main.async {
+          self?.startConfirmVC(image: image, docStep: step, docVer: version) { [weak self] in
+            self?.goNextStep(completion: completion)
+          }
+        }
+      }
+      
+      return stepView
+    } catch {
+      print("runPoseEstimationV2 error:", error)
+      completion(.failure(.moduleError))
+      return nil
+    }
   }
   
 }
