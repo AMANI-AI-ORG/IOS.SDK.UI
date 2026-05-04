@@ -1234,7 +1234,7 @@
 /* Begin XCRemoteSwiftPackageReference section */
 		1801C8E72DC2673400F53343 /* XCRemoteSwiftPackageReference "AmaniSDK-ios" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/munir-amani/AmaniSDK-ios";
+			repositoryURL = "https://github.com/AMANI-AI-ORG/AmaniSDK-iOS";
 			requirement = {
 				branch = main;
 				kind = branch;
@@ -1242,7 +1242,7 @@
 		};
 		488B08D22D68905B00935C5D /* XCRemoteSwiftPackageReference "AmaniVoiceAssistantSDK" */ = {
 			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/munir-amani/AmaniVoiceAssistantSDK";
+			repositoryURL = "https://github.com/AMANI-AI-ORG/AmaniVoiceAssistantSDK";
 			requirement = {
 				kind = upToNextMajorVersion;
 				minimumVersion = 1.0.1;
