@@ -1,0 +1,314 @@
+name: Publish Release — Tag Commit, Update Mobile_SDK_Repo & Create GitHub Release
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+env:
+  MOBILE_SDK_REPO: 'AmaniTechnologiesLtd/Mobile_SDK_Repo'
+  MOBILE_SDK_REPO_PATH: 'Mobile_SDK_Repo'
+  POD_NAME: 'AmaniUI'
+  PODSPEC_FILE: 'AmaniUI.podspec'
+  PODSPEC_SOURCE_GIT_URL: '${{ github.server_url }}/${{ github.repository }}.git'
+  BUNDLE_GEMFILE: '${{ github.workspace }}/.github/Gemfile'
+
+jobs:
+  publish:
+    name: Create Tag, Update Specs Repo & Publish Release
+    if: github.event.pull_request.merged == true && startsWith(github.event.pull_request.head.ref, 'release/')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+
+    concurrency:
+      group: publish-release-${{ github.event.pull_request.number }}
+      cancel-in-progress: false
+
+    steps:
+      - name: Extract version from release branch
+        id: version
+        shell: bash
+        env:
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          VERSION="${BRANCH#release/}"
+
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+([a-zA-Z0-9._-]*)?$ ]]; then
+            echo "::error::Invalid release branch version: ${VERSION}"
+            exit 1
+          fi
+
+          echo "value=${VERSION}" >> "$GITHUB_OUTPUT"
+          echo "📦 Publishing release ${VERSION}"
+
+      - name: Checkout source repo (main)
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Ruby with Bundler cache
+        uses: ruby/setup-ruby@v1
+        with:
+          ruby-version: '3.2'
+          bundler-cache: true
+
+      - name: Show tool versions
+        shell: bash
+        run: |
+          ruby -v
+          bundle -v
+          bundle exec pod --version
+
+      - name: Find previous release tag
+        id: prev_tag
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          git fetch --tags --force
+
+          PREV=$(git tag --list --sort=-v:refname \
+            | grep -E '^v?[0-9]+\.[0-9]+\.[0-9]+' \
+            | grep -v SNAPSHOT \
+            | grep -Ev "^v?${VERSION}$" \
+            | head -1)
+
+          if [ -z "$PREV" ]; then
+            PREV=$(git rev-list --max-parents=0 HEAD | head -1)
+          fi
+
+          echo "tag=${PREV}" >> "$GITHUB_OUTPUT"
+          echo "📋 Previous release tag: ${PREV}"
+
+      - name: Detect pre-release version
+        id: prerelease
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          VERSION_LOWER=$(echo "$VERSION" | tr '[:upper:]' '[:lower:]')
+          if [[ "$VERSION_LOWER" =~ (snapshot|test|beta|alpha|rc|dev|canary|nightly|preview) ]]; then
+            echo "is_prerelease=true" >> "$GITHUB_OUTPUT"
+            echo "⚠️ Pre-release version detected: ${VERSION}"
+          else
+            echo "is_prerelease=false" >> "$GITHUB_OUTPUT"
+            echo "✅ Stable release: ${VERSION}"
+          fi
+
+      - name: Verify tag does not already exist
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          if git rev-parse "${VERSION}" >/dev/null 2>&1; then
+            echo "::error::Tag ${VERSION} already exists."
+            exit 1
+          fi
+
+      - name: Verify local podspec exists
+        shell: bash
+        run: |
+          if [ ! -f "${PODSPEC_FILE}" ]; then
+            echo "::error file=${PODSPEC_FILE}::Podspec file not found."
+            exit 1
+          fi
+
+      - name: Create and push source tag
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "${VERSION}" -m "Release ${VERSION}"
+          git push origin "${VERSION}"
+
+      - name: Checkout Mobile_SDK_Repo
+        uses: actions/checkout@v4
+        with:
+          repository: AmaniTechnologiesLtd/Mobile_SDK_Repo
+          token: ${{ secrets.MOBILESDKREPO_PAT }}
+          path: Mobile_SDK_Repo
+
+      - name: Verify spec version does not already exist
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          DEST="${MOBILE_SDK_REPO_PATH}/Specs/${POD_NAME}/${VERSION}"
+          if [ -d "$DEST" ]; then
+            echo "::error::Spec path already exists: $DEST"
+            exit 1
+          fi
+
+      - name: Generate release podspec.json for Mobile_SDK_Repo
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+          REPO_URL: ${{ env.PODSPEC_SOURCE_GIT_URL }}
+        run: |
+          mkdir -p .tmp/specgen
+          cp "${PODSPEC_FILE}" ".tmp/specgen/${POD_NAME}.release.podspec"
+
+          python3 - <<'PY'
+          import os, pathlib, re, sys
+
+          podspec = pathlib.Path(f".tmp/specgen/{os.environ['POD_NAME']}.release.podspec")
+          version = os.environ["VERSION"]
+          repo_url = os.environ["REPO_URL"]
+
+          text = podspec.read_text()
+
+          text, version_count = re.subn(
+              r'(^\s*s\.version\s*=\s*)["\'][^"\']+["\']',
+              rf'\1"{version}"',
+              text,
+              count=1,
+              flags=re.MULTILINE
+          )
+
+          text, source_count = re.subn(
+              r'(^\s*s\.source\s*=\s*)\{[^\n]*\}',
+              rf'\1{{ :git => "{repo_url}", :tag => "{version}" }}',
+              text,
+              count=1,
+              flags=re.MULTILINE
+          )
+
+          if version_count != 1:
+              print(f"::error file={podspec}::Could not update s.version")
+              sys.exit(1)
+
+          if source_count != 1:
+              print(f"::error file={podspec}::Could not update s.source")
+              sys.exit(1)
+
+          podspec.write_text(text)
+          print(f"Prepared podspec for version {version} with source {repo_url}@{version}")
+          PY
+
+          DEST="${MOBILE_SDK_REPO_PATH}/Specs/${POD_NAME}/${VERSION}"
+          mkdir -p "$DEST"
+
+          bundle exec pod ipc spec ".tmp/specgen/${POD_NAME}.release.podspec" > "$DEST/${POD_NAME}.podspec.json"
+
+      - name: Verify generated spec content
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+          REPO_URL: ${{ env.PODSPEC_SOURCE_GIT_URL }}
+          SPEC_PATH: ${{ env.MOBILE_SDK_REPO_PATH }}/Specs/${{ env.POD_NAME }}/${{ steps.version.outputs.value }}/${{ env.POD_NAME }}.podspec.json
+        run: |
+          python3 - <<'PY'
+          import json, os, pathlib, sys
+
+          spec_path = pathlib.Path(os.environ["SPEC_PATH"])
+          version = os.environ["VERSION"]
+          repo_url = os.environ["REPO_URL"]
+
+          data = json.loads(spec_path.read_text())
+
+          if data.get("version") != version:
+              print(f"::error file={spec_path}::Version mismatch in generated spec")
+              sys.exit(1)
+
+          source = data.get("source", {})
+          if source.get("git") != repo_url:
+              print(f"::error file={spec_path}::Source git mismatch in generated spec")
+              sys.exit(1)
+
+          if source.get("tag") != version:
+              print(f"::error file={spec_path}::Source tag mismatch in generated spec")
+              sys.exit(1)
+
+          print(f"Verified spec: {spec_path}")
+          PY
+
+      - name: Commit and push Mobile_SDK_Repo
+        shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          cd "${MOBILE_SDK_REPO_PATH}"
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add "Specs/${POD_NAME}/${VERSION}/${POD_NAME}.podspec.json"
+
+          if git diff --cached --quiet; then
+            echo "::error::No spec change detected for Mobile_SDK_Repo."
+            exit 1
+          fi
+
+          git commit -m "Release ${POD_NAME} ${VERSION}"
+          git push
+
+      - name: Process release notes from PR body
+        id: notes
+        shell: python3 {0}
+        env:
+          PR_BODY: ${{ github.event.pull_request.body }}
+        run: |
+          import os, re
+
+          raw = os.environ.get("PR_BODY", "")
+
+          match = re.search(r"###\s*Release\s*Notes\s*\n(.*)", raw, re.DOTALL | re.IGNORECASE)
+          if match:
+              raw = match.group(1).strip()
+
+          BADGES = [
+              (r"\bfix(?:es|ed)?\b",    "![Fix](https://img.shields.io/badge/Fix-🐛-e74c3c)"),
+              (r"\bfeature\b",          "![Feature](https://img.shields.io/badge/Feature-✨-8c730d)"),
+              (r"\bimprovement\b",      "![Improvement](https://img.shields.io/badge/Improvement-🛠️-8e44ad)"),
+              (r"\bupdate[sd]?\b",      "![Update](https://img.shields.io/badge/Update-🔄-2980b9)"),
+              (r"\bchange[sd]?\b",      "![Change](https://img.shields.io/badge/Change-♻️-136634)"),
+          ]
+
+          lines = raw.strip().splitlines()
+          decorated = []
+
+          for line in lines:
+              line = line.strip().lstrip("*-• ").strip()
+              if not line:
+                  continue
+              badge = ""
+              for pattern, b in BADGES:
+                  if re.search(pattern, line, re.IGNORECASE):
+                      badge = b + " "
+                      break
+              decorated.append(f"* {badge}{line}")
+
+          body = "\n".join(decorated)
+
+          with open(os.environ["GITHUB_OUTPUT"], "a") as fh:
+              fh.write("body<<__DELIMITER__\n")
+              fh.write(body + "\n")
+              fh.write("__DELIMITER__\n")
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.version.outputs.value }}
+          name: v${{ steps.version.outputs.value }}
+          body: |
+            ## What's Changed?
+
+            ${{ steps.notes.outputs.body }}
+
+            ---
+            **Full Changelog**: ${{ github.server_url }}/${{ github.repository }}/compare/${{ steps.prev_tag.outputs.tag }}...${{ steps.version.outputs.value }}
+          draft: false
+          prerelease: ${{ steps.prerelease.outputs.is_prerelease == 'true' }}
+          make_latest: ${{ steps.prerelease.outputs.is_prerelease != 'true' }}
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Delete release branch
+        shell: bash
+        env:
+          BRANCH: ${{ github.event.pull_request.head.ref }}
+        run: |
+          git push origin --delete "$BRANCH" || true

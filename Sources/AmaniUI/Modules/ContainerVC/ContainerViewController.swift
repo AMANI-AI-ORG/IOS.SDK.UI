@@ -27,6 +27,7 @@ class ContainerViewController: BaseViewController {
   private var isDissapeared = false
   private var selfieInstructionSteps: [(animation: String, text: String)] = []
   private var currentSelfieStepIndex = 0
+  var bypassIntroForPoseV2 = false
   
   var stepConfig: StepConfig?
   var docID: DocumentID?
@@ -62,6 +63,13 @@ class ContainerViewController: BaseViewController {
     super.viewWillAppear(animated)
       
       isDissapeared = false
+    
+    if bypassIntroForPoseV2 {
+      lottieAnimationView?.stop()
+      lottieAnimationView?.removeFromSuperview()
+      callback?()
+      return
+    }
 
     if docID?.getDocumentType() == "SE" && !selfieInstructionSteps.isEmpty {
       currentSelfieStepIndex = 0
@@ -162,7 +170,7 @@ extension ContainerViewController {
       self.btnContinue.translatesAutoresizingMaskIntoConstraints = false
       self.titleDescription.translatesAutoresizingMaskIntoConstraints = false
       
-      if docID?.getDocumentType() == "SE" {
+      if docID?.getDocumentType() == "SE" && !bypassIntroForPoseV2  {
         let defaultDesc1 = "Doğrulamaya başlamak için, yüzünü alanın içinde tut"
         let defaultDesc2 = "Güneş gözlüğü, şapka veya maske takmadığına emin ol"
 
@@ -205,7 +213,13 @@ extension ContainerViewController {
       self.animationView.translatesAutoresizingMaskIntoConstraints = false
       self.animationView.backgroundColor = .clear
       
-        if animationName == nil {
+      if bypassIntroForPoseV2 {
+        self.btnContinue.isHidden = true
+        self.titleDescription.isHidden = true
+        self.setNavigationLeftButton(TintColor: appConfig.generalconfigs?.topBarFontColor ?? "#ffffff")
+        self.navigationItem.rightBarButtonItem = nil
+        self.navigationItem.rightBarButtonItems = nil
+      } else if animationName == nil {
             self.btnContinue.isHidden = true
             self.titleDescription.isHidden = true
             self.setNavigationRightButtonPDF(text: appConfig.generalconfigs?.uploadPdf ?? "Upload PDF" ,tintColor: appConfig.generalconfigs?.topBarFontColor ?? "20202F")
