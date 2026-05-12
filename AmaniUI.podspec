@@ -11,7 +11,11 @@ Pod::Spec.new do |s|
   s.source       = { :path => "." }
   s.resource_bundles ={ 'AmaniUI' => ['Sources/AmaniUI/*/*.{xib,storyboard,xcassets,xcprivacy}'] }
   s.source_files = "Sources/AmaniUI/**/*.{h,m,swift,xib}"
-  s.exclude_files = "Sources/AmaniUnitTests/**/*"
+  s.exclude_files = [
+  "Sources/AmaniUnitTests/AmaniUnitTests.swift",
+  "Sources/AmaniUnitTests/*",
+  "Sources/AmaniUnitTests/**/*"
+  ]
   s.documentation_url = "https://documentation.amani.ai"
   s.platform     = :ios, "13.0"
   s.pod_target_xcconfig = { "OTHER_LDFLAGS" => "-weak_framework CryptoKit -weak_framework CoreNFC -weak_framework CryptoTokenKit" }
