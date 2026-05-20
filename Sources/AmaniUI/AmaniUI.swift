@@ -53,6 +53,8 @@ public class AmaniUI {
   public var nviData: NviModel? = nil
   public var location: CLLocation? = nil
   
+  public var uiVersion: UIVersion = .v1
+
   public var idVideoRecord:Bool? = nil
   public var idHologramDetection:Bool? = nil
   public var poseEstimationRecord:Bool? = nil
@@ -125,7 +127,8 @@ public class AmaniUI {
     nviModel: NviModel? = nil,
     country: String? = nil,
     location: CLLocation? = nil,
-    apiVersion:ApiVersions = .v2
+    apiVersion: ApiVersions = .v2,
+    uiVersion: UIVersion = .v1
   ) {
     self.server = server
     self.token = token
@@ -135,6 +138,7 @@ public class AmaniUI {
     self.nviData = nviModel
     self.location = location
     self.apiVersion = apiVersion
+    self.uiVersion = uiVersion
     self.language = language
   }
   
@@ -160,7 +164,8 @@ public class AmaniUI {
     nviModel: NviModel? = nil,
     country: String? = nil,
     location: CLLocation? = nil,
-    apiVersion:ApiVersions = .v2
+    apiVersion: ApiVersions = .v2,
+    uiVersion: UIVersion = .v1
   ) {
     self.server = server
     self.userName = userName
@@ -171,6 +176,7 @@ public class AmaniUI {
     self.nviData = nviModel
     self.location = location
     self.apiVersion = apiVersion
+    self.uiVersion = uiVersion
     self.language = language
   }
   
