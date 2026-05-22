@@ -210,13 +210,19 @@ class NonKYCStepManager {
 
     let firstKYCIndex = sorted.firstIndex(where: { return $0.identifier == "kyc"  })
     let lastKYCIndex = sorted.lastIndex(where: { $0.identifier == "kyc" })
-    
+
+    guard let firstKYCIndex, let lastKYCIndex else {
+      preSteps = sorted
+      postSteps = []
+      return
+    }
+
     if firstKYCIndex == 0 {
       preSteps = []
     } else {
-      preSteps = Array(sorted[0 ... (firstKYCIndex!.advanced(by: -1))])
+      preSteps = Array(sorted[0 ... firstKYCIndex.advanced(by: -1)])
     }
-    postSteps = Array(sorted[lastKYCIndex!.advanced(by: 1)...])
+    postSteps = Array(sorted[lastKYCIndex.advanced(by: 1)...])
   }
   
   public func hasPostSteps() -> Bool {
