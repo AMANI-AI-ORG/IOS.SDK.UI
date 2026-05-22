@@ -276,7 +276,7 @@ class SelfieHandler: DocumentHandler {
       let builder = poseModule.v1
         .setInfoMessages(infoMessages: infoMessages)
         .setScreenConfig(screenConfig: screenConfig)
-        .setVideoRecording(enabled: AmaniUI.sharedInstance.poseEstimationRecord ?? false)
+        .setVideoRecording(enabled: version.recordVideo ?? false)
       
       stepView = try builder.start { [weak self] image in
         self?.stepView?.removeFromSuperview()
@@ -332,7 +332,7 @@ class SelfieHandler: DocumentHandler {
         .setSelfiePreparationVideoURL(AmaniUI.sharedInstance.preparationVideoURL)
         .setInfoMessages(infoMessages: infoMessages)
         .setScreenConfig(screenConfig: screenConfig)
-        .setVideoRecording(enabled: AmaniUI.sharedInstance.poseEstimationRecord ?? false)
+        .setVideoRecording(enabled: version.recordVideo ?? false)
       
       stepView = try builder.start { [weak self] image in
         self?.stepView?.removeFromSuperview()
