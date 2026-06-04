@@ -74,6 +74,7 @@ class ContainerViewController: BaseViewController {
     if docID?.getDocumentType() == "SE" && !selfieInstructionSteps.isEmpty {
       currentSelfieStepIndex = 0
       self.setConstraints()
+      playVoiceAssistantSounds()
       playCurrentSelfieInstruction()
     } else if let animationName = animationName {
       var side:String = "front"
@@ -97,19 +98,8 @@ class ContainerViewController: BaseViewController {
         name = "xxx_id_\(side)"
       }
       
-      #if canImport(AmaniVoiceAssistantSDK)
-          if let docID = self.docID {
-            Task { @MainActor in
-              do {
-                try? await AmaniUI.sharedInstance.voiceAssistant?.play(key: "VOICE_\(docID.getDocumentType())\(self.step.rawValue)")
-              }catch(let error) {
-                debugPrint("\(error)")
-              }
-              
-            }
-          }
-          
-      #endif
+      playVoiceAssistantSounds()
+    
         DispatchQueue.main.async {
             self.lottieInit(name: name) {[weak self] _ in
         //      print(finishedAnimation)
@@ -257,6 +247,21 @@ extension ContainerViewController {
   //
     }
   
+  private func playVoiceAssistantSounds() {
+    #if canImport(AmaniVoiceAssistantSDK)
+      if let docID = self.docID {
+        Task { @MainActor in
+          do {
+            try? await AmaniUI.sharedInstance.voiceAssistant?.play(key: "VOICE_\(docID.getDocumentType())\(self.step.rawValue)")
+          }catch(let error) {
+            debugPrint("\(error)")
+          }
+          
+        }
+      }
+      
+    #endif
+  }
   private func playCurrentSelfieInstruction() {
       guard currentSelfieStepIndex < selfieInstructionSteps.count else {
           // Finished all steps
