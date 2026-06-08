@@ -31,7 +31,7 @@ let package = Package(
         .target(
             name: "AmaniUI",
             dependencies: [
-                    .product(name:"AmaniSDKBundle", package:"AmaniSDK"),
+                    .product(name:"AmaniSDK", package:"AmaniSDK"),
                     "Lottie"
                 ],
             resources: [
