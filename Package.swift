@@ -12,7 +12,6 @@ let package = Package(
     products: [
         .library(
             name: "AmaniUI",
-            type: .dynamic,
             targets: ["AmaniUI"]
         )
     ],
@@ -40,7 +39,6 @@ let package = Package(
               .process("PrivacyInfo.xcprivacy")
             ],
             linkerSettings:[
-              .linkedFramework("AmaniSDK"),
               .linkedFramework("CryptoKit"),
               .linkedFramework("CoreNFC"),
               .linkedFramework("CryptoTokenKit"),
