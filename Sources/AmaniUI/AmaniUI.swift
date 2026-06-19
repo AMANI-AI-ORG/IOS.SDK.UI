@@ -31,7 +31,7 @@ public class AmaniUI {
   internal var voiceAssistant: AmaniVoiceAssistant?
 #endif
   internal let sharedSDKInstance = Amani.sharedInstance
-  
+  private let version = "1.3.11"
   
   var missingRules:[[String:String]]? = nil
   var rulesKYC: [KYCRuleModel] = []
@@ -291,7 +291,7 @@ public class AmaniUI {
     parentVC = parentViewController
       // set the delegate regardless of init method
     self.sharedSDKInstance.setDelegate(delegate: self)
- 
+    self.sharedSDKInstance.setUISDKVersion(version: self.version)
     if (token != nil){
      
       sharedSDKInstance.initAmani(server: server!, token: token!, sharedSecret: sharedSecret, customer: customer, language: language, apiVersion: apiVersion) {[weak self] (customerModel, error) in
@@ -321,7 +321,8 @@ public class AmaniUI {
     config = nil
     rulesKYC = []
     sharedSDKInstance.removeDelegates()
-    sharedSDKInstance.disconnectFromSocket()
+    sharedSDKInstance.disconnectFromSSE()
+    
   }
   
   @objc
