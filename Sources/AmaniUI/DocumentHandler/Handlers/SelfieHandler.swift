@@ -55,6 +55,9 @@ class SelfieHandler: DocumentHandler {
         guard let stepView = self.runPoseEstimationV2(
           step: docStep,
           version: version,
+          onUIStateChanged: { [weak containerVC] state in
+            containerVC?.handlePoseEstimationV2UIState(state, selfieType: selfieType)
+          },
           completion: completion
         ) else {
           completion(.failure(.moduleError))
@@ -294,10 +297,11 @@ class SelfieHandler: DocumentHandler {
       return nil
     }
   }
-      
+  
   private func runPoseEstimationV2(
     step: DocumentStepModel,
     version: DocumentVersion,
+    onUIStateChanged: ((PoseEstimationV2UIState) -> Void)? = nil,
     completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
   ) -> UIView? {
     do {
@@ -305,8 +309,6 @@ class SelfieHandler: DocumentHandler {
       var screenConfig: [PoseEstimationV2ColorKey: String] = [:]
       
       if let generalConfig = try Amani.sharedInstance.appConfig().getApplicationConfig().generalconfigs {
-//        infoMessages[.] = generalConfig.tryAgainText
-        
         screenConfig[.appBackgroundColor] = generalConfig.appBackground
         screenConfig[.appFontColor] = generalConfig.appFontColor
       }
@@ -318,8 +320,6 @@ class SelfieHandler: DocumentHandler {
       infoMessages[.faceTooFar] = version.faceIsTooFarText
       infoMessages[.holdPhoneVertically] = version.holdStable
       infoMessages[.keepRotating] = step.captureDescription
-//      infoMessages[.alertTitle] = version.selfieAlertTitle
-//      infoMessages[.alertDescription] = version.selfieAlertDescription
       infoMessages[.completed] = ""
       
       screenConfig[.progressRingColor] = version.ovalViewStartColor
@@ -334,8 +334,13 @@ class SelfieHandler: DocumentHandler {
         .setScreenConfig(screenConfig: screenConfig)
         .setVideoRecording(enabled: version.recordVideo ?? false)
       
+      if let onUIStateChanged {
+        builder.setOnUIStateChanged(onUIStateChanged)
+      }
+      
       stepView = try builder.start { [weak self] image in
         self?.stepView?.removeFromSuperview()
+        
         DispatchQueue.main.async {
           self?.startConfirmVC(image: image, docStep: step, docVer: version) { [weak self] in
             self?.goNextStep(completion: completion)
@@ -352,3 +357,4 @@ class SelfieHandler: DocumentHandler {
   }
   
 }
+
