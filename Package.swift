@@ -1,7 +1,7 @@
 // swift-tools-version:5.3
 import PackageDescription
 
-let UIVersion = "1.3.9"
+let UIVersion = "1.3.14"
 
 let package = Package(
     name: "AmaniUI",
@@ -24,14 +24,20 @@ let package = Package(
         .package(
             name: "AmaniSDK",
             url: "https://github.com/AMANI-AI-ORG/AmaniSDK-iOS",
-            from: "3.6.0"
-        )
+            from: "3.6.9"
+        ),
+        .package(
+            name: "AmaniVoiceAssistant",
+            url: "https://github.com/AMANI-AI-ORG/iOS.SDK.VoiceAssistant",
+            from: "1.1.1"
+          )
     ],
     targets: [
         .target(
             name: "AmaniUI",
             dependencies: [
                     .product(name:"AmaniSDK", package:"AmaniSDK"),
+                    .product(name:"AmaniVoiceAssistant", package:"AmaniVoiceAssistant"),
                     "Lottie"
                 ],
             resources: [

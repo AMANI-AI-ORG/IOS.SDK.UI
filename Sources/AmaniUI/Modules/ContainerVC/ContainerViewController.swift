@@ -31,7 +31,6 @@ class ContainerViewController: BaseViewController {
   
   var stepConfig: StepConfig?
   var docID: DocumentID?
-  var selfieTypeForPoseV2: Int?
   
   func bind(animationName:String?,
             docStep:DocumentStepModel,
