@@ -121,22 +121,25 @@ class IdHandler: DocumentHandler {
     }
 
     private func startNFCCapture(docVer: DocumentVersion, completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void) {
-        let nfcCaptureView = NFCViewController()
-        nfcCaptureView.docID = "NFC"
-//        let nfcCaptureView = NFCViewController(
-//            nibName: String(describing: NFCViewController.self),
-//            bundle: AmaniUI.sharedInstance.getBundle()
-//        )
-        DispatchQueue.main.async {
-            nfcCaptureView.bind(documentVersion: docVer) { [weak self] in
-                // ID is captured return to home!
-              guard let self = self else {return}
-              self.topVC?.navigationController?.popToViewController(ofClass: HomeViewController.self)
-                // Run the completion
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            let callback: () -> Void = { [weak self] in
+                guard let self = self else { return }
+                self.topVC?.navigationController?.popToViewController(ofClass: HomeViewController.self)
                 completion(.success(self.stepViewModel))
             }
-            nfcCaptureView.setNavigationLeftButton()
-            self.topVC?.navigationController?.pushViewController(nfcCaptureView, animated: true)
+            if AmaniUI.sharedInstance.uiVersion == .v2 {
+                let nfcCaptureView = NFCV2ViewController()
+                nfcCaptureView.docID = "NFC"
+                nfcCaptureView.bind(documentVersion: docVer, callback: callback)
+                self.topVC?.navigationController?.pushViewController(nfcCaptureView, animated: true)
+            } else {
+                let nfcCaptureView = NFCViewController()
+                nfcCaptureView.docID = "NFC"
+                nfcCaptureView.bind(documentVersion: docVer, callback: callback)
+                nfcCaptureView.setNavigationLeftButton()
+                self.topVC?.navigationController?.pushViewController(nfcCaptureView, animated: true)
+            }
         }
     }
   
