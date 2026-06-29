@@ -55,6 +55,13 @@ public class AmaniUI {
   
   public var uiVersion: UIVersion = .v1
 
+  var style: UIStyle {
+    switch uiVersion {
+    case .v1: return .v1
+    case .v2: return .v2
+    }
+  }
+
   public var idVideoRecord:Bool? = nil
   public var idHologramDetection:Bool? = nil
   public var poseEstimationRecord:Bool? = nil
@@ -327,7 +334,7 @@ public class AmaniUI {
     config = nil
     rulesKYC = []
     sharedSDKInstance.removeDelegates()
-    sharedSDKInstance.disconnectFromSocket()
+//    sharedSDKInstance.disconnectFromSocket()
   }
   
   @objc
@@ -373,7 +380,12 @@ public class AmaniUI {
   
   private func startKYCHome() {
     DispatchQueue.main.async {
-      self.initialVC = HomeViewController()
+      switch self.uiVersion {
+      case .v1:
+        self.initialVC = HomeViewController()
+      case .v2:
+        self.initialVC = HomeV2ViewController()
+      }
       self.initialVC?.bind(customerData: self.customerRespData!, nonKYCManager: self.nonKYCStepManager)
       try? self.initialVC?.generateKYCStepViewModels(from: self.rulesKYC)
       self.sdkNavigationController.setViewControllers(

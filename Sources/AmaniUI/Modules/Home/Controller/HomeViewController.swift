@@ -64,7 +64,7 @@ class HomeViewController: BaseViewController {
   
 
   // MARK: - Initial setup methods
-  private func setupUI() {
+  func setupUI() {
     descriptionLabel.translatesAutoresizingMaskIntoConstraints = false
     kycStepTblView.translatesAutoresizingMaskIntoConstraints = false
     amaniLogo = UIImageView(image: UIImage(named: "ic_poweredBy", in: AmaniUI.sharedInstance.getBundle(), with: nil)?.withRenderingMode(.alwaysTemplate))
@@ -177,36 +177,34 @@ class HomeViewController: BaseViewController {
     self.customerData = customerData
     self.nonKYCStepManager = nonKYCManager
   }
-  
-}
 
-// MARK: - HomeViewDelegate methods
-extension HomeViewController {
-  
-  /**
-   This method renders the rules, and uploads the document.
-   */
+  // MARK: - Overridable data methods
+
   func setCustomerInfo(model: CustomerResponseModel) {
-    
     kycStepTblView.showKYCStep(stepModels: stepModels!, onSelectCallback: { [weak self] kycStepTblViewModel in
       DispatchQueue.main.async {
         self?.kycStepTblView.updateStatus(for: kycStepTblViewModel!, status: .PROCESSING)
       }
-        
-      
-      
-      kycStepTblViewModel!.upload { (result,args) in
-        
-//        if result == true {
-//          print("upload success")
-//        } else if let errors = errors {
-//          
-//          print(errors)
-//        }
-      }
+      kycStepTblViewModel!.upload { (result,args) in }
     })
   }
-  
+
+  func onStepModel(rules: [AmaniSDK.KYCRuleModel]?) {
+    DispatchQueue.main.async {
+      if self.viewAppeared {
+        guard let kycStepTblView = self.kycStepTblView else { return }
+        guard let stepModelleri = try? self.generateKYCStepViewModels(from: AmaniUI.sharedInstance.rulesKYC) else { return }
+        self.kycStepTblView.updateDataAndReload(stepModels: stepModelleri)
+        self.goToSuccess()
+      }
+    }
+  }
+
+}
+
+// MARK: - HomeViewDelegate methods
+extension HomeViewController {
+
   func goToSuccess() {
     guard let stepModels = self.stepModels else {
       print("no model info passed 209")
@@ -218,15 +216,13 @@ extension HomeViewController {
       if let nonKYCManager = self.nonKYCStepManager, nonKYCManager.hasPostSteps() {
         nonKYCManager.startFlow(forPreSteps: false) {[weak self] () in
           DispatchQueue.main.async {
-            let successVC = SuccessViewController()
-              //            let successVC = SuccessViewController(nibName: String(describing: SuccessViewController.self), bundle: AmaniUI.sharedInstance.getBundle())
-            self?.navigationController?.pushViewController(successVC, animated: true)
+            let successVC = self?.makeSuccessViewController()
+            if let vc = successVC { self?.navigationController?.pushViewController(vc, animated: true) }
           }
         }
       } else {
         DispatchQueue.main.async {
-          let successVC = SuccessViewController()
-            //        let successVC = SuccessViewController(nibName: String(describing: SuccessViewController.self), bundle: AmaniUI.sharedInstance.getBundle())
+          let successVC = self.makeSuccessViewController()
           self.navigationController?.pushViewController(successVC, animated: false)
         }
       }
@@ -234,6 +230,16 @@ extension HomeViewController {
 
   }
   
+  func makeSuccessViewController() -> UIViewController {
+    if AmaniUI.sharedInstance.uiVersion == .v2 {
+      let vc = SuccessV2ViewController()
+      vc.bind(stepModels: stepModels)
+      return vc
+    } else {
+      return SuccessViewController()
+    }
+  }
+
   @objc
   func didReceiveStepModel(_ notification: Notification) {
     if let rules = (notification.object as? [Any?])?[1] as? [KYCRuleModel] {
@@ -253,37 +259,11 @@ extension HomeViewController {
 }
 
 extension HomeViewController {
-  
+
   func onProfileStatus(profile: AmaniSDK.wsProfileStatusModel) {
-    
+
   }
-  
-  func onStepModel(rules: [AmaniSDK.KYCRuleModel]?) {
-    // CHECK RULES AND OPEN SUCCESS SCREEN
-    // Reload customer when upload is complete
-//    print("on stepmodel \(AmaniUI.sharedInstance.rulesKYC)")
-    DispatchQueue.main.async {
-      if self.viewAppeared{
-        
-        guard let kycStepTblView = self.kycStepTblView else {return}
-          //      guard let rules = rules else {
-          //        return
-          //      }
-          //      print(AmaniUI.sharedInstance.rulesKYC)
-        guard let stepModelleri =  try? self.generateKYCStepViewModels(from:  AmaniUI.sharedInstance.rulesKYC) else {return}
-        
-        
-        self.kycStepTblView.updateDataAndReload(stepModels: stepModelleri)
-        
-        
-        self.goToSuccess()
-        
-      }
-    }
- 
-    
-  }
-  
+
 }
 extension HomeViewController {
     private func setConstraints() {
