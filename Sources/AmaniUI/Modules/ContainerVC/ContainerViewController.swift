@@ -31,7 +31,7 @@ class ContainerViewController: BaseViewController {
   
   var stepConfig: StepConfig?
   var docID: DocumentID?
-    
+  
   func bind(animationName:String?,
             docStep:DocumentStepModel,
             step:steps,
@@ -74,6 +74,7 @@ class ContainerViewController: BaseViewController {
     if docID?.getDocumentType() == "SE" && !selfieInstructionSteps.isEmpty {
       currentSelfieStepIndex = 0
       self.setConstraints()
+      playVoiceAssistantSounds()
       playCurrentSelfieInstruction()
     } else if let animationName = animationName {
       var side:String = "front"
@@ -97,19 +98,8 @@ class ContainerViewController: BaseViewController {
         name = "xxx_id_\(side)"
       }
       
-      #if canImport(AmaniVoiceAssistantSDK)
-          if let docID = self.docID {
-            Task { @MainActor in
-              do {
-                try? await AmaniUI.sharedInstance.voiceAssistant?.play(key: "VOICE_\(docID.getDocumentType())\(self.step.rawValue)")
-              }catch(let error) {
-                debugPrint("\(error)")
-              }
-              
-            }
-          }
-          
-      #endif
+      playVoiceAssistantSounds()
+    
         DispatchQueue.main.async {
             self.lottieInit(name: name) {[weak self] _ in
         //      print(finishedAnimation)
@@ -257,6 +247,7 @@ extension ContainerViewController {
   //
     }
   
+  
   private func playCurrentSelfieInstruction() {
       guard currentSelfieStepIndex < selfieInstructionSteps.count else {
           // Finished all steps
@@ -395,5 +386,61 @@ extension ContainerViewController: mrzInfoDelegate {
 //      }
       
     }
+  }
+}
+
+extension ContainerViewController {
+  func handlePoseEstimationV2UIState(_ state: PoseEstimationV2UIState, selfieType: Int) {
+    switch state {
+    case .preparationScreenDidShow:
+      playVoiceAssistantSoundForPosev2()
+     
+    case .preparationStartButtonTapped, .captureFlowDidStart:
+      stopVoiceAssistantSound()
+    
+    @unknown default:
+      break
+    }
+  }
+  
+  private func playVoiceAssistantSoundForPosev2() {
+#if canImport(AmaniVoiceAssistantSDK)
+    Task { @MainActor in
+      do {
+        try await AmaniUI.sharedInstance.voiceAssistant?.play(key: "VOICE_SE1")
+      } catch {
+        debugPrint("VoiceAssistant play failed for key: \(error)")
+      }
+    }
+#endif
+  }
+  
+  private func playVoiceAssistantSounds() {
+#if canImport(AmaniVoiceAssistantSDK)
+    if let docID = self.docID {
+      Task { @MainActor in
+        do {
+          try await AmaniUI.sharedInstance.voiceAssistant?.play(key: "VOICE_\(docID.getDocumentType())\(self.step.rawValue)")
+          
+        }catch(let error) {
+          debugPrint("\(error)")
+        }
+        
+      }
+    }
+    
+#endif
+  }
+  
+  private func stopVoiceAssistantSound() {
+#if canImport(AmaniVoiceAssistantSDK)
+    Task { @MainActor in
+      do {
+       try? await AmaniUI.sharedInstance.voiceAssistant?.stop()
+      } catch {
+        debugPrint("VoiceAssistant stop failed: \(error)")
+      }
+    }
+#endif
   }
 }

@@ -1,0 +1,229 @@
+name: ④ Release · Measure
+
+on:
+  workflow_dispatch:
+    inputs:
+      version_label:
+        description: "Label for this measurement (e.g. 1.3.0, main, branch name)"
+        required: true
+        default: "main"
+      update_history:
+        description: "Prepend the result to UI_SIZE_HISTORY.md and push a metrics PR?"
+        type: boolean
+        default: false
+
+  workflow_call:
+    inputs:
+      version_label:
+        type: string
+        required: true
+      update_history:
+        type: boolean
+        default: true
+    outputs:
+      report_path:
+        description: "Path to the generated markdown report"
+        value: ${{ jobs.measure.outputs.report_path }}
+
+jobs:
+  measure:
+    name: Measure source payload & report
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      report_path: ${{ steps.measure.outputs.report }}
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Measure source payload
+        id: measure
+        env:
+          VERSION: ${{ inputs.version_label }}
+          OUTPUT: /tmp/ui-size-section.md
+          JSON_OUTPUT: /tmp/ui-size-measurement.json
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          rm -rf /tmp/amaniui-payload /tmp/amaniui-source-payload.zip
+          mkdir -p /tmp/amaniui-payload/Sources
+
+          cp AmaniUI.podspec /tmp/amaniui-payload/
+          rsync -a --delete Sources/AmaniUI /tmp/amaniui-payload/Sources/
+
+          cd /tmp/amaniui-payload
+          zip -qr /tmp/amaniui-source-payload.zip .
+
+          ZIP_BYTES=$(stat -c%s /tmp/amaniui-source-payload.zip)
+          RAW_BYTES=$(du -sb /tmp/amaniui-payload | cut -f1)
+
+          ZIP_HUMAN=$(awk "BEGIN { printf \"%.2f MB\", $ZIP_BYTES/1048576 }")
+          RAW_HUMAN=$(awk "BEGIN { printf \"%.2f MB\", $RAW_BYTES/1048576 }")
+
+          export ZIP_BYTES RAW_BYTES ZIP_HUMAN RAW_HUMAN
+
+          python3 - <<'PY'
+          import json, os, pathlib
+
+          version = os.environ["VERSION"]
+          zip_bytes = int(os.environ["ZIP_BYTES"])
+          raw_bytes = int(os.environ["RAW_BYTES"])
+          zip_human = os.environ["ZIP_HUMAN"]
+          raw_human = os.environ["RAW_HUMAN"]
+
+          out = pathlib.Path(os.environ["OUTPUT"])
+          js = pathlib.Path(os.environ["JSON_OUTPUT"])
+
+          out.write_text(
+              "| Metric | Value |\n"
+              "|---|---|\n"
+              f"| Source payload (zip) | {zip_human} |\n"
+              f"| Source payload (uncompressed) | {raw_human} |\n"
+          )
+
+          js.write_text(json.dumps({
+              "version": version,
+              "zip_bytes": zip_bytes,
+              "raw_bytes": raw_bytes,
+              "zip_human": zip_human,
+              "raw_human": raw_human
+          }, indent=2))
+          PY
+
+          echo "report=/tmp/ui-size-section.md" >> "$GITHUB_OUTPUT"
+
+          {
+            echo "## 📦 Source payload report — \`${VERSION}\`"
+            echo ""
+            cat /tmp/ui-size-section.md
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Refresh source size badge
+        if: ${{ inputs.update_history == true }}
+        shell: bash
+        run: |
+          mkdir -p .github/metrics
+
+          python3 - <<'PY'
+          import json, pathlib
+
+          data = json.loads(pathlib.Path("/tmp/ui-size-measurement.json").read_text())
+          zip_bytes = data["zip_bytes"]
+          zip_human = data["zip_human"]
+
+          if zip_bytes < 1_048_576:
+              color = "brightgreen"
+          elif zip_bytes < 3_145_728:
+              color = "blue"
+          elif zip_bytes < 6_291_456:
+              color = "orange"
+          else:
+              color = "red"
+
+          badge = {
+              "schemaVersion": 1,
+              "label": "AmaniUI source",
+              "message": zip_human,
+              "color": color
+          }
+
+          pathlib.Path(".github/metrics/amaniui-source-size.json").write_text(
+              json.dumps(badge, indent=2)
+          )
+          PY
+
+      - name: Update UI_SIZE_HISTORY.md
+        if: ${{ inputs.update_history == true }}
+        shell: bash
+        env:
+          VERSION: ${{ inputs.version_label }}
+        run: |
+          mkdir -p .github/metrics
+
+          python3 - <<'PY'
+          import json, pathlib, os
+
+          version = os.environ["VERSION"]
+          section = pathlib.Path("/tmp/ui-size-section.md").read_text()
+          measurement = json.loads(pathlib.Path("/tmp/ui-size-measurement.json").read_text())
+
+          history_md = pathlib.Path(".github/metrics/UI_SIZE_HISTORY.md")
+          latest_json = pathlib.Path(".github/metrics/ui-size-latest.json")
+          history_json = pathlib.Path(".github/metrics/ui-size-history.json")
+
+          existing_md = history_md.read_text() if history_md.exists() else "# UI Size History\n\n"
+          header = "# UI Size History\n\n"
+          body = existing_md[len(header):] if existing_md.startswith(header) else existing_md
+
+          new_section = (
+              f"## 📦 Source payload size — `{version}`\n\n"
+              f"{section}\n"
+          )
+
+          history_md.write_text(header + new_section + body)
+
+          latest_json.write_text(json.dumps(measurement, indent=2))
+
+          if history_json.exists():
+              history = json.loads(history_json.read_text())
+          else:
+              history = []
+
+          history = [entry for entry in history if entry.get("version") != version]
+          history.insert(0, measurement)
+
+          history_json.write_text(json.dumps(history, indent=2))
+          PY
+
+      - name: Open metrics PR
+        if: ${{ inputs.update_history == true }}
+        env:
+          VERSION: ${{ inputs.version_label }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          SLUG=$(echo "$VERSION" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9._-]/-/g')
+          BRANCH="metrics/ui-size-${SLUG}"
+
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+          git add .github/metrics/
+          if git diff --cached --quiet; then
+            echo "No metrics change to commit — skipping PR."
+            exit 0
+          fi
+
+          git checkout -B "$BRANCH"
+          git commit -m "chore(metrics): record UI source size for ${VERSION}"
+          git push --force-with-lease origin "$BRANCH"
+
+          gh label create "metrics" --color "C5DEF5" --description "Auto-generated UI size metrics update" 2>/dev/null || true
+
+          PR_URL=$(gh pr list --head "$BRANCH" --state open --json url --jq '.[0].url // empty')
+
+          if [ -n "$PR_URL" ]; then
+            echo "Refreshed existing PR: $PR_URL"
+            gh pr comment "$PR_URL" --body "Refreshed UI size metrics for \`${VERSION}\` from run \`${{ github.run_id }}\`."
+          else
+            gh pr create               --base main               --head "$BRANCH"               --title "chore(metrics): UI size report for ${VERSION}"               --label "metrics"               --body "Auto-generated by **④ Release · Measure** (run \`${{ github.run_id }}\`).
+
+          Updates:
+          - [\`amaniui-source-size.json\`](.github/metrics/amaniui-source-size.json)
+          - [\`UI_SIZE_HISTORY.md\`](.github/metrics/UI_SIZE_HISTORY.md)
+          - [\`ui-size-latest.json\`](.github/metrics/ui-size-latest.json)
+          - [\`ui-size-history.json\`](.github/metrics/ui-size-history.json)
+
+          Version: \`${VERSION}\`
+
+          Merge to publish the updated size record."
+          fi
+

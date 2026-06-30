@@ -1,7 +1,7 @@
 // swift-tools-version:5.3
 import PackageDescription
 
-let UIVersion = "1.2.9"
+let UIVersion = "1.3.15"
 
 let package = Package(
     name: "AmaniUI",
@@ -12,7 +12,6 @@ let package = Package(
     products: [
         .library(
             name: "AmaniUI",
-            type: .dynamic,
             targets: ["AmaniUI"]
         )
     ],
@@ -23,15 +22,22 @@ let package = Package(
             from: "4.5.0"
         ),
         .package(
-            name: "AmaniRepo",
-            path: "/Users/yyerdogmus/Documents/GitHub/IOS_SDK_V2" 
-        )
+            name: "AmaniSDK",
+            url: "https://github.com/AMANI-AI-ORG/AmaniSDK-iOS",
+            from: "3.6.9"
+        ),
+        .package(
+            name: "AmaniVoiceAssistantSDK",
+            url: "https://github.com/AMANI-AI-ORG/AmaniVoiceAssistantSDK",
+            from: "1.1.1"
+          )
     ],
     targets: [
         .target(
             name: "AmaniUI",
             dependencies: [
-                    .product(name:"AmaniSDK", package:"AmaniRepo"),
+                    .product(name:"AmaniSDK", package:"AmaniSDK"),
+                    .product(name:"AmaniVoiceAssistantSDK", package:"AmaniVoiceAssistantSDK"),
                     "Lottie"
                 ],
             resources: [
@@ -39,7 +45,6 @@ let package = Package(
               .process("PrivacyInfo.xcprivacy")
             ],
             linkerSettings:[
-              .linkedFramework("AmaniSDK"),
               .linkedFramework("CryptoKit"),
               .linkedFramework("CoreNFC"),
               .linkedFramework("CryptoTokenKit"),

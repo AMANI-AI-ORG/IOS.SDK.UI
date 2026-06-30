@@ -1,4 +1,4 @@
-name: Publish Release — Tag Commit, Update Mobile_SDK_Repo & Create GitHub Release
+name: ③ Release · Ship
 
 on:
   pull_request:
@@ -21,6 +21,9 @@ jobs:
     permissions:
       contents: write
       pull-requests: read
+    outputs:
+      version: ${{ steps.version.outputs.value }}
+      is_prerelease: ${{ steps.prerelease.outputs.is_prerelease }}
 
     concurrency:
       group: publish-release-${{ github.event.pull_request.number }}
@@ -312,3 +315,16 @@ jobs:
           BRANCH: ${{ github.event.pull_request.head.ref }}
         run: |
           git push origin --delete "$BRANCH" || true
+
+  measure:
+    name: Measure & record source payload size
+    needs: publish
+    if: >-
+      needs.publish.result == 'success'
+      && needs.publish.outputs.is_prerelease != 'true'
+      && contains(github.event.pull_request.labels.*.name, 'measure-size')
+    uses: ./.github/workflows/release-measure.yml
+    with:
+      version_label: ${{ needs.publish.outputs.version }}
+      update_history: true
+    secrets: inherit
