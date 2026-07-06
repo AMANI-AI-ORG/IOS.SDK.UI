@@ -26,7 +26,7 @@ class QuestionSubmitButton: UIStackView {
     submit.setTitleColor(.white, for: .normal)
     submit.backgroundColor = hextoUIColor(hexString: genConfig?.primaryButtonBackgroundColor ?? "#EA3365")
     submit.addTarget(self, action: #selector(didTapNext), for: .touchUpInside)
-      submit.addCornerRadiousWith(radious: 25.0)
+      submit.addCornerRadiousWith(radious: AmaniUI.sharedInstance.style.ctaButtonCornerRadius)
     return submit
   }()
   

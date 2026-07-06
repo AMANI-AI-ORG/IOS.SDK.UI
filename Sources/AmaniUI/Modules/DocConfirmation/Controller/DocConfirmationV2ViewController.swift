@@ -68,7 +68,7 @@ class DocConfirmationV2ViewController: BaseViewController {
         view.backgroundColor = bgColor
 
         // Navigation bar
-        setNavigationBarWith(title: "Review capture")
+        setNavigationBarWith(title: gc?.v2DocumentConfirmationNavTitle ?? "Review capture")
         let backButton = makeNavButton(
             icon: UIImage(systemName: "arrow.left"),
             tintColor: hextoUIColor(hexString: gc?.topBarFontColor ?? "1A1A2E")
@@ -78,14 +78,14 @@ class DocConfirmationV2ViewController: BaseViewController {
 
         // Title
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        titleLabel.text = "Looks good?"
+        titleLabel.text = gc?.v2DocumentConfirmationHeader ?? "Looks good?"
         titleLabel.font = UIFont.systemFont(ofSize: 26, weight: .bold)
         titleLabel.textColor = fontColor
         titleLabel.numberOfLines = 0
 
         // Subtitle
         subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
-        subtitleLabel.text = "Make sure the document is sharp and fully visible."
+        subtitleLabel.text = gc?.v2DocumentConfirmationSubtitle ?? "Make sure the document is sharp and fully visible."
         subtitleLabel.font = UIFont.systemFont(ofSize: 15, weight: .regular)
         subtitleLabel.textColor = fontColor.withAlphaComponent(0.55)
         subtitleLabel.numberOfLines = 0
@@ -99,7 +99,7 @@ class DocConfirmationV2ViewController: BaseViewController {
         imageView.backgroundColor = UIColor.black.withAlphaComponent(0.85)
 
         // Quality checks card
-        buildQualityCard(fontColor: fontColor, accentColor: accentColor)
+        buildQualityCard(fontColor: fontColor, accentColor: accentColor, gc: gc)
 
         // Content stack
         let contentStack = UIStackView(arrangedSubviews: [titleLabel, subtitleLabel, imageView, qualityCard])
@@ -180,7 +180,7 @@ class DocConfirmationV2ViewController: BaseViewController {
 
     // MARK: - Quality card
 
-    private func buildQualityCard(fontColor: UIColor, accentColor: UIColor) {
+    private func buildQualityCard(fontColor: UIColor, accentColor: UIColor, gc: GeneralConfig?) {
         qualityCard.translatesAutoresizingMaskIntoConstraints = false
         qualityCard.backgroundColor = fontColor.withAlphaComponent(0.05)
         qualityCard.layer.cornerRadius = AmaniUI.sharedInstance.style.cardCornerRadius
@@ -189,14 +189,14 @@ class DocConfirmationV2ViewController: BaseViewController {
 
         let headerLabel = UILabel()
         headerLabel.translatesAutoresizingMaskIntoConstraints = false
-        headerLabel.text = "QUALITY CHECKS"
+        headerLabel.text = gc?.v2DocumentQualityHeader ?? "QUALITY CHECKS"
         headerLabel.font = UIFont.systemFont(ofSize: 11, weight: .semibold)
         headerLabel.textColor = fontColor.withAlphaComponent(0.45)
 
         let checks = [
-            "Sharp & in focus",
-            "Document fully visible",
-            "No glare or shadows",
+            gc?.v2DocumentQuality1 ?? "Sharp & in focus",
+            gc?.v2DocumentQuality2 ?? "Document fully visible",
+            gc?.v2DocumentQuality3 ?? "No glare or shadows",
         ]
 
         let rowsStack = UIStackView(arrangedSubviews: checks.map { makeQualityRow(text: $0, fontColor: fontColor, accentColor: accentColor) })

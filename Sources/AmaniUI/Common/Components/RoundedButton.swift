@@ -22,7 +22,7 @@ class RoundedButton: UIButton {
     backgroundColor = color
     
     layer.borderColor = color.cgColor
-    layer.cornerRadius = 24.0
+    layer.cornerRadius = AmaniUI.sharedInstance.style.ctaButtonCornerRadius
     
     titleLabel?.font = UIFont.systemFont(ofSize: 16.0, weight: .bold)
     contentEdgeInsets = UIEdgeInsets(top: 10, left: 20, bottom: 10, right: 20)

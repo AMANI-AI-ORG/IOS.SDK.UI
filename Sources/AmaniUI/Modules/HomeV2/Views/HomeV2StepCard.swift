@@ -27,6 +27,8 @@ final class HomeV2StepCard: UIView {
     private let errorTitleLabel = UILabel()
     private let errorMessageLabel = UILabel()
 
+    private let contentStack = UIStackView()
+
     private var tapAction: (() -> Void)?
 
     // MARK: - Init
@@ -109,10 +111,11 @@ final class HomeV2StepCard: UIView {
         errorCard.addSubview(errorTextStack)
 
         // Outer content stack (row + optional error card)
-        let contentStack = UIStackView(arrangedSubviews: [rowStack, errorCard])
         contentStack.axis = .vertical
         contentStack.spacing = 10
         contentStack.translatesAutoresizingMaskIntoConstraints = false
+        contentStack.addArrangedSubview(rowStack)
+        contentStack.addArrangedSubview(errorCard)
         cardView.addSubview(contentStack)
 
         NSLayoutConstraint.activate([
@@ -166,6 +169,10 @@ final class HomeV2StepCard: UIView {
         tapAction?()
     }
 
+    func setContentDimmed(_ dimmed: Bool) {
+        contentStack.alpha = dimmed ? 0.75 : 1.0
+    }
+
     // MARK: - Configure
 
     func configure(
@@ -178,23 +185,44 @@ final class HomeV2StepCard: UIView {
         tapAction = onTap
         let style = AmaniUI.sharedInstance.style
         let state = resolveState(for: step)
-        let fontColor = hextoUIColor(hexString: AmaniUI.sharedInstance.config?.generalconfigs?.appFontColor ?? "FFFFFF")
+        let gc = AmaniUI.sharedInstance.config?.generalconfigs
+        let fontColor = hextoUIColor(hexString: gc?.appFontColor ?? "FFFFFF")
         let mutedColor = fontColor.withAlphaComponent(0.45)
         let inactiveSurface = fontColor.withAlphaComponent(0.07)
         let inactiveBorder = fontColor.withAlphaComponent(0.18)
         let inactiveBadge = fontColor.withAlphaComponent(0.12)
 
-        // Per-status color and its on-color text, sourced from stepConfig.buttonColor / buttonTextColor
-        // (same source as v1 KYCStepTableViewCell). Falls back to accentColor when unconfigured.
-        let statusColor = step.buttonColor
-        let statusTextColor = step.textColor
+        // Active cards always use the brand accent (primaryButtonBackgroundColor).
+        // Terminal-state cards (approved/rejected/pending/processing) use the per-step
+        // config color from stepConfig.buttonColor, which matches v1 behavior.
+        let statusColor: UIColor
+        let statusTextColor: UIColor
+        switch state {
+        case .active:
+            statusColor = accentColor
+            statusTextColor = .white
+        case .completed, .pendingReview, .rejected, .processing:
+            statusColor = step.buttonColor
+            statusTextColor = step.textColor
+        case .locked:
+            statusColor = inactiveBadge   // not used for card/badge coloring
+            statusTextColor = mutedColor
+        }
 
         // Card appearance
         cardView.layer.cornerRadius = style.cardCornerRadius
         cardView.clipsToBounds = true
 
         switch state {
-        case .active, .rejected, .processing:
+        case .active:
+            cardView.layer.borderWidth = style.cardBorderWidth
+            cardView.layer.borderColor = accentColor.cgColor
+            cardView.backgroundColor = step.buttonColor.withAlphaComponent(0.07)
+        case .rejected:
+            cardView.layer.borderWidth = style.cardBorderWidth
+            cardView.layer.borderColor = accentColor.cgColor
+            cardView.backgroundColor = statusColor.withAlphaComponent(0.07)
+        case .processing:
             cardView.layer.borderWidth = style.cardBorderWidth
             cardView.layer.borderColor = statusColor.cgColor
             cardView.backgroundColor = statusColor.withAlphaComponent(0.07)
@@ -244,39 +272,38 @@ final class HomeV2StepCard: UIView {
             badgeIconView.tintColor = statusTextColor
         }
 
-        // Title
+        // Title — always the step name so subtitle status labels don't duplicate it
         switch state {
-        case .active, .rejected, .processing:
+        case .active, .rejected, .processing, .completed, .pendingReview:
             titleLabel.text = step.title
-            titleLabel.textColor = fontColor
-        case .completed, .pendingReview:
-            titleLabel.text = step.stepConfig.buttonText?.approved ?? step.title
             titleLabel.textColor = fontColor
         case .locked:
             titleLabel.text = step.title
             titleLabel.textColor = mutedColor
         }
 
-        // Subtitle
+        // Subtitle — reuse existing buttonText config keys for terminal states
         let time = estimatedTime(for: step)
         switch state {
         case .active:
-            subtitleLabel.text = hasProgress ? "Up next · \(time)" : "Start here · \(time)"
+            let startLabel = gc?.v2StepStartHereLabel ?? "Start here"
+            let upNextLabel = gc?.v2StepUpNextLabel ?? "Up next"
+            subtitleLabel.text = hasProgress ? "\(upNextLabel) · \(time)" : "\(startLabel) · \(time)"
             subtitleLabel.textColor = mutedColor
         case .completed:
-            subtitleLabel.text = "Verified"
+            subtitleLabel.text = step.stepConfig.buttonText?.approved ?? "Verified"
             subtitleLabel.textColor = mutedColor
         case .pendingReview:
-            subtitleLabel.text = "Under review"
+            subtitleLabel.text = step.stepConfig.buttonText?.pendingReview ?? "Under review"
             subtitleLabel.textColor = mutedColor
         case .rejected:
-            subtitleLabel.text = "Rejected · Action needed"
+            subtitleLabel.text = step.stepConfig.buttonText?.rejected ?? "Rejected · Action needed"
             subtitleLabel.textColor = mutedColor
         case .locked:
             subtitleLabel.text = time
             subtitleLabel.textColor = mutedColor
         case .processing:
-            subtitleLabel.text = "Processing..."
+            subtitleLabel.text = step.stepConfig.buttonText?.processing ?? "Processing..."
             subtitleLabel.textColor = mutedColor
         }
 
@@ -300,24 +327,28 @@ final class HomeV2StepCard: UIView {
             rightIconView.isHidden = true
         }
 
+        // Dim content for rejected — border (on cardView.layer) stays full opacity
+        contentStack.alpha = (state == .rejected) ? 0.75 : 1.0
+
         // Error sub-card
         if state == .rejected {
             errorCard.isHidden = false
-            errorCard.backgroundColor = hextoUIColor(hexString: AmaniUI.sharedInstance.config?.generalconfigs?.appBackground ?? "FFFFFF")
+            errorCard.backgroundColor = hextoUIColor(hexString: gc?.appBackground ?? "FFFFFF")
             errorCard.layer.borderWidth = 1
             errorCard.layer.borderColor = statusColor.withAlphaComponent(0.25).cgColor
 
             errorIconView.image = UIImage(systemName: "exclamationmark.circle")?.withRenderingMode(.alwaysTemplate)
             errorIconView.tintColor = fontColor
 
-            errorTitleLabel.text = "Verification could not be completed"
+            errorTitleLabel.text = gc?.v2StepRejectionTitle ?? "Verification could not be completed"
             errorTitleLabel.textColor = fontColor
 
-            errorMessageLabel.text = "Please retake your document in good lighting and make sure all details are clearly visible."
+            errorMessageLabel.text = gc?.v2StepRejectionDescription ?? "Your submission could not be accepted. Please try again to continue."
             errorMessageLabel.textColor = fontColor.withAlphaComponent(0.6)
         } else {
             errorCard.isHidden = true
         }
+
     }
 
     // MARK: - Helpers
@@ -337,6 +368,8 @@ final class HomeV2StepCard: UIView {
     }
 
     private func estimatedTime(for step: KYCStepViewModel) -> String {
+        let gc = AmaniUI.sharedInstance.config?.generalconfigs
+        if let configured = gc?.v2EstimatedTime { return configured }
         let ids = Set(step.documents.compactMap { $0.id })
         if ids.contains("NF") { return "~2 min" }
         if ids.contains("IB") { return "~1 min" }

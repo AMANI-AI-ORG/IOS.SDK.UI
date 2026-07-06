@@ -204,7 +204,7 @@ class NFCV2ViewController: BaseViewController {
         searchingDot.layer.cornerRadius = 5
 
         searchingLabel.translatesAutoresizingMaskIntoConstraints = false
-        searchingLabel.text = "Searching for chip..."
+        searchingLabel.text = appConfig?.generalconfigs?.v2NfcSearchingText ?? "Searching for chip..."
         searchingLabel.font = UIFont.systemFont(ofSize: 14, weight: .medium)
         searchingLabel.textColor = fontColor.withAlphaComponent(0.55)
 

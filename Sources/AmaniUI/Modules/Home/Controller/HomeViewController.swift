@@ -182,6 +182,7 @@ class HomeViewController: BaseViewController {
 
   func setCustomerInfo(model: CustomerResponseModel) {
     kycStepTblView.showKYCStep(stepModels: stepModels!, onSelectCallback: { [weak self] kycStepTblViewModel in
+      AmaniUI.sharedInstance.markStepAsProcessing(id: kycStepTblViewModel!.id)
       DispatchQueue.main.async {
         self?.kycStepTblView.updateStatus(for: kycStepTblViewModel!, status: .PROCESSING)
       }

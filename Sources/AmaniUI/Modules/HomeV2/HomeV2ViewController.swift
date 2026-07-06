@@ -223,9 +223,9 @@ class HomeV2ViewController: HomeViewController {
         if let idx = idx {
             selectStep(at: idx, animated: false)
         } else {
-            // All steps done or locked — CTA says Continue
+            let gc = AmaniUI.sharedInstance.config?.generalconfigs
             ctaButton.backgroundColor = accentColor
-            ctaButton.setTitle("Continue", for: .normal)
+            ctaButton.setTitle(gc?.continueText ?? "Continue", for: .normal)
         }
     }
 
@@ -240,7 +240,11 @@ class HomeV2ViewController: HomeViewController {
         let applyChanges = {
             for (i, card) in self.stepCards.enumerated() {
                 if self.isSelectable(steps[i]) {
-                    card.alpha = i == index ? 1.0 : 0.45
+                    let isRejected = steps[i].status == .REJECTED || steps[i].status == .AUTOMATICALLY_REJECTED
+                    card.alpha = (i == index || isRejected) ? 1.0 : 0.75
+                    if isRejected {
+                        card.setContentDimmed(i != index)
+                    }
                 } else {
                     card.alpha = 1.0
                 }
@@ -279,6 +283,7 @@ class HomeV2ViewController: HomeViewController {
             case .failure(let error):
                 print("HomeV2: step press error \(error)")
             case .success(let model):
+                AmaniUI.sharedInstance.markStepAsProcessing(id: model.id)
                 model.updateStatus(status: .PROCESSING)
                 DispatchQueue.main.async {
                     guard let self = self else { return }
@@ -293,36 +298,42 @@ class HomeV2ViewController: HomeViewController {
     // MARK: - Header text logic
 
     private func headerContent(steps: [KYCStepViewModel]) -> (String, String) {
+        let gc = AmaniUI.sharedInstance.config?.generalconfigs
         let completedCount = steps.filter { $0.status == .APPROVED || $0.status == .PENDING_REVIEW }.count
         let rejectedCount = steps.filter { $0.status == .REJECTED || $0.status == .AUTOMATICALLY_REJECTED }.count
         let remainingCount = steps.count - completedCount
 
         if rejectedCount > 0 {
-            let step = rejectedCount == 1 ? "step needs" : "steps need"
+            let noun = rejectedCount == 1 ? "step needs" : "steps need"
+            let suffix = gc?.v2HomeRejectedSubtitle ?? "your attention before we can continue."
             return (
-                "Verification incomplete",
-                "\(numberWord(rejectedCount).capitalized) \(step) your attention before we can continue."
+                gc?.v2HomeRejectedTitle ?? "Verification incomplete",
+                "\(numberWord(rejectedCount).capitalized) \(noun) \(suffix)"
             )
         } else if completedCount == 0 {
+            let suffix = gc?.v2HomeInitialSubtitle ?? "quick steps. Should take about 2 minutes."
             return (
-                "Let's get you verified",
-                "\(numberWord(steps.count).capitalized) quick steps. Should take about 2 minutes."
+                gc?.v2HomeInitialTitle ?? "Let's get you verified",
+                "\(numberWord(steps.count).capitalized) \(suffix)"
             )
         } else {
-            let steps = remainingCount == 1 ? "step" : "steps"
+            let noun = remainingCount == 1 ? "more step" : "more steps"
+            let suffix = gc?.v2HomeProgressSubtitle ?? "to finish verification."
             return (
-                "You're making progress",
-                "\(numberWord(remainingCount).capitalized) more \(steps) to finish verification."
+                gc?.v2HomeProgressTitle ?? "You're making progress",
+                "\(numberWord(remainingCount).capitalized) \(noun) \(suffix)"
             )
         }
     }
 
     private func ctaTitleForStep(_ step: KYCStepViewModel, hasProgress: Bool) -> String {
+        let gc = AmaniUI.sharedInstance.config?.generalconfigs
         let name = step.stepConfig.title ?? step.title
         if step.status == .REJECTED || step.status == .AUTOMATICALLY_REJECTED {
-            return "Retake \(name)"
+            return "\(gc?.v2HomeCtaRetake ?? "Retake") \(name)"
         }
-        return hasProgress ? "Continue with \(name)" : "Start with \(name)"
+        let prefix = hasProgress ? (gc?.v2HomeCtaContinue ?? "Continue with") : (gc?.v2HomeCtaStart ?? "Start with")
+        return "\(prefix) \(name)"
     }
 
     // MARK: - Helpers

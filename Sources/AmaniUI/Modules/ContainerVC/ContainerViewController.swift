@@ -165,7 +165,9 @@ extension ContainerViewController {
         Amani.sharedInstance.setMRZDelegate(delegate: self)
       }
       let appConfig = try! Amani.sharedInstance.appConfig().getApplicationConfig()
-      let buttonRadious = CGFloat(appConfig.generalconfigs?.buttonRadius ?? 10)
+      let buttonRadious: CGFloat = AmaniUI.sharedInstance.uiVersion == .v2
+          ? AmaniUI.sharedInstance.style.ctaButtonCornerRadius
+          : CGFloat(appConfig.generalconfigs?.buttonRadius ?? 10)
       
       self.btnContinue.translatesAutoresizingMaskIntoConstraints = false
       self.titleDescription.translatesAutoresizingMaskIntoConstraints = false

@@ -117,7 +117,7 @@ class VersionV2ViewController: BaseViewController {
         ctaButton.setTitleColor(UIColor.white.withAlphaComponent(0.6), for: .disabled)
         ctaButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
         ctaButton.layer.cornerRadius = AmaniUI.sharedInstance.style.ctaButtonCornerRadius
-        ctaButton.setTitle("Select a document to continue", for: .normal)
+        ctaButton.setTitle(gc?.v2DocSelectionPlaceholder ?? "Select a document to continue", for: .normal)
         ctaButton.isEnabled = false
         ctaButton.addTarget(self, action: #selector(ctaTapped), for: .touchUpInside)
 
@@ -180,7 +180,7 @@ class VersionV2ViewController: BaseViewController {
         let title = selectedVersion?.title ?? "Continue"
         UIView.animate(withDuration: 0.2) {
             self.ctaButton.backgroundColor = accentColor
-            self.ctaButton.setTitle("Continue with \(title)", for: .normal)
+            self.ctaButton.setTitle("\(gc?.v2HomeCtaContinue ?? "Continue with") \(title)", for: .normal)
             self.ctaButton.isEnabled = true
         }
     }

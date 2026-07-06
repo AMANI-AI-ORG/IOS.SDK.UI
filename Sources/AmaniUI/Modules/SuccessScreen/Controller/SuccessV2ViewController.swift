@@ -88,7 +88,7 @@ class SuccessV2ViewController: BaseViewController {
 
         // Title
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        titleLabel.text = "You're all done!"
+        titleLabel.text = gc?.successHeaderText ?? "You're all done!"
         titleLabel.font = UIFont.systemFont(ofSize: 26, weight: .bold)
         titleLabel.textColor = fontColor
         titleLabel.textAlignment = .center
@@ -96,7 +96,7 @@ class SuccessV2ViewController: BaseViewController {
 
         // Subtitle
         subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
-        subtitleLabel.text = "All steps are complete. We'll review your documents and let you know the result."
+        subtitleLabel.text = gc?.successInfo1Text ?? "All steps are complete. We'll review your documents and let you know the result."
         subtitleLabel.font = UIFont.systemFont(ofSize: 15, weight: .regular)
         subtitleLabel.textColor = fontColor.withAlphaComponent(0.55)
         subtitleLabel.textAlignment = .center

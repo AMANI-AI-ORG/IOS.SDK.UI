@@ -34,8 +34,8 @@ class IdHandler: DocumentHandler {
           if version.nfc == true && NFCNDEFReaderSession.readingAvailable {
                 self.startNFCCapture(docVer: version, completion: completion)
             } else {
+              completion(.success(self.stepViewModel))
               self.topVC?.navigationController?.popToViewController(ofClass: HomeViewController.self)
-                completion(.success(self.stepViewModel))
             }
         }
     }
@@ -125,8 +125,8 @@ class IdHandler: DocumentHandler {
             guard let self = self else { return }
             let callback: () -> Void = { [weak self] in
                 guard let self = self else { return }
-                self.topVC?.navigationController?.popToViewController(ofClass: HomeViewController.self)
                 completion(.success(self.stepViewModel))
+                self.topVC?.navigationController?.popToViewController(ofClass: HomeViewController.self)
             }
             if AmaniUI.sharedInstance.uiVersion == .v2 {
                 let nfcCaptureView = NFCV2ViewController()
