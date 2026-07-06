@@ -439,7 +439,17 @@ public class AmaniUI {
       }
     }
   }
-  
+
+  /// Optimistically marks a KYC rule as PROCESSING in the shared rules cache,
+  /// without waiting for the backend to confirm the upload. This mirrors v1's
+  /// behavior of updating the local customer model immediately after a step's
+  /// capture flow finishes, so the Home screen never has to wait on a network
+  /// round trip to show the correct status.
+  func markStepAsProcessing(id: String?) {
+    guard let id = id, let index = rulesKYC.firstIndex(where: { $0.id == id }) else { return }
+    rulesKYC[index].status = DocumentStatus.PROCESSING.rawValue
+  }
+
 }
 
 
