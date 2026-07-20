@@ -29,7 +29,7 @@ let package = Package(
         .package(
             name: "AmaniVoiceAssistantSDK",
             url: "https://github.com/AMANI-AI-ORG/AmaniVoiceAssistantSDK",
-            from: "1.1.1"
+            from: "1.1.2"
           )
     ],
     targets: [
