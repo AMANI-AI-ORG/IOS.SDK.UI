@@ -126,7 +126,7 @@ class SuccessV2ViewController: BaseViewController {
             progressView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 12),
             progressView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
             progressView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
-            progressView.heightAnchor.constraint(equalToConstant: 44),
+            progressView.heightAnchor.constraint(equalToConstant: 56),
 
             // Icon wrapper below progress view
             iconWrapperView.centerXAnchor.constraint(equalTo: view.centerXAnchor),

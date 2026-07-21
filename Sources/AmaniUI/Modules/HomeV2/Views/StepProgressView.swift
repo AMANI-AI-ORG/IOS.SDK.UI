@@ -62,12 +62,14 @@ final class StepProgressView: UIView {
             let label = UILabel()
             label.translatesAutoresizingMaskIntoConstraints = false
             label.text = step.stepConfig.title ?? step.id
-            label.font = UIFont.systemFont(ofSize: 11, weight: .medium)
+            label.font = UIFont.systemFont(ofSize: 9, weight: .medium)
             label.textAlignment = .center
+            label.numberOfLines = 2
+            label.lineBreakMode = .byWordWrapping
 
             if isActive {
                 label.textColor = accentColor
-                label.font = UIFont.systemFont(ofSize: 11, weight: .semibold)
+                label.font = UIFont.systemFont(ofSize: 9, weight: .semibold)
             } else if isCompleted {
                 label.textColor = fontColor.withAlphaComponent(0.7)
             } else {
@@ -91,7 +93,7 @@ final class StepProgressView: UIView {
                 label.leadingAnchor.constraint(equalTo: container.leadingAnchor),
                 label.trailingAnchor.constraint(equalTo: container.trailingAnchor),
                 label.bottomAnchor.constraint(equalTo: container.bottomAnchor),
-                label.heightAnchor.constraint(equalToConstant: 16),
+                label.heightAnchor.constraint(equalToConstant: 28),
             ])
 
             stepStack.addArrangedSubview(container)

@@ -69,7 +69,11 @@ class HomeV2ViewController: HomeViewController {
             tintColor: hextoUIColor(hexString: appConfig.generalconfigs?.topBarFontColor ?? "1A1A2E")
         )
         backButton.addTarget(self, action: #selector(popViewController), for: .touchUpInside)
-        navigationItem.leftBarButtonItem = UIBarButtonItem(customView: backButton)
+        let backBarItem = UIBarButtonItem(customView: backButton)
+        if #available(iOS 26.0, *) {
+            backBarItem.hidesSharedBackground = true
+        }
+        navigationItem.leftBarButtonItem = backBarItem
 
     }
 
@@ -79,8 +83,9 @@ class HomeV2ViewController: HomeViewController {
         let symConfig = UIImage.SymbolConfiguration(pointSize: 13, weight: .medium)
         button.setImage(icon?.withConfiguration(symConfig).withRenderingMode(.alwaysTemplate), for: .normal)
         button.tintColor = tintColor
-        button.backgroundColor = tintColor.withAlphaComponent(0.12)
+        button.backgroundColor = tintColor.withAlphaComponent(0.3)
         button.layer.cornerRadius = AmaniUI.sharedInstance.style.navButtonCornerRadius
+        button.layer.cornerCurve = .continuous
         button.frame = CGRect(x: 0, y: 0, width: size, height: size)
         NSLayoutConstraint.activate([
             button.widthAnchor.constraint(equalToConstant: size),
@@ -168,7 +173,7 @@ class HomeV2ViewController: HomeViewController {
             contentStack.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: -40),
 
             // Progress view fixed height
-            progressView.heightAnchor.constraint(equalToConstant: 44),
+            progressView.heightAnchor.constraint(equalToConstant: 56),
         ])
     }
 

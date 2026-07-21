@@ -29,6 +29,6 @@ struct UIStyle {
         ctaButtonHeight: 56,
         cardBorderWidth: 1.5,
         navButtonSize: 36,
-        navButtonCornerRadius: 10
+        navButtonCornerRadius: 14
     )
 }

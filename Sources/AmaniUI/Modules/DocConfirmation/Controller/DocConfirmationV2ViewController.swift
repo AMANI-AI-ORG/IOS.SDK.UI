@@ -74,7 +74,11 @@ class DocConfirmationV2ViewController: BaseViewController {
             tintColor: hextoUIColor(hexString: gc?.topBarFontColor ?? "1A1A2E")
         )
         backButton.addTarget(self, action: #selector(tryAgainAction(_:)), for: .touchUpInside)
-        navigationItem.leftBarButtonItem = UIBarButtonItem(customView: backButton)
+        let backBarItem = UIBarButtonItem(customView: backButton)
+        if #available(iOS 26.0, *) {
+            backBarItem.hidesSharedBackground = true
+        }
+        navigationItem.leftBarButtonItem = backBarItem
 
         // Title
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -264,8 +268,9 @@ class DocConfirmationV2ViewController: BaseViewController {
         let symConfig = UIImage.SymbolConfiguration(pointSize: 13, weight: .medium)
         button.setImage(icon?.withConfiguration(symConfig).withRenderingMode(.alwaysTemplate), for: .normal)
         button.tintColor = tintColor
-        button.backgroundColor = tintColor.withAlphaComponent(0.12)
+        button.backgroundColor = tintColor.withAlphaComponent(0.3)
         button.layer.cornerRadius = AmaniUI.sharedInstance.style.navButtonCornerRadius
+        button.layer.cornerCurve = .continuous
         button.frame = CGRect(x: 0, y: 0, width: size, height: size)
         NSLayoutConstraint.activate([
             button.widthAnchor.constraint(equalToConstant: size),
