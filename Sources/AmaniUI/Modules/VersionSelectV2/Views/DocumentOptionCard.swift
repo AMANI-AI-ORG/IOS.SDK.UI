@@ -164,7 +164,7 @@ final class DocumentOptionCard: UIView {
         if isSelected {
             chipsRow.isHidden = false
             if version.nfc == true {
-                let nfcLabel = AmaniUI.sharedInstance.config?.generalconfigs?.v2NfcChipLabel ?? "Fastest with NFC"
+                let nfcLabel = version.v2NfcChipLabel ?? AmaniUI.sharedInstance.config?.generalconfigs?.v2NfcChipLabel ?? "Fastest with NFC"
                 chipsRow.addArrangedSubview(makeChip(
                     text: nfcLabel,
                     filled: true,
@@ -260,6 +260,7 @@ final class DocumentOptionCard: UIView {
 
     private func timeEstimate(for version: DocumentVersion) -> String {
         let gc = AmaniUI.sharedInstance.config?.generalconfigs
+        if let configured = version.v2EstimatedTime { return configured }
         if let configured = gc?.v2EstimatedTime { return configured }
         if version.nfc == true { return "~2 min" }
         switch version.docID?.uppercased() {

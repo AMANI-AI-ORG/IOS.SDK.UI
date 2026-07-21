@@ -117,7 +117,8 @@ class VersionV2ViewController: BaseViewController {
         ctaButton.setTitleColor(UIColor.white.withAlphaComponent(0.6), for: .disabled)
         ctaButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
         ctaButton.layer.cornerRadius = AmaniUI.sharedInstance.style.ctaButtonCornerRadius
-        ctaButton.setTitle(gc?.v2DocSelectionPlaceholder ?? "Select a document to continue", for: .normal)
+        let firstVersion = stepVM?.documents.first?.versions?.first
+        ctaButton.setTitle(firstVersion?.v2DocSelectionPlaceholder ?? gc?.v2DocSelectionPlaceholder ?? "Select a document to continue", for: .normal)
         ctaButton.isEnabled = false
         ctaButton.addTarget(self, action: #selector(ctaTapped), for: .touchUpInside)
 

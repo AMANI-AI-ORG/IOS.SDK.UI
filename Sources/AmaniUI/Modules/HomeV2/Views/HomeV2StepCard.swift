@@ -340,10 +340,11 @@ final class HomeV2StepCard: UIView {
             errorIconView.image = UIImage(systemName: "exclamationmark.circle")?.withRenderingMode(.alwaysTemplate)
             errorIconView.tintColor = fontColor
 
-            errorTitleLabel.text = gc?.v2StepRejectionTitle ?? "Verification could not be completed"
+            let firstVersion = step.documents.first?.versions?.first
+            errorTitleLabel.text = firstVersion?.v2StepRejectionTitle ?? gc?.v2StepRejectionTitle ?? "Verification could not be completed"
             errorTitleLabel.textColor = fontColor
 
-            errorMessageLabel.text = gc?.v2StepRejectionDescription ?? "Your submission could not be accepted. Please try again to continue."
+            errorMessageLabel.text = firstVersion?.v2StepRejectionDescription ?? gc?.v2StepRejectionDescription ?? "Your submission could not be accepted. Please try again to continue."
             errorMessageLabel.textColor = fontColor.withAlphaComponent(0.6)
         } else {
             errorCard.isHidden = true
@@ -369,6 +370,7 @@ final class HomeV2StepCard: UIView {
 
     private func estimatedTime(for step: KYCStepViewModel) -> String {
         let gc = AmaniUI.sharedInstance.config?.generalconfigs
+        if let configured = step.documents.first?.versions?.first?.v2EstimatedTime { return configured }
         if let configured = gc?.v2EstimatedTime { return configured }
         let ids = Set(step.documents.compactMap { $0.id })
         if ids.contains("NF") { return "~2 min" }

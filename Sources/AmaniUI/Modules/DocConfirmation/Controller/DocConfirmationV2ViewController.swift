@@ -68,7 +68,7 @@ class DocConfirmationV2ViewController: BaseViewController {
         view.backgroundColor = bgColor
 
         // Navigation bar
-        setNavigationBarWith(title: gc?.v2DocumentConfirmationNavTitle ?? "Review capture")
+        setNavigationBarWith(title: documentVersion?.v2DocumentConfirmationNavTitle ?? gc?.v2DocumentConfirmationNavTitle ?? "Review capture")
         let backButton = makeNavButton(
             icon: UIImage(systemName: "arrow.left"),
             tintColor: hextoUIColor(hexString: gc?.topBarFontColor ?? "1A1A2E")
@@ -78,14 +78,14 @@ class DocConfirmationV2ViewController: BaseViewController {
 
         // Title
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        titleLabel.text = gc?.v2DocumentConfirmationHeader ?? "Looks good?"
+        titleLabel.text = documentVersion?.v2DocumentConfirmationHeader ?? gc?.v2DocumentConfirmationHeader ?? "Looks good?"
         titleLabel.font = UIFont.systemFont(ofSize: 26, weight: .bold)
         titleLabel.textColor = fontColor
         titleLabel.numberOfLines = 0
 
         // Subtitle
         subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
-        subtitleLabel.text = gc?.v2DocumentConfirmationSubtitle ?? "Make sure the document is sharp and fully visible."
+        subtitleLabel.text = documentVersion?.v2DocumentConfirmationSubtitle ?? gc?.v2DocumentConfirmationSubtitle ?? "Make sure the document is sharp and fully visible."
         subtitleLabel.font = UIFont.systemFont(ofSize: 15, weight: .regular)
         subtitleLabel.textColor = fontColor.withAlphaComponent(0.55)
         subtitleLabel.numberOfLines = 0
@@ -189,14 +189,14 @@ class DocConfirmationV2ViewController: BaseViewController {
 
         let headerLabel = UILabel()
         headerLabel.translatesAutoresizingMaskIntoConstraints = false
-        headerLabel.text = gc?.v2DocumentQualityHeader ?? "QUALITY CHECKS"
+        headerLabel.text = documentVersion?.v2DocumentQualityHeader ?? gc?.v2DocumentQualityHeader ?? "QUALITY CHECKS"
         headerLabel.font = UIFont.systemFont(ofSize: 11, weight: .semibold)
         headerLabel.textColor = fontColor.withAlphaComponent(0.45)
 
-        let checks = [
-            gc?.v2DocumentQuality1 ?? "Sharp & in focus",
-            gc?.v2DocumentQuality2 ?? "Document fully visible",
-            gc?.v2DocumentQuality3 ?? "No glare or shadows",
+        let checks: [String] = [
+            documentVersion?.v2DocumentQuality1 ?? gc?.v2DocumentQuality1 ?? "Sharp & in focus",
+            documentVersion?.v2DocumentQuality2 ?? gc?.v2DocumentQuality2 ?? "Document fully visible",
+            documentVersion?.v2DocumentQuality3 ?? gc?.v2DocumentQuality3 ?? "No glare or shadows",
         ]
 
         let rowsStack = UIStackView(arrangedSubviews: checks.map { makeQualityRow(text: $0, fontColor: fontColor, accentColor: accentColor) })
