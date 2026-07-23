@@ -28,7 +28,7 @@ class ContainerViewController: BaseViewController {
   private var selfieInstructionSteps: [(animation: String, text: String)] = []
   private var currentSelfieStepIndex = 0
   var bypassIntroForPoseV2 = false
-  
+  var isSpeechFlow = false
   var stepConfig: StepConfig?
   var docID: DocumentID?
   
@@ -203,7 +203,8 @@ extension ContainerViewController {
       self.animationView.translatesAutoresizingMaskIntoConstraints = false
       self.animationView.backgroundColor = .clear
       
-      if bypassIntroForPoseV2 {
+      
+      if bypassIntroForPoseV2 || isSpeechFlow {
         self.btnContinue.isHidden = true
         self.titleDescription.isHidden = true
         self.setNavigationLeftButton(TintColor: appConfig.generalconfigs?.topBarFontColor ?? "#ffffff")
