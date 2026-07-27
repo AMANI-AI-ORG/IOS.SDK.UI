@@ -98,19 +98,22 @@ class TermsAndConditionsView: UIView, UITextViewDelegate {
         
         if let generalConfig = appConfig?.generalconfigs {
             let buttonRadius = CGFloat(generalConfig.buttonRadius ?? 10)
-            
+            let ctaCornerRadius: CGFloat = AmaniUI.sharedInstance.uiVersion == .v2
+                ? AmaniUI.sharedInstance.style.ctaButtonCornerRadius
+                : 28
+
             descriptionTextView.textColor = hextoUIColor(hexString: generalConfig.appFontColor ?? "#20202F")
-            
+
             acceptButton.backgroundColor = hextoUIColor(hexString: generalConfig.primaryButtonBackgroundColor ?? ThemeColor.primaryColor.toHexString())
             acceptButton.setTitleColor(hextoUIColor(hexString: generalConfig.primaryButtonTextColor ?? "#FFFFFF"), for: .normal)
-            acceptButton.layer.cornerRadius = 28
+            acceptButton.layer.cornerRadius = ctaCornerRadius
             acceptButton.clipsToBounds = true
-            
+
             declineButton.backgroundColor = .clear
             let declineColor = hextoUIColor(hexString: generalConfig.secondaryButtonTextColor ?? generalConfig.primaryButtonBackgroundColor ?? "#EA3365")
             declineButton.setTitleColor(declineColor, for: .normal)
             declineButton.layer.borderColor = declineColor.cgColor
-            declineButton.layer.cornerRadius = 28
+            declineButton.layer.cornerRadius = ctaCornerRadius
             declineButton.clipsToBounds = true
         }
     }

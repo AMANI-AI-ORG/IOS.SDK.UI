@@ -41,7 +41,11 @@ class IdHandler: DocumentHandler {
     }
 
     func showContainerVC(version: DocumentVersion, workingStep: Int, completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void) {
-      
+        if AmaniUI.sharedInstance.uiVersion == .v2 {
+            showContainerV2VC(version: version, workingStep: workingStep, completion: completion)
+            return
+        }
+
         let containerVC = ContainerViewController()
         containerVC.stepConfig = stepViewModel.stepConfig
         containerVC.setDisappearCallback {
@@ -71,6 +75,28 @@ class IdHandler: DocumentHandler {
             containerVC.view.bringSubviewToFront(self.frontView!)
             // Show the front capture view
 //        self.showStepView(navbarHidden: false)
+        }
+      topVC?.navigationController?.pushViewController(containerVC, animated: true)
+    }
+
+    private func showContainerV2VC(version: DocumentVersion, workingStep: Int, completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void) {
+        let containerVC = ContainerV2ViewController()
+        containerVC.setDisappearCallback { [weak self] in
+          self?.frontView?.removeFromSuperview()
+        }
+
+        containerVC.bind(docStep: version.steps![workingStep], step: steps(rawValue: workingStep) ?? steps.front, totalSteps: version.steps?.count ?? 1) { [weak self] in
+          guard let self = self else { return }
+            self.frontView = try? self.idCaptureModule.start(stepId: workingStep) { [weak self] image in
+                DispatchQueue.main.async {
+                    self?.frontView?.removeFromSuperview()
+                    self?.startConfirmVC(image: image, docStep: version.steps![workingStep], docVer: version, stepId: workingStep) { [weak self] () in
+                      completion(.success(self!.stepViewModel))
+                    }
+                }
+            }
+            containerVC.view.addSubview(self.frontView!)
+            containerVC.view.bringSubviewToFront(self.frontView!)
         }
       topVC?.navigationController?.pushViewController(containerVC, animated: true)
     }

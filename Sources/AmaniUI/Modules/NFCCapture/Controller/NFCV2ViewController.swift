@@ -6,11 +6,12 @@ class NFCV2ViewController: BaseViewController {
 
     // MARK: - Business logic (mirrored from NFCViewController)
 
-    var nfcFormView: NFCConfigureView!
+    var nfcFormView: NFCConfigureV2View!
     var docID: String?
     private var documentVersion: DocumentVersion?
     private var onFinishCallback: (() -> Void)?
     private var appConfig: AppConfigModel?
+    private var nfcNavTitle: String?
     var isDone: Bool = false
     var maxAttempts: Int = 0
     let idCaptureModule = Amani.sharedInstance.IdCapture()
@@ -64,6 +65,9 @@ class NFCV2ViewController: BaseViewController {
     func hideCustomView() {
         nfcFormView.isHidden = true
         nfcFormView.removeFromSuperview()
+        if let nfcNavTitle = nfcNavTitle {
+            navigationItem.title = nfcNavTitle
+        }
     }
 
     // MARK: - Bind
@@ -369,7 +373,12 @@ class NFCV2ViewController: BaseViewController {
     }
 
     private func setNFCFormUIView(nvi: NviModel) async {
-        nfcFormView = NFCConfigureView()
+        if nfcNavTitle == nil {
+            nfcNavTitle = navigationItem.title
+        }
+        navigationItem.title = "Chip data"
+
+        nfcFormView = NFCConfigureV2View()
         nfcFormView.appConfig = appConfig
         nfcFormView.setTextsFrom(nvi: nvi)
         nfcFormView.delegate = self

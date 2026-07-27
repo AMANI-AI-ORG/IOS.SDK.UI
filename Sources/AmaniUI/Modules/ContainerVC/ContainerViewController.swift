@@ -236,7 +236,10 @@ extension ContainerViewController {
             btnContinue.setTitleColor(hextoUIColor(hexString: appConfig.generalconfigs?.primaryButtonTextColor ?? ThemeColor.whiteColor.toHexString()), for: .normal)
             btnContinue.tintColor = hextoUIColor(hexString: appConfig.generalconfigs?.primaryButtonTextColor ?? ThemeColor.whiteColor.toHexString())
             btnContinue.addCornerRadiousWith(radious: buttonRadious)
-            
+            if AmaniUI.sharedInstance.uiVersion == .v2 {
+              btnContinue.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
+            }
+
         }
 
       // Navigation Bar
@@ -349,7 +352,7 @@ extension ContainerViewController {
                 btnContinue.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
                 btnContinue.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
                 btnContinue.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
-                btnContinue.heightAnchor.constraint(equalToConstant: 50),
+                btnContinue.heightAnchor.constraint(equalToConstant: AmaniUI.sharedInstance.uiVersion == .v2 ? AmaniUI.sharedInstance.style.ctaButtonHeight : 50),
 
             ])
         }
