@@ -487,8 +487,6 @@ private extension SpeechHandler {
     ) -> SpeechVerifierAppearance {
       let colors = version.speechVerifierUiColors
       
-      let defaultTextColor = stepViewModel.textColor
-      let defaultButtonColor = stepViewModel.buttonColor
       
       let instructionTextColor = UIColor(hexString: colors?.instructionTextColor ?? "")
       
@@ -519,6 +517,15 @@ private extension SpeechHandler {
       
       let failureIconColor = UIColor(hexString: colors?.resultErrorColor ?? "")
       
+      let exemptWords = version.speechVerification?.exemptWords?
+        .map {
+          $0.trimmingCharacters(
+            in: .whitespacesAndNewlines
+          )
+        }
+        .filter {
+          !$0.isEmpty
+        } ?? []
       
       return SpeechVerifierAppearance(
         instructionTextColor: instructionTextColor,
@@ -532,7 +539,8 @@ private extension SpeechHandler {
         retryButtonBackgroundColor: retryButtonBackgroundColor,
         listeningIconColor: listeningIconColor,
         successIconColor: successIconColor,
-        failureIconColor: failureIconColor
+        failureIconColor: failureIconColor,
+        exemptWords: exemptWords
       )
     }
   }
