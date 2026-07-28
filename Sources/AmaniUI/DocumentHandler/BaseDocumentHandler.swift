@@ -25,15 +25,15 @@ protocol DocumentHandler {
 
 extension DocumentHandler {
   func startConfirmVC(image: UIImage, docStep: DocumentStepModel, docVer: DocumentVersion,stepId:Int = 0, completion: @escaping () -> Void) {
-    let confirmVC = DocConfirmationViewController()
-//    let confirmVC = DocConfirmationViewController(
-//      nibName: String(describing: DocConfirmationViewController.self),
-//      bundle: AmaniUI.sharedInstance.getBundle()
-//    )
-    
-    confirmVC.bind(image: image, documentID: docID, docVer: docVer, docStep: docStep,stepid: stepId, callback: completion)
-    
-    self.topVC?.navigationController?.pushViewController(confirmVC, animated: true)
+    if AmaniUI.sharedInstance.uiVersion == .v2 {
+      let confirmVC = DocConfirmationV2ViewController()
+      confirmVC.bind(image: image, documentID: docID, docVer: docVer, docStep: docStep, stepid: stepId, callback: completion)
+      self.topVC?.navigationController?.pushViewController(confirmVC, animated: true)
+    } else {
+      let confirmVC = DocConfirmationViewController()
+      confirmVC.bind(image: image, documentID: docID, docVer: docVer, docStep: docStep,stepid: stepId, callback: completion)
+      self.topVC?.navigationController?.pushViewController(confirmVC, animated: true)
+    }
   }
   
   func showStepView(navbarHidden: Bool) {

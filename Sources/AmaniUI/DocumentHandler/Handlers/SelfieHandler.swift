@@ -150,8 +150,8 @@ class SelfieHandler: DocumentHandler {
   
   func goNextStep( completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void) {
     DispatchQueue.main.async {
-      self.topVC?.navigationController?.popToViewController(ofClass: HomeViewController.self)
       completion(.success(self.stepViewModel))
+      self.topVC?.navigationController?.popToViewController(ofClass: HomeViewController.self)
     }
   }
   

@@ -109,14 +109,21 @@ class KYCStepViewModel {
       documentHandler.start(for: (documents.first?.id)!)
     } else {
       // Navigate to version select screen
+      if AmaniUI.sharedInstance.uiVersion == .v2 {
+        let versionSelectScreen = VersionV2ViewController()
+        let allStepModels = (topViewController as? HomeViewController)?.stepModels
+        versionSelectScreen.bind(runnerHelper: self.documentHandler, step: self, allStepModels: allStepModels)
+        documentHandler.bind(topVC: versionSelectScreen, callback: completion)
+        self.topViewController.navigationController?.pushViewController(versionSelectScreen, animated: true)
+      } else {
         let versionSelectScreen = VersionViewController()
-//      let versionSelectScreen = VersionViewController(nibName: String(describing: VersionViewController.self), bundle: AmaniUI.sharedInstance.getBundle())
-      versionSelectScreen.bind(runnerHelper: self.documentHandler,
-                               docTitle: self.documentSelectionTitle,
-                               docDescription: self.documentSelectionDescription,
-                               step: self)
-      documentHandler.bind(topVC: versionSelectScreen, callback: completion)
-      self.topViewController.navigationController?.pushViewController(versionSelectScreen, animated: true)
+        versionSelectScreen.bind(runnerHelper: self.documentHandler,
+                                 docTitle: self.documentSelectionTitle,
+                                 docDescription: self.documentSelectionDescription,
+                                 step: self)
+        documentHandler.bind(topVC: versionSelectScreen, callback: completion)
+        self.topViewController.navigationController?.pushViewController(versionSelectScreen, animated: true)
+      }
     }
   }
   

@@ -53,6 +53,15 @@ public class AmaniUI {
   public var nviData: NviModel? = nil
   public var location: CLLocation? = nil
   
+  public var uiVersion: UIVersion = .v1
+
+  var style: UIStyle {
+    switch uiVersion {
+    case .v1: return .v1
+    case .v2: return .v2
+    }
+  }
+
   public var idVideoRecord:Bool? = nil
   public var idHologramDetection:Bool? = nil
   public var poseEstimationRecord:Bool? = nil
@@ -125,7 +134,8 @@ public class AmaniUI {
     nviModel: NviModel? = nil,
     country: String? = nil,
     location: CLLocation? = nil,
-    apiVersion:ApiVersions = .v2
+    apiVersion: ApiVersions = .v2,
+    uiVersion: UIVersion = .v1
   ) {
     self.server = server
     self.token = token
@@ -135,6 +145,7 @@ public class AmaniUI {
     self.nviData = nviModel
     self.location = location
     self.apiVersion = apiVersion
+    self.uiVersion = uiVersion
     self.language = language
   }
   
@@ -160,7 +171,8 @@ public class AmaniUI {
     nviModel: NviModel? = nil,
     country: String? = nil,
     location: CLLocation? = nil,
-    apiVersion:ApiVersions = .v2
+    apiVersion: ApiVersions = .v2,
+    uiVersion: UIVersion = .v1
   ) {
     self.server = server
     self.userName = userName
@@ -171,6 +183,7 @@ public class AmaniUI {
     self.nviData = nviModel
     self.location = location
     self.apiVersion = apiVersion
+    self.uiVersion = uiVersion
     self.language = language
   }
   
@@ -368,7 +381,12 @@ public class AmaniUI {
   
   private func startKYCHome() {
     DispatchQueue.main.async {
-      self.initialVC = HomeViewController()
+      switch self.uiVersion {
+      case .v1:
+        self.initialVC = HomeViewController()
+      case .v2:
+        self.initialVC = HomeV2ViewController()
+      }
       self.initialVC?.bind(customerData: self.customerRespData!, nonKYCManager: self.nonKYCStepManager)
       try? self.initialVC?.generateKYCStepViewModels(from: self.rulesKYC)
       self.sdkNavigationController.setViewControllers(
@@ -422,7 +440,17 @@ public class AmaniUI {
       }
     }
   }
-  
+
+  /// Optimistically marks a KYC rule as PROCESSING in the shared rules cache,
+  /// without waiting for the backend to confirm the upload. This mirrors v1's
+  /// behavior of updating the local customer model immediately after a step's
+  /// capture flow finishes, so the Home screen never has to wait on a network
+  /// round trip to show the correct status.
+  func markStepAsProcessing(id: String?) {
+    guard let id = id, let index = rulesKYC.firstIndex(where: { $0.id == id }) else { return }
+    rulesKYC[index].status = DocumentStatus.PROCESSING.rawValue
+  }
+
 }
 
 
