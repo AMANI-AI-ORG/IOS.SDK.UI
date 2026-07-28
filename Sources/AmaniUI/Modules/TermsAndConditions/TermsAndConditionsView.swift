@@ -126,102 +126,93 @@ final class TermsAndConditionsView: UIView {
     let tc = generalConfig.termsAndConditions
     let buttonRadius = CGFloat(generalConfig.buttonRadius ?? 10)
     
-    func bind(completion: @escaping () -> Void, declineCompletion: @escaping () -> Void) {
-        self.completion = completion
-        self.declineCompletion = declineCompletion
-        
-        guard let tc = appConfig?.generalconfigs?.termsAndConditions else {
-            print("Warning: showTermsAndConditions is true but terms_and_conditions config is missing")
-            completion()
-            return
-        }
-        
-        descriptionTextView.text = tc.description ?? ""
-        descriptionTextView.delegate = self
-        
-        acceptButton.setTitle(tc.acceptButtonText ?? appConfig?.generalconfigs?.continueText ?? "Accept", for: .normal)
-        declineButton.setTitle(tc.declineButtonText ?? "Decline", for: .normal)
-        
-        // Initially disable buttons and dim them
-        acceptButton.isEnabled = false
-        acceptButton.alpha = 0.5
-        declineButton.isEnabled = false
-        declineButton.alpha = 0.5
-        
-        // Check if content is small enough that scroll is not needed
-        DispatchQueue.main.async { [weak self] in
-            self?.checkIfScrollIsNeeded()
-        }
-        
-        if let generalConfig = appConfig?.generalconfigs {
-            let buttonRadius = CGFloat(generalConfig.buttonRadius ?? 10)
-            let ctaCornerRadius: CGFloat = AmaniUI.sharedInstance.uiVersion == .v2
-                ? AmaniUI.sharedInstance.style.ctaButtonCornerRadius
-                : 28
-
-            descriptionTextView.textColor = hextoUIColor(hexString: generalConfig.appFontColor ?? "#20202F")
-
-            acceptButton.backgroundColor = hextoUIColor(hexString: generalConfig.primaryButtonBackgroundColor ?? ThemeColor.primaryColor.toHexString())
-            acceptButton.setTitleColor(hextoUIColor(hexString: generalConfig.primaryButtonTextColor ?? "#FFFFFF"), for: .normal)
-            acceptButton.layer.cornerRadius = ctaCornerRadius
-            acceptButton.clipsToBounds = true
-
-            declineButton.backgroundColor = .clear
-            let declineColor = hextoUIColor(hexString: generalConfig.secondaryButtonTextColor ?? generalConfig.primaryButtonBackgroundColor ?? "#EA3365")
-            declineButton.setTitleColor(declineColor, for: .normal)
-            declineButton.layer.borderColor = declineColor.cgColor
-            declineButton.layer.cornerRadius = ctaCornerRadius
-            declineButton.clipsToBounds = true
-        }
+    acceptButton.setTitle(
+      tc?.acceptButtonText ?? generalConfig.continueText ?? "Accept",
+      for: .normal
+    )
+    
+    declineButton.setTitle(
+      tc?.declineButtonText ?? "Decline",
+      for: .normal
+    )
+    
+    acceptButton.backgroundColor = hextoUIColor(
+      hexString: generalConfig.primaryButtonBackgroundColor ?? ThemeColor.primaryColor.toHexString()
+    )
+    acceptButton.setTitleColor(
+      hextoUIColor(hexString: generalConfig.primaryButtonTextColor ?? "#FFFFFF"),
+      for: .normal
+    )
+    acceptButton.layer.cornerRadius = buttonRadius
+    acceptButton.clipsToBounds = true
+    
+    declineButton.backgroundColor = .clear
+    
+    let declineColor = hextoUIColor(
+      hexString: generalConfig.secondaryButtonTextColor
+      ?? generalConfig.primaryButtonBackgroundColor
+      ?? "#EA3365"
+    )
+    
+    declineButton.setTitleColor(declineColor, for: .normal)
+    declineButton.layer.borderColor = declineColor.cgColor
+    declineButton.layer.cornerRadius = buttonRadius
+    declineButton.clipsToBounds = true
+  }
+  
+  private func disableActionButtons() {
+    hasEnabledActionButtons = false
+    
+    acceptButton.isEnabled = false
+    acceptButton.alpha = 0.5
+    
+    declineButton.isEnabled = false
+    declineButton.alpha = 0.5
+  }
+  
+  private func enableActionButtons() {
+    guard !hasEnabledActionButtons else { return }
+    
+    hasEnabledActionButtons = true
+    
+    acceptButton.isEnabled = true
+    acceptButton.alpha = 1.0
+    
+    declineButton.isEnabled = true
+    declineButton.alpha = 1.0
+  }
+  
+  private func checkIfScrollIsNeeded() {
+    let contentHeight = webView.scrollView.contentSize.height
+    let visibleHeight = webView.scrollView.bounds.height
+    
+    guard contentHeight > 0, visibleHeight > 0 else { return }
+    
+    if contentHeight <= visibleHeight + 1.0 {
+      enableActionButtons()
     }
+  }
+  
+  private func checkIfScrolledToBottom(_ scrollView: UIScrollView) {
+    let visibleHeight = scrollView.bounds.height
+    let contentHeight = scrollView.contentSize.height
+    let offsetY = scrollView.contentOffset.y
     
-    @objc private func acceptPressed() {
-        Amani.sharedInstance.customerInfo().acceptTermsConditions { [weak self] success in
-            if success {
-                self?.completion?()
-            } else {
-                // In a real app, show an error alert. 
-                // For now, we proceed as per the requirement or just try again.
-                print("Failed to accept T&C")
-                self?.completion?() // Proceeding anyway or handling error
-            }
-        }
+    let distanceFromBottom = contentHeight - offsetY
+    
+    if distanceFromBottom <= visibleHeight + 1.0 {
+      enableActionButtons()
     }
-    
-    @objc private func declinePressed() {
-        // As per user request: "users will be able to continue even if they reject... we just need to keep the log of it"
-        print("User declined Terms and Conditions")
-        declineCompletion?()
-    }
-    
-    // MARK: - UITextViewDelegate & Scroll Logic
-    
-    func scrollViewDidScroll(_ scrollView: UIScrollView) {
-        let height = scrollView.frame.size.height
-        let contentYoffset = scrollView.contentOffset.y
-        let distanceFromBottom = scrollView.contentSize.height - contentYoffset
-        
-        // Use a small threshold (1.0) to account for floating point precision
-        if (distanceFromBottom <= height + 1.0) {
-            enableActionButtons()
-        }
-    }
-    
-    private func checkIfScrollIsNeeded() {
-        // If the content size is smaller than or equal to the frame size, 
-        // the user doesn't need to scroll.
-        if descriptionTextView.contentSize.height <= descriptionTextView.frame.size.height {
-            enableActionButtons()
-        }
-    }
-    
-    private func enableActionButtons() {
-        if !acceptButton.isEnabled {
-            acceptButton.isEnabled = true
-            acceptButton.alpha = 1.0
-            
-            declineButton.isEnabled = true
-            declineButton.alpha = 1.0
+  }
+  
+  @objc private func acceptPressed() {
+    Amani.sharedInstance.customerInfo().acceptTermsConditions { [weak self] success in
+      DispatchQueue.main.async {
+        if success {
+          self?.completion?()
+        } else {
+          print("Failed to accept T&C")
+          self?.completion?()
         }
       }
     }
@@ -249,7 +240,7 @@ extension TermsAndConditionsView: WKNavigationDelegate {
   ) {
     print("Failed to load T&C URL: \(error.localizedDescription)")
     
-     
+    
     enableActionButtons()
   }
   
@@ -269,3 +260,5 @@ extension TermsAndConditionsView: UIScrollViewDelegate {
     checkIfScrolledToBottom(scrollView)
   }
 }
+
+

@@ -70,9 +70,11 @@ class HomeV2ViewController: HomeViewController {
         )
         backButton.addTarget(self, action: #selector(popViewController), for: .touchUpInside)
         let backBarItem = UIBarButtonItem(customView: backButton)
-        if #available(iOS 26.0, *) {
-            backBarItem.hidesSharedBackground = true
-        }
+#if compiler(>=6.2)
+      if #available(iOS 26.0, *) {
+        backBarItem.hidesSharedBackground = true
+      }
+#endif
         navigationItem.leftBarButtonItem = backBarItem
 
     }
