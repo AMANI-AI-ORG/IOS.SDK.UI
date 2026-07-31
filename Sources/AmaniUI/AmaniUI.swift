@@ -31,7 +31,7 @@ public class AmaniUI {
   internal var voiceAssistant: AmaniVoiceAssistant?
 #endif
   internal let sharedSDKInstance = Amani.sharedInstance
-  private let version = "1.4.1"
+  private let version = "1.4.2"
   
   var missingRules:[[String:String]]? = nil
   var rulesKYC: [KYCRuleModel] = []

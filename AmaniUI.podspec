@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name         = "AmaniUI"
-  s.version      = "1.4.1"
+  s.version      = "1.4.2"
   s.license      = { :type => "Copyright", :text => "\t\t\t\t\t\t\t\t\t\t\t\t\t\tCopyright 2022\n\t\t\t\t\t\t\t\t\t\t\t\t\t\tAmani Ai AŞ.\n" }
   s.swift_versions = "5.0"
   s.requires_arc = true
@@ -23,7 +23,7 @@ Pod::Spec.new do |s|
     "OTHER_LDFLAGS" => "$(inherited) -weak_framework CryptoKit -weak_framework CoreNFC -weak_framework CryptoTokenKit"
   }
   s.dependency "lottie-ios", "~> 4.5.0"
-  s.dependency "AmaniSDK", "~> 3.7.1"
+  s.dependency "AmaniSDK", "~> 3.7.2"
   s.dependency "AmaniVoiceAssistantSDK", "~> 1.1.2"
 end
 
