@@ -31,6 +31,7 @@ class ContainerViewController: BaseViewController {
   var isSpeechFlow = false
   var stepConfig: StepConfig?
   var docID: DocumentID?
+  private var isLeavingViewHierarchy = false
   
   func bind(animationName:String?,
             docStep:DocumentStepModel,
@@ -63,6 +64,7 @@ class ContainerViewController: BaseViewController {
     super.viewWillAppear(animated)
       
       isDissapeared = false
+    isLeavingViewHierarchy = false
     
     if bypassIntroForPoseV2 {
       lottieAnimationView?.stop()
@@ -116,31 +118,65 @@ class ContainerViewController: BaseViewController {
 
   }
   
-
+  override func viewDidDisappear(_ animated: Bool) {
+    super.viewDidDisappear(animated)
     
-  override func viewWillDisappear(_ animated: Bool) {
-    // remove the sdk view on exiting by calling the callback
-      #if canImport(AmaniVoiceAssistantSDK)
-      
-          Task { @MainActor in
-            do {
-              try? await AmaniUI.sharedInstance.voiceAssistant?.stop()
-            }catch(let error) {
-              debugPrint("\(error)")
-            }
-            
-          }
-        
-        
-      #endif
-    print("Container View disappear")
-//    cleanupViews()
-    if let disappearCb = self.disappearCallback {
-      disappearCb()
+    guard isLeavingViewHierarchy,
+          !isDissapeared else {
+      return
     }
-      isDissapeared = true
-    super.viewWillDisappear(animated)
+    
+    isDissapeared = true
+    disappearCallback?()
   }
+  
+  override func viewWillDisappear(_ animated: Bool) {
+    super.viewWillDisappear(animated)
+    
+#if canImport(AmaniVoiceAssistantSDK)
+    Task { @MainActor in
+      do {
+        try? await AmaniUI.sharedInstance.voiceAssistant?.stop()
+      } catch {
+        debugPrint("\(error)")
+      }
+    }
+#endif
+    
+    /*
+     Settings açılması veya başka bir geçici görünüm değişimi SDK akışını
+     temizlememeli. Cleanup yalnızca controller gerçekten pop veya dismiss
+     ediliyorsa çalıştırılacak.
+     */
+    isLeavingViewHierarchy =
+    isMovingFromParent ||
+    isBeingDismissed ||
+    navigationController?.isBeingDismissed == true
+  }
+    
+//  override func viewWillDisappear(_ animated: Bool) {
+//    // remove the sdk view on exiting by calling the callback
+//      #if canImport(AmaniVoiceAssistantSDK)
+//      
+//          Task { @MainActor in
+//            do {
+//              try? await AmaniUI.sharedInstance.voiceAssistant?.stop()
+//            }catch(let error) {
+//              debugPrint("\(error)")
+//            }
+//            
+//          }
+//        
+//        
+//      #endif
+//    print("Container View disappear")
+////    cleanupViews()
+//    if let disappearCb = self.disappearCallback {
+//      disappearCb()
+//    }
+//    isDissapeared = true
+//    super.viewWillDisappear(animated)
+//  }
 
 }
 extension ContainerViewController {

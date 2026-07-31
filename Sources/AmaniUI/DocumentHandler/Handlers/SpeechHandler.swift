@@ -615,31 +615,24 @@ private extension SpeechHandler {
     
     switch reason {
     case .verificationFailed:
-      /*
-       Core UI aynı timeout penceresi içinde tekrar dinlemeye devam ediyor.
-       Flow burada bitirilmez.
-       */
+     
       return
       
     case .timeout:
-      /*
-       Core UI retry button gösteriyor.
-       Kullanıcı tekrar deneyebilir.
-       */
+    
       return
       
     case .speechRecognitionUnavailable:
-      /*
-       Art arda SV -> ST veya ST -> SV geçişinde SFSpeech tarafı
-       transient error döndürebiliyor. Bu durumda flow'u pop'lama.
-       Core UI retry / failure state'i yönetsin.
-       */
+     
       return
       
     case .cameraPermissionDenied,
         .microphonePermissionDenied,
-        .speechRecognitionPermissionDenied,
-        .cameraUnavailable,
+        .speechRecognitionPermissionDenied:
+     
+      return
+      
+    case .cameraUnavailable,
         .microphoneUnavailable,
         .cameraInputFailed,
         .microphoneInputFailed,

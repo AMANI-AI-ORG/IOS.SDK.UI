@@ -30,6 +30,9 @@ class ContainerV2ViewController: BaseViewController {
     private let badgeIconView = UIImageView()
     private let checklistCard = UIView()
     private let continueButton = UIButton(type: .custom)
+    private var isLeavingViewHierarchy = false
+    private var didInvokeDisappearCallback = false
+    private var didStartBoundFlow = false
 
     // MARK: - Static content (front/back copy — not yet config-driven)
 
@@ -95,20 +98,63 @@ class ContainerV2ViewController: BaseViewController {
         setupV2UI()
     }
 
-    override func viewWillAppear(_ animated: Bool) {
-        super.viewWillAppear(animated)
-        if bypassIntro {
-            callback?()
-            return
-        }
-        lottieAnimationView?.play()
+  override func viewWillAppear(_ animated: Bool) {
+    super.viewWillAppear(animated)
+    
+    /*
+     Settings dönüşü gerçek bir navigation çıkışı değildir.
+     */
+    isLeavingViewHierarchy = false
+    
+    if bypassIntro {
+      startBoundFlowIfNeeded()
+      return
     }
+    
+    lottieAnimationView?.play()
+  }
 
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
-        lottieAnimationView?.pause()
-        disappearCallback?()
+  override func viewWillDisappear(_ animated: Bool) {
+    super.viewWillDisappear(animated)
+    
+    lottieAnimationView?.pause()
+      
+    
+    /*
+     Cleanup yalnızca controller gerçekten pop veya dismiss
+     ediliyorsa yapılır.
+     */
+    isLeavingViewHierarchy =
+    isMovingFromParent ||
+    isBeingDismissed ||
+    navigationController?.isBeingDismissed == true ||
+    tabBarController?.isBeingDismissed == true
+
+    print(
+      "[ContainerV2] viewWillDisappear",
+      "leavingHierarchy:", isLeavingViewHierarchy,
+      "movingFromParent:", isMovingFromParent,
+      "beingDismissed:", isBeingDismissed,
+      "applicationState:",
+      UIApplication.shared.applicationState.rawValue
+    )
+
+  }
+  
+  override func viewDidDisappear(_ animated: Bool) {
+    super.viewDidDisappear(animated)
+    
+    guard isLeavingViewHierarchy,
+          !didInvokeDisappearCallback else {
+      return
     }
+    
+    didInvokeDisappearCallback = true
+    print("[ContainerV2] invoking disappear callback")
+
+    
+    disappearCallback?()
+  }
 
     // MARK: - Bind
 
@@ -404,6 +450,23 @@ class ContainerV2ViewController: BaseViewController {
     // MARK: - Actions
 
     @objc func continueButtonPressed(_ sender: Any) {
-        callback?()
+      startBoundFlowIfNeeded()
     }
+  
+  private func startBoundFlowIfNeeded() {
+    guard !didStartBoundFlow else {
+
+      print("[ContainerV2] duplicate flow start ignored")
+
+      return
+    }
+    
+    didStartBoundFlow = true
+    
+
+    print("[ContainerV2] starting bound flow")
+
+    
+    callback?()
+  }
 }
