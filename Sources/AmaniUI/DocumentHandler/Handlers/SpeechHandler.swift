@@ -190,7 +190,7 @@ private extension SpeechHandler {
     
     verifier.setType(type: type)
     verifier.setTimeout(seconds: version.timeoutSeconds ?? 30)
-     
+    
     applySpeechVerifierAppearance(
       verifier,
       version: version
@@ -257,17 +257,19 @@ private extension SpeechHandler {
     _ verifier: SpeechVerifier,
     version: DocumentVersion
   ) {
-    let questions = identityQuestionTypes(from: version)
-    
-    verifier.setIdentityQuestions(
-      questions.isEmpty ? defaultIdentityQuestions() : questions
+    let configurations = identityQuestionConfigurations(
+      from: version
     )
     
-    let threshold = identityMatchThresholdPercent(from: version)
-    
-    verifier.matchThresholdPercent(
-      threshold
-    )
+    if configurations.isEmpty {
+      verifier.setIdentityQuestion(
+        defaultIdentityQuestionConfigurations(
+          from: version
+        )
+      )
+    } else {
+      verifier.setIdentityQuestion(configurations)
+    }
     
     /*
      Burada identityAnswers(...) çağırma.
@@ -280,15 +282,20 @@ private extension SpeechHandler {
      */
   }
   
-  func identityQuestionTypes(
+  func identityQuestionConfigurations(
     from version: DocumentVersion
-  ) -> [SpeechVerifierIdentityQuestionType] {
+  ) -> [SpeechVerifierIdentityQuestionConfiguration] {
     guard let speechVerification = version.speechVerification,
           let steps = speechVerification.steps else {
       return []
     }
     
-    var result: [SpeechVerifierIdentityQuestionType] = []
+    let defaultThreshold =
+    speechVerification.defaultMatchThresholdPercent ?? 100
+    
+    var result: [
+      SpeechVerifierIdentityQuestionConfiguration
+    ] = []
     
     for step in steps {
       let type = step.type?
@@ -299,60 +306,38 @@ private extension SpeechHandler {
         continue
       }
       
-      let questions = step.questions ?? []
+      let stepThreshold =
+      step.matchThresholdPercent ?? defaultThreshold
       
-      for question in questions {
+      for question in step.questions ?? [] {
         guard let mappedType = mapIdentityQuestionType(
           question.type
         ) else {
           continue
         }
         
-        if !result.contains(where: { $0 == mappedType }) {
-          result.append(mappedType)
+        let threshold =
+        question.matchThresholdPercent ?? stepThreshold
+        
+        guard !result.contains(
+          where: { $0.type == mappedType }
+        ) else {
+          continue
         }
+        
+        result.append(
+          SpeechVerifierIdentityQuestionConfiguration(
+            type: mappedType,
+            matchThresholdPercent: threshold
+          )
+        )
       }
     }
     
     return result
   }
   
-  func identityMatchThresholdPercent(
-    from version: DocumentVersion
-  ) -> Int {
-    guard let speechVerification = version.speechVerification else {
-      return 100
-    }
-    
-    let defaultThreshold = speechVerification.defaultMatchThresholdPercent ?? 100
-    
-    let thresholds = speechVerification.steps?
-      .flatMap { step -> [Int] in
-        guard step.type?.uppercased() == "IDENTITY_QUESTION" else {
-          return []
-        }
-        
-        let stepThreshold = step.matchThresholdPercent
-        
-        return step.questions?.compactMap {
-          $0.matchThresholdPercent ?? stepThreshold
-        } ?? []
-      } ?? []
-    
-    /*
-     Core tarafında şu an question bazlı threshold setter yok.
-     Bu yüzden identity questions için en toleranslı değeri kullanıyoruz.
-     
-     Config örneğinde:
-     ID_NUMBER: 90
-     MOTHER_NAME: 80
-     FATHER_NAME: 80
-     DOCUMENT_NUMBER: 80
-     
-     Global olarak 80 set edilir.
-     */
-    return thresholds.min() ?? defaultThreshold
-  }
+  
   
   func mapIdentityQuestionType(
     _ rawType: String?
@@ -379,10 +364,22 @@ private extension SpeechHandler {
     }
   }
   
-  func defaultIdentityQuestions() -> [SpeechVerifierIdentityQuestionType] {
-    [
-      .documentNumber,
-      .motherName
+  func defaultIdentityQuestionConfigurations(
+    from version: DocumentVersion
+  ) -> [SpeechVerifierIdentityQuestionConfiguration] {
+    let threshold =
+    version.speechVerification?
+      .defaultMatchThresholdPercent ?? 100
+    
+    return [
+      SpeechVerifierIdentityQuestionConfiguration(
+        type: .documentNumber,
+        matchThresholdPercent: threshold
+      ),
+      SpeechVerifierIdentityQuestionConfiguration(
+        type: .motherName,
+        matchThresholdPercent: threshold
+      )
     ]
   }
 }
@@ -397,38 +394,38 @@ private extension SpeechHandler {
   ) {
     let configuredTexts = spokenTextItems(from: version)
     
-    guard !configuredTexts.isEmpty else {
-      verifier
-        .setText(defaultSpokenText())
-        .matchThresholdPercent(
-          version.speechVerification?.defaultMatchThresholdPercent ?? 90
-        )
+    guard let selectedItem = configuredTexts.randomElement() else {
+      verifier.setText(
+        defaultSpokenText(),
+        version.speechVerification?
+          .defaultMatchThresholdPercent ?? 100
+      )
       return
     }
     
     /*
-     Core tarafındaki mevcut public API'de text bazlı threshold yok.
-     Bu yüzden text'i UI tarafında seçiyoruz ve threshold'unu beraber set ediyoruz.
-     Böylece birden fazla text varsa bile seçilen text'in threshold'u doğru çalışır.
+     UI selects one configured text and forwards that exact text's threshold.
+     Core stores it on the resolved runtime step, so it cannot leak into
+     identity questions or any later step.
      */
-    let selectedItem = configuredTexts.randomElement()!
-    
-    verifier
-      .setText(selectedItem.text)
-      .matchThresholdPercent(selectedItem.threshold)
+    verifier.setText(
+      selectedItem.text,
+      selectedItem.matchThresholdPercent
+    )
   }
   
   func spokenTextItems(
     from version: DocumentVersion
-  ) -> [(text: String, threshold: Int)] {
+  ) -> [SpeechVerifierTextConfiguration] {
     guard let speechVerification = version.speechVerification,
           let steps = speechVerification.steps else {
       return []
     }
     
-    let defaultThreshold = speechVerification.defaultMatchThresholdPercent ?? 90
+    let defaultThreshold =
+    speechVerification.defaultMatchThresholdPercent ?? 100
     
-    var result: [(text: String, threshold: Int)] = []
+    var result: [SpeechVerifierTextConfiguration] = []
     
     for step in steps {
       let type = step.type?
@@ -439,22 +436,21 @@ private extension SpeechHandler {
         continue
       }
       
-      let stepThreshold = step.matchThresholdPercent ?? defaultThreshold
-      let texts = step.texts ?? []
+      let stepThreshold =
+      step.matchThresholdPercent ?? defaultThreshold
       
-      for textItem in texts {
+      for textItem in step.texts ?? [] {
         guard let text = textItem.text?
           .trimmingCharacters(in: .whitespacesAndNewlines),
               !text.isEmpty else {
           continue
         }
         
-        let threshold = textItem.matchThresholdPercent ?? stepThreshold
-        
         result.append(
-          (
+          SpeechVerifierTextConfiguration(
             text: text,
-            threshold: threshold
+            matchThresholdPercent:
+              textItem.matchThresholdPercent ?? stepThreshold
           )
         )
       }
@@ -471,79 +467,79 @@ private extension SpeechHandler {
 
   // MARK: - Colors
 
-  private extension SpeechHandler {
-    
-    func applySpeechVerifierAppearance(
-      _ verifier: SpeechVerifier,
-      version: DocumentVersion
-    ) {
-      verifier.setAppearance(
-        makeSpeechVerifierAppearance(from: version)
-      )
-    }
-    
-    func makeSpeechVerifierAppearance(
-      from version: DocumentVersion
-    ) -> SpeechVerifierAppearance {
-      let colors = version.speechVerifierUiColors
-      
-      
-      let instructionTextColor = UIColor(hexString: colors?.instructionTextColor ?? "")
-      
-      
-      let visibleTextColor = UIColor(hexString: colors?.speechTextColor ?? "")
-     
-      
-      let statusTextColor = UIColor(hexString: colors?.statusTextColor ?? "")
-    
-      
-      let highlightColor = UIColor(hexString: colors?.speechTextHighlightColor ?? "")
-     
-      
-      let overlayBackgroundColor = UIColor(hexString: colors?.overlayBackgroundColor ?? "\(UIColor.black.withAlphaComponent(0.80))")
-      
-      
-      let retryButtonTextColor = UIColor(hexString: colors?.retryButtonTextColor ?? "ffffff")
-      
-      
-      let retryButtonBackgroundColor = UIColor(hexString: colors?.retryButtonBackgroundColor ?? "")
-     
-      
-      let listeningIconColor = UIColor(hexString: colors?.micActiveColor ?? "\(highlightColor)")
-      
-      
-      let successIconColor = UIColor(hexString: colors?.resultSuccessColor ?? "\(highlightColor)")
-      
-      
-      let failureIconColor = UIColor(hexString: colors?.resultErrorColor ?? "")
-      
-      let exemptWords = version.speechVerification?.exemptWords?
-        .map {
-          $0.trimmingCharacters(
-            in: .whitespacesAndNewlines
-          )
-        }
-        .filter {
-          !$0.isEmpty
-        } ?? []
-      
-      return SpeechVerifierAppearance(
-        instructionTextColor: instructionTextColor,
-        visibleTextColor: visibleTextColor,
-        highlightedTextColor: highlightColor,
-        statusTextColor: statusTextColor,
-        progressTintColor: highlightColor,
-        progressTrackTintColor: visibleTextColor.withAlphaComponent(0.25),
-        overlayBackgroundColor: overlayBackgroundColor,
-        retryButtonTextColor: retryButtonTextColor,
-        retryButtonBackgroundColor: retryButtonBackgroundColor,
-        listeningIconColor: listeningIconColor,
-        successIconColor: successIconColor,
-        failureIconColor: failureIconColor,
-        exemptWords: exemptWords
-      )
-    }
+private extension SpeechHandler {
+  
+  func applySpeechVerifierAppearance(
+    _ verifier: SpeechVerifier,
+    version: DocumentVersion
+  ) {
+    verifier.setAppearance(
+      makeSpeechVerifierAppearance(from: version)
+    )
   }
+  
+  func makeSpeechVerifierAppearance(
+    from version: DocumentVersion
+  ) -> SpeechVerifierAppearance {
+    let colors = version.speechVerifierUiColors
+    
+    
+    let instructionTextColor = UIColor(hexString: colors?.instructionTextColor ?? "")
+    
+    
+    let visibleTextColor = UIColor(hexString: colors?.speechTextColor ?? "")
+    
+    
+    let statusTextColor = UIColor(hexString: colors?.statusTextColor ?? "")
+    
+    
+    let highlightColor = UIColor(hexString: colors?.speechTextHighlightColor ?? "")
+    
+    
+    let overlayBackgroundColor = UIColor(hexString: colors?.overlayBackgroundColor ?? "\(UIColor.black.withAlphaComponent(0.80))")
+    
+    
+    let retryButtonTextColor = UIColor(hexString: colors?.retryButtonTextColor ?? "ffffff")
+    
+    
+    let retryButtonBackgroundColor = UIColor(hexString: colors?.retryButtonBackgroundColor ?? "")
+    
+    
+    let listeningIconColor = UIColor(hexString: colors?.micActiveColor ?? "\(highlightColor)")
+    
+    
+    let successIconColor = UIColor(hexString: colors?.resultSuccessColor ?? "\(highlightColor)")
+    
+    
+    let failureIconColor = UIColor(hexString: colors?.resultErrorColor ?? "")
+    
+    let exemptWords = version.speechVerification?.exemptWords?
+      .map {
+        $0.trimmingCharacters(
+          in: .whitespacesAndNewlines
+        )
+      }
+      .filter {
+        !$0.isEmpty
+      } ?? []
+    
+    return SpeechVerifierAppearance(
+      instructionTextColor: instructionTextColor,
+      visibleTextColor: visibleTextColor,
+      highlightedTextColor: highlightColor,
+      statusTextColor: statusTextColor,
+      progressTintColor: highlightColor,
+      progressTrackTintColor: visibleTextColor.withAlphaComponent(0.25),
+      overlayBackgroundColor: overlayBackgroundColor,
+      retryButtonTextColor: retryButtonTextColor,
+      retryButtonBackgroundColor: retryButtonBackgroundColor,
+      listeningIconColor: listeningIconColor,
+      successIconColor: successIconColor,
+      failureIconColor: failureIconColor,
+      exemptWords: exemptWords
+    )
+  }
+}
 
   // MARK: - State
 
