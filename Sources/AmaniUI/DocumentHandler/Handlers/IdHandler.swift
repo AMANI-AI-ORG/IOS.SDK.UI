@@ -85,7 +85,7 @@ class IdHandler: DocumentHandler {
           self?.frontView?.removeFromSuperview()
         }
 
-        containerVC.bind(docStep: version.steps![workingStep], step: steps(rawValue: workingStep) ?? steps.front, totalSteps: version.steps?.count ?? 1) { [weak self] in
+        containerVC.bind(animationName: version.type, docStep: version.steps![workingStep], step: steps(rawValue: workingStep) ?? steps.front, totalSteps: version.steps?.count ?? 1) { [weak self] in
           guard let self = self else { return }
             self.frontView = try? self.idCaptureModule.start(stepId: workingStep) { [weak self] image in
                 DispatchQueue.main.async {

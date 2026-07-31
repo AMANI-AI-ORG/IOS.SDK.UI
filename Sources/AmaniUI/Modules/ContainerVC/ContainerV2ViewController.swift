@@ -1,14 +1,19 @@
 import UIKit
 import AmaniSDK
+import Lottie
 
 @available(iOS 13, *)
 class ContainerV2ViewController: BaseViewController {
 
     // MARK: - Business logic
 
+    private var animationName: String?
     private var docStep: DocumentStepModel?
     private var step: steps = .front
     private var totalSteps: Int = 2
+    private var isSelfie: Bool = false
+    private var bypassIntro: Bool = false
+    private var stepModels: [KYCStepViewModel]?
     private var callback: (() -> Void)?
     private var disappearCallback: (() -> Void)?
 
@@ -16,10 +21,11 @@ class ContainerV2ViewController: BaseViewController {
 
     private let scrollView = UIScrollView()
     private let eyebrowLabel = UILabel()
+    private let progressView = StepProgressView()
     private let headlineLabel = UILabel()
     private let descriptionLabel = UILabel()
     private let illustrationCard = UIView()
-    private let illustrationIconView = UIImageView()
+    private var lottieAnimationView: LottieAnimationView?
     private let badgeView = UIView()
     private let badgeIconView = UIImageView()
     private let checklistCard = UIView()
@@ -34,10 +40,23 @@ class ContainerV2ViewController: BaseViewController {
         let checklistHeader: String
         let checklistItems: [String]
         let badgeIcon: String
-        let illustrationIcon: String
     }
 
     private var content: PrepContent {
+        if isSelfie {
+            return PrepContent(
+                navTitle: "Selfie",
+                headline: "Let's take your selfie",
+                description: "Look straight at the camera and keep your face centered in the frame.",
+                checklistHeader: "BEFORE YOU START",
+                checklistItems: [
+                    "Good, even lighting on your face",
+                    "Remove glasses, hats, or masks",
+                    "Hold the phone at eye level",
+                ],
+                badgeIcon: "faceid"
+            )
+        }
         switch step {
         case .front:
             return PrepContent(
@@ -50,8 +69,7 @@ class ContainerV2ViewController: BaseViewController {
                     "All four corners visible",
                     "No glare on the photo or text",
                 ],
-                badgeIcon: "camera.fill",
-                illustrationIcon: "person.text.rectangle.fill"
+                badgeIcon: "camera.fill"
             )
         case .back:
             return PrepContent(
@@ -64,8 +82,7 @@ class ContainerV2ViewController: BaseViewController {
                     "Barcode not covered by fingers",
                     "Flat surface, no tilt",
                 ],
-                badgeIcon: "arrow.triangle.2.circlepath.camera.fill",
-                illustrationIcon: "widget.extralarge"
+                badgeIcon: "arrow.triangle.2.circlepath.camera.fill"
             )
         }
     }
@@ -74,20 +91,44 @@ class ContainerV2ViewController: BaseViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        guard !bypassIntro else { return }
         setupV2UI()
+    }
+
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        if bypassIntro {
+            callback?()
+            return
+        }
+        lottieAnimationView?.play()
     }
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        lottieAnimationView?.pause()
         disappearCallback?()
     }
 
     // MARK: - Bind
 
-    func bind(docStep: DocumentStepModel?, step: steps, totalSteps: Int, callback: @escaping () -> Void) {
+    func bind(
+        animationName: String?,
+        docStep: DocumentStepModel?,
+        step: steps,
+        totalSteps: Int,
+        isSelfie: Bool = false,
+        bypassIntro: Bool = false,
+        stepModels: [KYCStepViewModel]? = nil,
+        callback: @escaping () -> Void
+    ) {
+        self.animationName = animationName
         self.docStep = docStep
         self.step = step
         self.totalSteps = totalSteps
+        self.isSelfie = isSelfie
+        self.bypassIntro = bypassIntro
+        self.stepModels = stepModels
         self.callback = callback
     }
 
@@ -103,7 +144,6 @@ class ContainerV2ViewController: BaseViewController {
         let fontColor = hextoUIColor(hexString: gc?.appFontColor ?? "20202F")
         let accentColor = hextoUIColor(hexString: gc?.primaryButtonBackgroundColor ?? "#C0395A")
         let bgColor = hextoUIColor(hexString: gc?.appBackground ?? "FFFFFF")
-        let cardColor = hextoUIColor(hexString: gc?.topBarBackground ?? "0F2435")
         view.backgroundColor = bgColor
 
         // Navigation bar
@@ -121,12 +161,17 @@ class ContainerV2ViewController: BaseViewController {
     #endif
         navigationItem.leftBarButtonItem = backBarItem
 
-        // Eyebrow
+        // Eyebrow (ID front/back) or progress bar (selfie)
         eyebrowLabel.translatesAutoresizingMaskIntoConstraints = false
         let eyebrowText = "STEP \(step.rawValue + 1) OF \(totalSteps) · PHOTO CAPTURE"
         eyebrowLabel.attributedText = NSAttributedString(string: eyebrowText, attributes: [.kern: 0.5])
         eyebrowLabel.font = UIFont.systemFont(ofSize: 12, weight: .semibold)
         eyebrowLabel.textColor = fontColor.withAlphaComponent(0.45)
+
+        progressView.translatesAutoresizingMaskIntoConstraints = false
+        if let stepModels = stepModels, !stepModels.isEmpty {
+            progressView.configure(steps: stepModels, accentColor: accentColor)
+        }
 
         // Headline
         headlineLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -143,17 +188,18 @@ class ContainerV2ViewController: BaseViewController {
         descriptionLabel.numberOfLines = 0
 
         // Illustration card
-        buildIllustrationCard(cardColor: cardColor, accentColor: accentColor)
+        buildIllustrationCard(accentColor: accentColor)
 
         // Checklist card
         buildChecklistCard(fontColor: fontColor, accentColor: accentColor)
 
         // Content stack
-        let contentStack = UIStackView(arrangedSubviews: [eyebrowLabel, headlineLabel, descriptionLabel, illustrationCard, checklistCard])
+        let topView: UIView = isSelfie ? progressView : eyebrowLabel
+        let contentStack = UIStackView(arrangedSubviews: [topView, headlineLabel, descriptionLabel, illustrationCard, checklistCard])
         contentStack.axis = .vertical
         contentStack.spacing = 0
         contentStack.translatesAutoresizingMaskIntoConstraints = false
-        contentStack.setCustomSpacing(8, after: eyebrowLabel)
+        contentStack.setCustomSpacing(isSelfie ? 20 : 8, after: topView)
         contentStack.setCustomSpacing(6, after: headlineLabel)
         contentStack.setCustomSpacing(24, after: descriptionLabel)
         contentStack.setCustomSpacing(20, after: illustrationCard)
@@ -183,7 +229,7 @@ class ContainerV2ViewController: BaseViewController {
 
         let ctaHeight = AmaniUI.sharedInstance.style.ctaButtonHeight
 
-        NSLayoutConstraint.activate([
+        var constraints = [
             continueButton.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
             continueButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
             continueButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
@@ -201,19 +247,35 @@ class ContainerV2ViewController: BaseViewController {
             contentStack.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: -40),
 
             illustrationCard.heightAnchor.constraint(equalTo: illustrationCard.widthAnchor, multiplier: 0.75),
-        ])
+        ]
+
+        if isSelfie {
+            constraints.append(progressView.heightAnchor.constraint(equalToConstant: 56))
+        }
+
+        NSLayoutConstraint.activate(constraints)
     }
 
-    private func buildIllustrationCard(cardColor: UIColor, accentColor: UIColor) {
+    private func buildIllustrationCard(accentColor: UIColor) {
         illustrationCard.translatesAutoresizingMaskIntoConstraints = false
-        illustrationCard.backgroundColor = cardColor.withAlphaComponent(0.55)
+        illustrationCard.backgroundColor = .clear
         illustrationCard.layer.cornerRadius = AmaniUI.sharedInstance.style.cardCornerRadius
         illustrationCard.clipsToBounds = false
 
-        illustrationIconView.translatesAutoresizingMaskIntoConstraints = false
-        illustrationIconView.image = UIImage(systemName: content.illustrationIcon)?.withRenderingMode(.alwaysTemplate)
-        illustrationIconView.tintColor = .white
-        illustrationIconView.contentMode = .scaleAspectFit
+        let side = step == .front ? "front" : "back"
+        let primaryName = isSelfie ? "xxx_se_0_front" : "\((animationName ?? "id").lowercased())_\(side)"
+        let fallbackName = isSelfie ? "xxx_se_0_front" : "xxx_id_\(side)"
+        let animation = LottieAnimation.named(primaryName, bundle: AmaniUI.sharedInstance.getBundle())
+            ?? LottieAnimation.named(fallbackName, bundle: AmaniUI.sharedInstance.getBundle())
+
+        let lottieView = LottieAnimationView(animation: animation)
+        lottieView.translatesAutoresizingMaskIntoConstraints = false
+        lottieView.backgroundColor = .clear
+        lottieView.contentMode = .scaleAspectFit
+        lottieView.loopMode = .loop
+        lottieView.layer.cornerRadius = AmaniUI.sharedInstance.style.cardCornerRadius
+        lottieView.clipsToBounds = true
+        self.lottieAnimationView = lottieView
 
         let badgeSize = AmaniUI.sharedInstance.style.badgeSize
         badgeView.translatesAutoresizingMaskIntoConstraints = false
@@ -226,14 +288,14 @@ class ContainerV2ViewController: BaseViewController {
         badgeIconView.contentMode = .scaleAspectFit
 
         badgeView.addSubview(badgeIconView)
-        illustrationCard.addSubview(illustrationIconView)
+        illustrationCard.addSubview(lottieView)
         illustrationCard.addSubview(badgeView)
 
         NSLayoutConstraint.activate([
-            illustrationIconView.centerXAnchor.constraint(equalTo: illustrationCard.centerXAnchor),
-            illustrationIconView.centerYAnchor.constraint(equalTo: illustrationCard.centerYAnchor),
-            illustrationIconView.widthAnchor.constraint(equalTo: illustrationCard.widthAnchor, multiplier: 0.65),
-            illustrationIconView.heightAnchor.constraint(equalTo: illustrationIconView.widthAnchor),
+            lottieView.topAnchor.constraint(equalTo: illustrationCard.topAnchor),
+            lottieView.bottomAnchor.constraint(equalTo: illustrationCard.bottomAnchor),
+            lottieView.leadingAnchor.constraint(equalTo: illustrationCard.leadingAnchor),
+            lottieView.trailingAnchor.constraint(equalTo: illustrationCard.trailingAnchor),
 
             badgeView.topAnchor.constraint(equalTo: illustrationCard.topAnchor, constant: -badgeSize / 3),
             badgeView.trailingAnchor.constraint(equalTo: illustrationCard.trailingAnchor, constant: badgeSize / 3),
@@ -245,6 +307,8 @@ class ContainerV2ViewController: BaseViewController {
             badgeIconView.widthAnchor.constraint(equalToConstant: badgeSize * 0.45),
             badgeIconView.heightAnchor.constraint(equalToConstant: badgeSize * 0.45),
         ])
+
+        lottieView.play()
     }
 
     private func buildChecklistCard(fontColor: UIColor, accentColor: UIColor) {

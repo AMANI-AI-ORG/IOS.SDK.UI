@@ -33,7 +33,12 @@ class SelfieHandler: DocumentHandler {
       completion(.failure(.configError))
       return
     }
-    
+
+    if AmaniUI.sharedInstance.uiVersion == .v2 {
+      startV2(selfieType: selfieType, docStep: docStep, version: version, completion: completion)
+      return
+    }
+
      //Only for posev2 bypassing intro animation
     if selfieType == -2 {
       let containerVC = ContainerViewController()
@@ -124,7 +129,104 @@ class SelfieHandler: DocumentHandler {
     
     self.topVC?.navigationController?.pushViewController(animationVC, animated: true)
   }
-  
+
+  private func startV2(
+    selfieType: Int,
+    docStep: AmaniSDK.DocumentStepModel,
+    version: AmaniSDK.DocumentVersion,
+    completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
+  ) {
+    let stepModels = (self.topVC as? HomeViewController)?.stepModels
+
+    //Only for posev2 bypassing intro animation
+    if selfieType == -2 {
+      let containerVC = ContainerV2ViewController()
+      containerVC.setDisappearCallback { [weak self] in
+        self?.stepView?.removeFromSuperview()
+      }
+
+      containerVC.bind(
+        animationName: nil,
+        docStep: version.steps![steps.front.rawValue],
+        step: .front,
+        totalSteps: 1,
+        isSelfie: true,
+        bypassIntro: true,
+        stepModels: stepModels
+      ) { [weak self, weak containerVC] in
+        guard let self = self, let containerVC = containerVC else { return }
+
+        guard let stepView = self.runPoseEstimationV2(
+          step: docStep,
+          version: version,
+          completion: completion
+        ) else {
+          completion(.failure(.moduleError))
+          return
+        }
+
+        self.stepView = stepView
+        containerVC.view.addSubview(stepView)
+        containerVC.view.bringSubviewToFront(stepView)
+      }
+
+      self.topVC?.navigationController?.pushViewController(containerVC, animated: true)
+      return
+    }
+
+    let animationVC = ContainerV2ViewController()
+    animationVC.setDisappearCallback { [weak self] in
+      self?.stepView?.removeFromSuperview()
+    }
+
+    animationVC.bind(
+      animationName: version.type,
+      docStep: version.steps![steps.front.rawValue],
+      step: .front,
+      totalSteps: 1,
+      isSelfie: true,
+      bypassIntro: false,
+      stepModels: stepModels
+    ) { [weak self] in
+      guard let self = self else { return }
+
+      let producedStepView: UIView?
+
+      if selfieType == -1 {
+        producedStepView = self.runManualSelfie(
+          step: docStep,
+          version: version,
+          completion: completion
+        )
+      } else if selfieType == 0 {
+        producedStepView = self.runAutoSelfie(
+          step: docStep,
+          version: version,
+          completion: completion
+        )
+      } else if selfieType >= 1 {
+        producedStepView = self.runPoseEstimation(
+          step: docStep,
+          version: version,
+          completion: completion
+        )
+      } else {
+        producedStepView = nil
+      }
+
+      guard let stepView = producedStepView else {
+        completion(.failure(.moduleError))
+        return
+      }
+
+      self.stepView = stepView
+      animationVC.view.addSubview(stepView)
+      animationVC.view.bringSubviewToFront(stepView)
+    }
+
+    self.topVC?.navigationController?.pushViewController(animationVC, animated: true)
+  }
+
   deinit {
     selfieModule = nil
   }
