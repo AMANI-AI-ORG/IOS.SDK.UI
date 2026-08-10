@@ -136,8 +136,6 @@ class SelfieHandler: DocumentHandler {
     version: AmaniSDK.DocumentVersion,
     completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
   ) {
-    let stepModels = (self.topVC as? HomeViewController)?.stepModels
-
     //Only for posev2 bypassing intro animation
     if selfieType == -2 {
       let containerVC = ContainerV2ViewController()
@@ -148,11 +146,11 @@ class SelfieHandler: DocumentHandler {
       containerVC.bind(
         animationName: nil,
         docStep: version.steps![steps.front.rawValue],
+        documentVersion: version,
         step: .front,
         totalSteps: 1,
         isSelfie: true,
-        bypassIntro: true,
-        stepModels: stepModels
+        bypassIntro: true
       ) { [weak self, weak containerVC] in
         guard let self = self, let containerVC = containerVC else { return }
 
@@ -174,57 +172,106 @@ class SelfieHandler: DocumentHandler {
       return
     }
 
-    let animationVC = ContainerV2ViewController()
-    animationVC.setDisappearCallback { [weak self] in
+    // Pose estimation (selfieType >= 1) gets a two-screen guide (primary then secondary),
+    // matching V1's existing 2-step pose-estimation instruction sequence. Manual/auto
+    // selfie (selfieType -1 / 0) only ever had one instruction step, so they keep one screen.
+    let showsSecondaryGuide = selfieType >= 1
+    let totalGuideSteps = showsSecondaryGuide ? 2 : 1
+
+    let primaryVC = ContainerV2ViewController()
+    primaryVC.setDisappearCallback { [weak self] in
       self?.stepView?.removeFromSuperview()
     }
-
-    animationVC.bind(
+    primaryVC.bind(
       animationName: version.type,
       docStep: version.steps![steps.front.rawValue],
+      documentVersion: version,
       step: .front,
-      totalSteps: 1,
+      totalSteps: totalGuideSteps,
       isSelfie: true,
-      bypassIntro: false,
-      stepModels: stepModels
-    ) { [weak self] in
+      bypassIntro: false
+    ) { [weak self, weak primaryVC] in
       guard let self = self else { return }
 
-      let producedStepView: UIView?
-
-      if selfieType == -1 {
-        producedStepView = self.runManualSelfie(
-          step: docStep,
+      if showsSecondaryGuide {
+        self.showSecondarySelfieGuide(
+          selfieType: selfieType,
+          docStep: docStep,
           version: version,
           completion: completion
         )
-      } else if selfieType == 0 {
-        producedStepView = self.runAutoSelfie(
-          step: docStep,
+      } else if let primaryVC = primaryVC {
+        self.startSelfieCapture(
+          selfieType: selfieType,
+          docStep: docStep,
           version: version,
+          hostVC: primaryVC,
           completion: completion
         )
-      } else if selfieType >= 1 {
-        producedStepView = self.runPoseEstimation(
-          step: docStep,
-          version: version,
-          completion: completion
-        )
-      } else {
-        producedStepView = nil
       }
-
-      guard let stepView = producedStepView else {
-        completion(.failure(.moduleError))
-        return
-      }
-
-      self.stepView = stepView
-      animationVC.view.addSubview(stepView)
-      animationVC.view.bringSubviewToFront(stepView)
     }
 
-    self.topVC?.navigationController?.pushViewController(animationVC, animated: true)
+    self.topVC?.navigationController?.pushViewController(primaryVC, animated: true)
+  }
+
+  private func showSecondarySelfieGuide(
+    selfieType: Int,
+    docStep: AmaniSDK.DocumentStepModel,
+    version: AmaniSDK.DocumentVersion,
+    completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
+  ) {
+    let secondaryVC = ContainerV2ViewController()
+    secondaryVC.setDisappearCallback { [weak self] in
+      self?.stepView?.removeFromSuperview()
+    }
+    secondaryVC.bind(
+      animationName: version.type,
+      docStep: version.steps![steps.front.rawValue],
+      documentVersion: version,
+      step: .back,
+      totalSteps: 2,
+      isSelfie: true,
+      bypassIntro: false
+    ) { [weak self, weak secondaryVC] in
+      guard let self = self, let secondaryVC = secondaryVC else { return }
+      self.startSelfieCapture(
+        selfieType: selfieType,
+        docStep: docStep,
+        version: version,
+        hostVC: secondaryVC,
+        completion: completion
+      )
+    }
+    self.topVC?.navigationController?.pushViewController(secondaryVC, animated: true)
+  }
+
+  private func startSelfieCapture(
+    selfieType: Int,
+    docStep: AmaniSDK.DocumentStepModel,
+    version: AmaniSDK.DocumentVersion,
+    hostVC: UIViewController,
+    completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
+  ) {
+    let producedStepView: UIView?
+
+    if selfieType == -1 {
+      producedStepView = runManualSelfie(step: docStep, version: version, completion: completion)
+    } else if selfieType == 0 {
+      producedStepView = runAutoSelfie(step: docStep, version: version, completion: completion)
+    } else if selfieType >= 1 {
+      producedStepView = runPoseEstimation(step: docStep, version: version, completion: completion)
+    } else {
+      producedStepView = nil
+    }
+
+    guard let stepView = producedStepView else {
+      completion(.failure(.moduleError))
+      return
+    }
+
+    self.stepView = stepView
+    hostVC.view.addSubview(stepView)
+    hostVC.view.bringSubviewToFront(stepView)
   }
 
   deinit {

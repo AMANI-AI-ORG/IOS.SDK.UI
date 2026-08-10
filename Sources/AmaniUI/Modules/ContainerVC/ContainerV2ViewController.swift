@@ -9,11 +9,11 @@ class ContainerV2ViewController: BaseViewController {
 
     private var animationName: String?
     private var docStep: DocumentStepModel?
+    private var documentVersion: DocumentVersion?
     private var step: steps = .front
     private var totalSteps: Int = 2
     private var isSelfie: Bool = false
     private var bypassIntro: Bool = false
-    private var stepModels: [KYCStepViewModel]?
     private var callback: (() -> Void)?
     private var disappearCallback: (() -> Void)?
 
@@ -21,7 +21,6 @@ class ContainerV2ViewController: BaseViewController {
 
     private let scrollView = UIScrollView()
     private let eyebrowLabel = UILabel()
-    private let progressView = StepProgressView()
     private let headlineLabel = UILabel()
     private let descriptionLabel = UILabel()
     private let illustrationCard = UIView()
@@ -34,10 +33,11 @@ class ContainerV2ViewController: BaseViewController {
     private var didInvokeDisappearCallback = false
     private var didStartBoundFlow = false
 
-    // MARK: - Static content (front/back copy — not yet config-driven)
+    // MARK: - Content (config-driven — see v2_prep_config_plan)
 
     private struct PrepContent {
         let navTitle: String
+        let eyebrowLabel: String?
         let headline: String
         let description: String
         let checklistHeader: String
@@ -45,49 +45,69 @@ class ContainerV2ViewController: BaseViewController {
         let badgeIcon: String
     }
 
+    /// `step == .front` is the primary slot (ID front / Selfie first instruction),
+    /// `step == .back` is the secondary slot (ID back / Selfie second instruction).
     private var content: PrepContent {
+        let isSecondary = step == .back
+        let dv = documentVersion
+        let gc = (try? Amani.sharedInstance.appConfig().getApplicationConfig())?.generalconfigs
+
+        let title = (isSecondary ? dv?.v2GuideSecondTitle : dv?.v2GuideTitle)
+        let description = (isSecondary ? dv?.v2GuideSecondDescription : dv?.v2GuideDescription)
+        let checklistHeader = dv?.v2GuideChecklistHeader
+        let check1 = isSecondary ? dv?.v2GuideSecondCheck1 : dv?.v2GuideCheck1
+        let check2 = isSecondary ? dv?.v2GuideSecondCheck2 : dv?.v2GuideCheck2
+        let check3 = isSecondary ? dv?.v2GuideSecondCheck3 : dv?.v2GuideCheck3
+
         if isSelfie {
             return PrepContent(
-                navTitle: "Selfie",
-                headline: "Let's take your selfie",
-                description: "Look straight at the camera and keep your face centered in the frame.",
-                checklistHeader: "BEFORE YOU START",
-                checklistItems: [
-                    "Good, even lighting on your face",
-                    "Remove glasses, hats, or masks",
-                    "Hold the phone at eye level",
-                ],
-                badgeIcon: "faceid"
+                navTitle: docStep?.captureTitle ?? gc?.v2SelfieText ?? "Selfie",
+                eyebrowLabel: dv?.v2GuideEyebrow,
+                headline: title ?? (isSecondary ? "Follow the movements" : "Let's take your selfie"),
+                description: description ?? (isSecondary
+                    ? "You'll be asked to turn your head and follow the on-screen prompts."
+                    : "Look straight at the camera and keep your face centered in the frame."),
+                checklistHeader: (checklistHeader ?? "Before you start").uppercased(),
+                checklistItems: isSecondary
+                    ? [
+                        check1 ?? "Stay in a well-lit area",
+                        check2 ?? "Keep your whole face visible",
+                        check3 ?? "Move slowly when prompted",
+                    ]
+                    : [
+                        check1 ?? "Good, even lighting on your face",
+                        check2 ?? "Remove glasses, hats, or masks",
+                        check3 ?? "Hold the phone at eye level",
+                    ],
+                badgeIcon: isSecondary ? "arrow.triangle.2.circlepath" : "faceid"
             )
         }
-        switch step {
-        case .front:
-            return PrepContent(
-                navTitle: "Front of ID",
-                headline: "Photograph the front side",
-                description: "Take the photo in a bright area and make sure the document fits fully in the frame.",
-                checklistHeader: "BEFORE YOU SHOOT",
-                checklistItems: [
-                    "Bright, even lighting",
-                    "All four corners visible",
-                    "No glare on the photo or text",
+
+        let navTitle = docStep?.captureTitle
+            ?? (isSecondary ? gc?.v2BackSideText : gc?.v2FrontSideText)
+            ?? (isSecondary ? "Back of ID" : "Front of ID")
+
+        return PrepContent(
+            navTitle: navTitle,
+            eyebrowLabel: dv?.v2GuideEyebrow ?? "Photo capture",
+            headline: title ?? (isSecondary ? "Now flip it over" : "Photograph the front side"),
+            description: description ?? (isSecondary
+                ? "We'll read the machine-readable zone (MRZ) on the back of your card."
+                : "Take the photo in a bright area and make sure the document fits fully in the frame."),
+            checklistHeader: (checklistHeader ?? "Before you shoot").uppercased(),
+            checklistItems: isSecondary
+                ? [
+                    check1 ?? "MRZ lines fully readable",
+                    check2 ?? "Barcode not covered by fingers",
+                    check3 ?? "Flat surface, no tilt",
+                ]
+                : [
+                    check1 ?? "Bright, even lighting",
+                    check2 ?? "All four corners visible",
+                    check3 ?? "No glare on the photo or text",
                 ],
-                badgeIcon: "camera.fill"
-            )
-        case .back:
-            return PrepContent(
-                navTitle: "Back of ID",
-                headline: "Now flip it over",
-                description: "We'll read the machine-readable zone (MRZ) on the back of your card.",
-                checklistHeader: "BEFORE YOU SHOOT",
-                checklistItems: [
-                    "MRZ lines fully readable",
-                    "Barcode not covered by fingers",
-                    "Flat surface, no tilt",
-                ],
-                badgeIcon: "arrow.triangle.2.circlepath.camera.fill"
-            )
-        }
+            badgeIcon: isSecondary ? "arrow.triangle.2.circlepath.camera.fill" : "camera.fill"
+        )
     }
 
     // MARK: - Lifecycle
@@ -161,20 +181,20 @@ class ContainerV2ViewController: BaseViewController {
     func bind(
         animationName: String?,
         docStep: DocumentStepModel?,
+        documentVersion: DocumentVersion? = nil,
         step: steps,
         totalSteps: Int,
         isSelfie: Bool = false,
         bypassIntro: Bool = false,
-        stepModels: [KYCStepViewModel]? = nil,
         callback: @escaping () -> Void
     ) {
         self.animationName = animationName
         self.docStep = docStep
+        self.documentVersion = documentVersion
         self.step = step
         self.totalSteps = totalSteps
         self.isSelfie = isSelfie
         self.bypassIntro = bypassIntro
-        self.stepModels = stepModels
         self.callback = callback
     }
 
@@ -191,9 +211,10 @@ class ContainerV2ViewController: BaseViewController {
         let accentColor = hextoUIColor(hexString: gc?.primaryButtonBackgroundColor ?? "#C0395A")
         let bgColor = hextoUIColor(hexString: gc?.appBackground ?? "FFFFFF")
         view.backgroundColor = bgColor
+        let currentContent = content
 
         // Navigation bar
-        setNavigationBarWith(title: content.navTitle, textColor: hextoUIColor(hexString: gc?.topBarFontColor ?? "1A1A2E"))
+        setNavigationBarWith(title: currentContent.navTitle, textColor: hextoUIColor(hexString: gc?.topBarFontColor ?? "1A1A2E"))
         let backButton = makeNavButton(
             icon: UIImage(systemName: "arrow.left"),
             tintColor: hextoUIColor(hexString: gc?.topBarFontColor ?? "1A1A2E")
@@ -207,28 +228,26 @@ class ContainerV2ViewController: BaseViewController {
     #endif
         navigationItem.leftBarButtonItem = backBarItem
 
-        // Eyebrow (ID front/back) or progress bar (selfie)
-        eyebrowLabel.translatesAutoresizingMaskIntoConstraints = false
-        let eyebrowText = "STEP \(step.rawValue + 1) OF \(totalSteps) · PHOTO CAPTURE"
-        eyebrowLabel.attributedText = NSAttributedString(string: eyebrowText, attributes: [.kern: 0.5])
-        eyebrowLabel.font = UIFont.systemFont(ofSize: 12, weight: .semibold)
-        eyebrowLabel.textColor = fontColor.withAlphaComponent(0.45)
-
-        progressView.translatesAutoresizingMaskIntoConstraints = false
-        if let stepModels = stepModels, !stepModels.isEmpty {
-            progressView.configure(steps: stepModels, accentColor: accentColor)
+        // Eyebrow — hidden entirely when there's no eyebrow label configured (e.g. Selfie by design)
+        let hasEyebrow = !(currentContent.eyebrowLabel?.isEmpty ?? true)
+        if hasEyebrow {
+            eyebrowLabel.translatesAutoresizingMaskIntoConstraints = false
+            let eyebrowText = "STEP \(step.rawValue + 1) OF \(totalSteps) · \(currentContent.eyebrowLabel!.uppercased())"
+            eyebrowLabel.attributedText = NSAttributedString(string: eyebrowText, attributes: [.kern: 0.5])
+            eyebrowLabel.font = UIFont.systemFont(ofSize: 12, weight: .semibold)
+            eyebrowLabel.textColor = fontColor.withAlphaComponent(0.45)
         }
 
         // Headline
         headlineLabel.translatesAutoresizingMaskIntoConstraints = false
-        headlineLabel.text = content.headline
+        headlineLabel.text = currentContent.headline
         headlineLabel.font = UIFont.systemFont(ofSize: 26, weight: .bold)
         headlineLabel.textColor = fontColor
         headlineLabel.numberOfLines = 0
 
         // Description
         descriptionLabel.translatesAutoresizingMaskIntoConstraints = false
-        descriptionLabel.text = content.description
+        descriptionLabel.text = currentContent.description
         descriptionLabel.font = UIFont.systemFont(ofSize: 15, weight: .regular)
         descriptionLabel.textColor = fontColor.withAlphaComponent(0.55)
         descriptionLabel.numberOfLines = 0
@@ -240,12 +259,19 @@ class ContainerV2ViewController: BaseViewController {
         buildChecklistCard(fontColor: fontColor, accentColor: accentColor)
 
         // Content stack
-        let topView: UIView = isSelfie ? progressView : eyebrowLabel
-        let contentStack = UIStackView(arrangedSubviews: [topView, headlineLabel, descriptionLabel, illustrationCard, checklistCard])
+        var arrangedSubviews: [UIView] = []
+        if hasEyebrow {
+            arrangedSubviews.append(eyebrowLabel)
+        }
+        arrangedSubviews.append(contentsOf: [headlineLabel, descriptionLabel, illustrationCard, checklistCard])
+
+        let contentStack = UIStackView(arrangedSubviews: arrangedSubviews)
         contentStack.axis = .vertical
         contentStack.spacing = 0
         contentStack.translatesAutoresizingMaskIntoConstraints = false
-        contentStack.setCustomSpacing(isSelfie ? 20 : 8, after: topView)
+        if hasEyebrow {
+            contentStack.setCustomSpacing(8, after: eyebrowLabel)
+        }
         contentStack.setCustomSpacing(6, after: headlineLabel)
         contentStack.setCustomSpacing(24, after: descriptionLabel)
         contentStack.setCustomSpacing(20, after: illustrationCard)
@@ -257,7 +283,7 @@ class ContainerV2ViewController: BaseViewController {
 
         // Continue button
         continueButton.translatesAutoresizingMaskIntoConstraints = false
-        continueButton.setTitle("Open camera", for: .normal)
+        continueButton.setTitle(gc?.v2OpenCameraButtonText ?? "Open camera", for: .normal)
         continueButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
         continueButton.setTitleColor(hextoUIColor(hexString: gc?.primaryButtonTextColor ?? "FFFFFF"), for: .normal)
         continueButton.backgroundColor = accentColor
@@ -275,7 +301,7 @@ class ContainerV2ViewController: BaseViewController {
 
         let ctaHeight = AmaniUI.sharedInstance.style.ctaButtonHeight
 
-        var constraints = [
+        NSLayoutConstraint.activate([
             continueButton.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
             continueButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
             continueButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
@@ -293,13 +319,7 @@ class ContainerV2ViewController: BaseViewController {
             contentStack.widthAnchor.constraint(equalTo: scrollView.widthAnchor, constant: -40),
 
             illustrationCard.heightAnchor.constraint(equalTo: illustrationCard.widthAnchor, multiplier: 0.75),
-        ]
-
-        if isSelfie {
-            constraints.append(progressView.heightAnchor.constraint(equalToConstant: 56))
-        }
-
-        NSLayoutConstraint.activate(constraints)
+        ])
     }
 
     private func buildIllustrationCard(accentColor: UIColor) {
