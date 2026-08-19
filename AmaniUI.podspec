@@ -24,6 +24,6 @@ Pod::Spec.new do |s|
   }
   s.dependency "lottie-ios", "~> 4.5.0"
   s.dependency "AmaniSDK", "~> 3.7.2"
-  s.dependency "AmaniVoiceAssistantSDK", "~> 1.1.2"
+  #s.dependency "AmaniVoiceAssistantSDK", "~> 1.1.2"
 end
 

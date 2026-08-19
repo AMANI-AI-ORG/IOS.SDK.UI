@@ -133,13 +133,16 @@ final class SpeechHandler: DocumentHandler {
   // MARK: - Speech Verifier
 
 private extension SpeechHandler {
-  
   private func runSpeechVerifier(
     step: DocumentStepModel,
     version: DocumentVersion,
-    completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
+    completion: @escaping (
+      Result<KYCStepViewModel, KYCStepError>
+    ) -> Void
   ) -> UIView? {
-    speechVerifierModule = Amani.sharedInstance.speechVerifier()
+    
+    speechVerifierModule =
+    Amani.sharedInstance.speechVerifier()
     
     guard let verifier = speechVerifierModule else {
       return nil
@@ -153,18 +156,49 @@ private extension SpeechHandler {
     
     verifier
       .setVideoRecording(enabled: true)
-      .onSuccess { [weak self] result in
-        guard let self else { return }
+    
+      .onPrompt { [weak self] prompt in
         
-        guard result == true else {
-          self.finishWithFailure(completion: completion)
+        guard let self else {
           return
         }
         
-        self.handleSpeechSuccess(completion: completion)
+        let key =
+        SpeechVerifierVoiceKey.key(
+          for: prompt
+        )
+        
+        await self.containerVC?
+          .playVoiceAssistantSound(
+            key: key
+          )
       }
+    
+      .onSuccess { [weak self] result in
+        
+        guard let self else {
+          return
+        }
+        
+        guard result == true else {
+          
+          self.finishWithFailure(
+            completion: completion
+          )
+          
+          return
+        }
+        
+        self.handleSpeechSuccess(
+          completion: completion
+        )
+      }
+    
       .onFailure { [weak self] reason, currentAttempt in
-        guard let self else { return }
+        
+        guard let self else {
+          return
+        }
         
         self.handleSpeechFailure(
           reason: reason,
@@ -174,12 +208,65 @@ private extension SpeechHandler {
       }
     
     do {
+      
       return try verifier.start()
+      
     } catch {
-      print("SpeechHandler start error:", error)
+      
+      print(
+        "SpeechHandler start error:",
+        error
+      )
+      
       return nil
     }
   }
+//  private func runSpeechVerifier(
+//    step: DocumentStepModel,
+//    version: DocumentVersion,
+//    completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
+//  ) -> UIView? {
+//    speechVerifierModule = Amani.sharedInstance.speechVerifier()
+//    
+//    guard let verifier = speechVerifierModule else {
+//      return nil
+//    }
+//    
+//    configureSpeechVerifier(
+//      verifier,
+//      step: step,
+//      version: version
+//    )
+//    
+//    verifier
+//      .setVideoRecording(enabled: true)
+//      .onSuccess { [weak self] result in
+//        guard let self else { return }
+//        
+//        guard result == true else {
+//          self.finishWithFailure(completion: completion)
+//          return
+//        }
+//        
+//        self.handleSpeechSuccess(completion: completion)
+//      }
+//      .onFailure { [weak self] reason, currentAttempt in
+//        guard let self else { return }
+//        
+//        self.handleSpeechFailure(
+//          reason: reason,
+//          currentAttempt: currentAttempt,
+//          completion: completion
+//        )
+//      }
+//    
+//    do {
+//      return try verifier.start()
+//    } catch {
+//      print("SpeechHandler start error:", error)
+//      return nil
+//    }
+//  }
   
   func configureSpeechVerifier(
     _ verifier: SpeechVerifier,
@@ -685,5 +772,34 @@ private extension SpeechHandler {
     topVC?.navigationController?.popToViewController(
       ofClass: HomeViewController.self
     )
+  }
+}
+
+private extension SpeechHandler {
+  
+  enum SpeechVerifierVoiceKey {
+    
+    static func key(
+      for prompt: SpeechVerifierPrompt
+    ) -> String {
+      
+      switch prompt {
+        
+      case .idNumber:
+        return "VOICE_ST0"
+        
+      case .documentNumber:
+        return "VOICE_ST1"
+        
+      case .motherName:
+        return "VOICE_ST2"
+        
+      case .fatherName:
+        return "VOICE_ST3"
+        
+      case .spokenText:
+        return "VOICE_ST4"
+      }
+    }
   }
 }

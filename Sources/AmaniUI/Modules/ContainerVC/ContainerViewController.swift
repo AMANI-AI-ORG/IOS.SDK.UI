@@ -8,9 +8,7 @@
 import Lottie
 import UIKit
 import AmaniSDK
-#if canImport(AmaniVoiceAssistantSDK)
-import AmaniVoiceAssistantSDK
-#endif
+
 
 class ContainerViewController: BaseViewController {
     // MARK: Properties
@@ -133,7 +131,7 @@ class ContainerViewController: BaseViewController {
   override func viewWillDisappear(_ animated: Bool) {
     super.viewWillDisappear(animated)
     
-#if canImport(AmaniVoiceAssistantSDK)
+
     Task { @MainActor in
       do {
         try? await AmaniUI.sharedInstance.voiceAssistant?.stop()
@@ -141,7 +139,6 @@ class ContainerViewController: BaseViewController {
         debugPrint("\(error)")
       }
     }
-#endif
     
     /*
      Settings açılması veya başka bir geçici görünüm değişimi SDK akışını
@@ -445,44 +442,135 @@ extension ContainerViewController {
     }
   }
   
-  private func playVoiceAssistantSoundForPosev2() {
-#if canImport(AmaniVoiceAssistantSDK)
-    Task { @MainActor in
-      do {
-        try await AmaniUI.sharedInstance.voiceAssistant?.play(key: "VOICE_SE1")
-      } catch {
-        debugPrint("VoiceAssistant play failed for key: \(error)")
-      }
+  @MainActor
+  func playVoiceAssistantSound(
+    key: String
+  ) async {
+    
+    
+    
+    guard let voiceAssistant =
+            AmaniUI.sharedInstance.voiceAssistant
+    else {
+      
+      debugPrint(
+        "VoiceAssistant is not initialized. key: \(key)"
+      )
+      
+      return
     }
-#endif
+    
+    do {
+      
+      _ = try await voiceAssistant.play(
+        key: key
+      )
+      
+    } catch {
+      
+      debugPrint(
+        "VoiceAssistant play failed. key: \(key), error: \(error)"
+      )
+    }
+    
+  }
+  
+  @MainActor
+  func stopVoiceAssistant() async {
+      
+    do {
+      
+      try await AmaniUI.sharedInstance
+        .voiceAssistant?
+        .stop()
+      
+    } catch {
+      
+      debugPrint(
+        "VoiceAssistant stop failed: \(error)"
+      )
+    }
+    
+
   }
   
   private func playVoiceAssistantSounds() {
-#if canImport(AmaniVoiceAssistantSDK)
-    if let docID = self.docID {
-      Task { @MainActor in
-        do {
-          try await AmaniUI.sharedInstance.voiceAssistant?.play(key: "VOICE_\(docID.getDocumentType())\(self.step.rawValue)")
-          
-        }catch(let error) {
-          debugPrint("\(error)")
-        }
-        
-      }
+    
+    guard let docID else {
+      return
     }
     
-#endif
+    let key =
+    "VOICE_\(docID.getDocumentType())\(step.rawValue)"
+    
+    Task { @MainActor [weak self] in
+      
+      await self?.playVoiceAssistantSound(
+        key: key
+      )
+    }
+  }
+  
+  private func playVoiceAssistantSoundForPosev2() {
+    
+    Task { @MainActor [weak self] in
+      
+      await self?.playVoiceAssistantSound(
+        key: "VOICE_SE1"
+      )
+    }
   }
   
   private func stopVoiceAssistantSound() {
-#if canImport(AmaniVoiceAssistantSDK)
-    Task { @MainActor in
-      do {
-       try? await AmaniUI.sharedInstance.voiceAssistant?.stop()
-      } catch {
-        debugPrint("VoiceAssistant stop failed: \(error)")
-      }
+    
+    Task { @MainActor [weak self] in
+      
+      await self?.stopVoiceAssistant()
     }
-#endif
   }
+  
+//  private func playVoiceAssistantSoundForPosev2() {
+//    Task { @MainActor in
+//      do {
+//        try await AmaniUI.sharedInstance.voiceAssistant?.play(key: "VOICE_SE1")
+//      } catch {
+//        debugPrint("VoiceAssistant play failed for key: \(error)")
+//      }
+//    }
+//
+//  }
+//  
+//  private func playVoiceAssistantSounds() {
+//
+//    if let docID = self.docID {
+//      Task { @MainActor in
+//        do {
+//          try await AmaniUI.sharedInstance.voiceAssistant?.play(key: "VOICE_\(docID.getDocumentType())\(self.step.rawValue)")
+//          
+//        }catch(let error) {
+//          debugPrint("\(error)")
+//        }
+//        
+//      }
+//    }
+//    
+//
+//  }
+//  
+//  private func stopVoiceAssistantSound() {
+//
+//    Task { @MainActor in
+//      do {
+//       try? await AmaniUI.sharedInstance.voiceAssistant?.stop()
+//      } catch {
+//        debugPrint("VoiceAssistant stop failed: \(error)")
+//      }
+//    }
+//
+//  }
+}
+
+extension ContainerViewController {
+  
+  
 }

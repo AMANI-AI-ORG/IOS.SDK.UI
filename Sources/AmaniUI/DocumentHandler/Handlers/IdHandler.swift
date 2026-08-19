@@ -8,9 +8,7 @@
 import AmaniSDK
 import UIKit
 import CoreNFC
-#if canImport(AmaniVoiceAssistant)
-import AmaniVoiceAssistant
-#endif
+
 
 class IdHandler: DocumentHandler {
     var stepView: UIView?

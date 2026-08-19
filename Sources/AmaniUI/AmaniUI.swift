@@ -8,9 +8,7 @@
 import AmaniSDK
 import UIKit
 import CoreLocation
-#if canImport(AmaniVoiceAssistantSDK)
-import AmaniVoiceAssistantSDK
-#endif
+
 private class AmaniBundleLocator {}
 
 public class AmaniUI {
@@ -27,9 +25,8 @@ public class AmaniUI {
   
     // MARK: - Internal configurations
   internal var config: AppConfigModel?
-#if canImport(AmaniVoiceAssistantSDK)
+
   internal var voiceAssistant: AmaniVoiceAssistant?
-#endif
   internal let sharedSDKInstance = Amani.sharedInstance
   private let version = "1.4.2"
   
@@ -228,7 +225,7 @@ public class AmaniUI {
           self?.config =  result
            
             //    MARK: Initialize AmaniVoiceAssistant
-#if canImport(AmaniVoiceAssistantSDK)
+
           if let generalconfig = result.generalconfigs {
             if let ttsvoices:String = generalconfig.ttsVoices {
               Task { @MainActor in
@@ -241,7 +238,6 @@ public class AmaniUI {
             }
 
           }
-#endif
           
           //Setting here features from config model.
           let allSteps: [DocumentModel] = result.stepConfig?

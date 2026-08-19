@@ -20,9 +20,6 @@ class SuccessViewController: BaseViewController {
   override func viewWillAppear(_ animated: Bool) {
     super.viewWillAppear(true)
 
-     
-#if canImport(AmaniVoiceAssistantSDK)
-    
         Task { @MainActor in
           do {
             try? await AmaniUI.sharedInstance.voiceAssistant?.play(key: "VOICE_SUCCESS")
@@ -31,7 +28,7 @@ class SuccessViewController: BaseViewController {
           }
           
         }
-#endif
+
 
   }
   

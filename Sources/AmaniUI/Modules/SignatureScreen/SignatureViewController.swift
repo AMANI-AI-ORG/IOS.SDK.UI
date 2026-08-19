@@ -8,9 +8,7 @@
 import UIKit
 import AmaniSDK
 import Lottie
-#if canImport(AmaniVoiceAssistantSDK)
-import AmaniVoiceAssistantSDK
-#endif
+
 
 final class SignatureViewController: BaseViewController {
 

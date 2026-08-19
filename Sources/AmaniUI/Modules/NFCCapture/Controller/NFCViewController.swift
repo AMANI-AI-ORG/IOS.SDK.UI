@@ -55,7 +55,7 @@ class NFCViewController: BaseViewController {
   
   override func viewWillDisappear(_ animated: Bool) {
     super.viewWillDisappear(animated)
-#if canImport(AmaniVoiceAssistantSDK)
+
     Task { @MainActor in
       do {
         try? await AmaniUI.sharedInstance.voiceAssistant?.stop()
@@ -63,7 +63,7 @@ class NFCViewController: BaseViewController {
         debugPrint("\(err)")
       }
     }
-#endif
+
   }
   
     func initialSetup() async {
@@ -144,7 +144,7 @@ class NFCViewController: BaseViewController {
     
     @objc func continueButtonPressed(_ sender: Any) {
         Task { @MainActor in
-          #if canImport(AmaniVoiceAssistantSDK)
+         
                 if let docID = self.docID {
                   do {
                     try? await AmaniUI.sharedInstance.voiceAssistant?.play(key: "VOICE_\(docID)")
@@ -153,7 +153,7 @@ class NFCViewController: BaseViewController {
                   }
                 }
                 
-          #endif
+        
           maxAttempts += 1
           let sdkMaxAttemptValue = (documentVersion?.maxNfcAttempt ?? (documentVersion?.maxAttempt ?? 3))
           if maxAttempts <= sdkMaxAttemptValue {
@@ -249,9 +249,9 @@ class NFCViewController: BaseViewController {
     await animateAsync(withDuration: 0.3) { [weak self] in
       Task {
         guard let self = self else { return }
-#if canImport(AmaniVoiceAssistantSDK)
+
         try? await AmaniUI.sharedInstance.voiceAssistant?.stop()
-#endif
+
        
         let sdkMaxAttemptValue = (self.documentVersion?.maxNfcAttempt ?? (self.documentVersion?.maxAttempt ?? 3))
         if self.maxAttempts <= sdkMaxAttemptValue {
