@@ -22,9 +22,6 @@ class NFCV2ViewController: BaseViewController {
 
     private let illustrationContainer = UIView()
     private var lottieAnimationView: LottieAnimationView?
-    private let hintLabel = UILabel()
-    private let titleLabel = UILabel()
-    private let subtitleLabel = UILabel()
     private let captionLabel = UILabel()
     private let continueButton = UIButton(type: .custom)
 
@@ -49,6 +46,8 @@ class NFCV2ViewController: BaseViewController {
         AnimationState(marker: "state:success", key: "success", frame: 267),
     ]
 
+    /// The Lottie file has no native text layers — these captions are the only on-screen copy
+    /// describing each state, rendered as a native label kept in sync with the animation's frame.
     /// Proposed future server config key: `nfcV2.animationStates`. Deferred, per spec — hardcoded until that config exists.
     private static let defaultCaptions: [String: String] = [
         "place": "Place the document behind your phone",
@@ -126,7 +125,6 @@ class NFCV2ViewController: BaseViewController {
     private func setupV2UI() {
         guard let docVer = documentVersion else { return }
         let gc = appConfig?.generalconfigs
-        let fontColor = hextoUIColor(hexString: gc?.appFontColor ?? "FFFFFF")
         let accentColor = hextoUIColor(hexString: gc?.primaryButtonBackgroundColor ?? "#C0395A")
         let bgColor = hextoUIColor(hexString: gc?.appBackground ?? "FFFFFF")
         view.backgroundColor = bgColor
@@ -146,37 +144,14 @@ class NFCV2ViewController: BaseViewController {
 #endif
         navigationItem.leftBarButtonItem = backBarItem
 
-        // Hint — static instructional text shown above the animation
-        hintLabel.translatesAutoresizingMaskIntoConstraints = false
-        hintLabel.text = docVer.v2NfcAnimationHint ?? "Follow the instructions in the animation below"
-        hintLabel.font = UIFont.systemFont(ofSize: 13, weight: .medium)
-        hintLabel.textColor = fontColor.withAlphaComponent(0.55)
-        hintLabel.textAlignment = .center
-        hintLabel.numberOfLines = 0
-
-        // Illustration
+        // Illustration — sized as large as possible and centered on screen.
         buildIllustration()
 
-        // Title
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        titleLabel.text = docVer.nfcTitle
-        titleLabel.font = UIFont.systemFont(ofSize: 24, weight: .bold)
-        titleLabel.textColor = fontColor
-        titleLabel.textAlignment = .center
-        titleLabel.numberOfLines = 0
-
-        // Subtitle (first description only)
-        subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
-        subtitleLabel.text = docVer.nfcDescription1
-        subtitleLabel.font = UIFont.systemFont(ofSize: 15, weight: .regular)
-        subtitleLabel.textColor = fontColor.withAlphaComponent(0.55)
-        subtitleLabel.textAlignment = .center
-        subtitleLabel.numberOfLines = 0
-
-        // Caption — native label under the animation, driven by its marker timeline
+        // Caption — the animation has no native text layers, so this is the only on-screen copy
+        // describing each state, kept in sync with the animation's frame timeline.
         captionLabel.translatesAutoresizingMaskIntoConstraints = false
         captionLabel.text = Self.defaultCaptions[Self.animationStates[0].key]
-        captionLabel.font = UIFont.systemFont(ofSize: 14, weight: .medium)
+        captionLabel.font = UIFont.systemFont(ofSize: 15, weight: .semibold)
         captionLabel.textColor = accentColor
         captionLabel.textAlignment = .center
         captionLabel.numberOfLines = 0
@@ -191,50 +166,34 @@ class NFCV2ViewController: BaseViewController {
         continueButton.layer.cornerRadius = AmaniUI.sharedInstance.style.ctaButtonCornerRadius
         continueButton.addTarget(self, action: #selector(continueButtonPressed(_:)), for: .touchUpInside)
 
-        view.addSubview(hintLabel)
         view.addSubview(illustrationContainer)
-        view.addSubview(titleLabel)
-        view.addSubview(subtitleLabel)
         view.addSubview(captionLabel)
         view.addSubview(continueButton)
 
         let ctaHeight = AmaniUI.sharedInstance.style.ctaButtonHeight
 
         NSLayoutConstraint.activate([
-            // Hint pinned near the top, above the illustration
-            hintLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
-            hintLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 32),
-            hintLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -32),
-
-            // Illustration below the hint, 4:3 to match the animation's 800x600 canvas
-            illustrationContainer.topAnchor.constraint(equalTo: hintLabel.bottomAnchor, constant: 8),
-            illustrationContainer.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 12),
-            illustrationContainer.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -12),
-            illustrationContainer.heightAnchor.constraint(equalTo: illustrationContainer.widthAnchor, multiplier: 0.75),
-
-            // Title below the illustration
-            titleLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            titleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 32),
-            titleLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -32),
-            titleLabel.topAnchor.constraint(equalTo: illustrationContainer.bottomAnchor, constant: 12),
-
-            // Subtitle below title
-            subtitleLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            subtitleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 32),
-            subtitleLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -32),
-            subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
-
-            // Caption below subtitle
-            captionLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            captionLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 32),
-            captionLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -32),
-            captionLabel.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 16),
-
             // Continue button pinned to bottom
             continueButton.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
             continueButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
             continueButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
             continueButton.heightAnchor.constraint(equalToConstant: ctaHeight),
+
+            // Caption sits directly above the Continue button with a small gap
+            captionLabel.bottomAnchor.constraint(equalTo: continueButton.topAnchor, constant: -12),
+            captionLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            captionLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 32),
+            captionLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -32),
+
+            // Illustration centered in the remaining space, as large as it can be while keeping
+            // the 4:3 aspect ratio that matches the animation's 800x600 canvas.
+            illustrationContainer.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            illustrationContainer.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerYAnchor),
+            illustrationContainer.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
+            illustrationContainer.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
+            illustrationContainer.heightAnchor.constraint(equalTo: illustrationContainer.widthAnchor, multiplier: 0.75),
+            illustrationContainer.topAnchor.constraint(greaterThanOrEqualTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
+            illustrationContainer.bottomAnchor.constraint(lessThanOrEqualTo: captionLabel.topAnchor, constant: -12),
         ])
     }
 

@@ -87,7 +87,7 @@ class CheckSMSView: UIView {
     if appConfig?.generalconfigs?.language != "ar" {
       let captureDescriptionText = appConfig?.stepConfig?[1].documents?[0].versions?[0].steps?[0].captureDescription
       let otpLangauge = captureDescriptionText?.extractTextWithinSingleQuotes()
-      self.otpLegend.text = "OTP (\(otpLangauge ?? "One time PIN"))"
+      self.otpLegend.text = "OTP (\((otpLangauge?.isEmpty == false ? otpLangauge : nil) ?? "One time PIN"))"
     } else {
       self.otpLegend.text = "OTP (دبوس مرة واحدة)"
     }
@@ -128,7 +128,9 @@ class CheckSMSView: UIView {
     self.formStackView.setCustomSpacing(32.0, after: otpInput)
     
     self.submitButton = RoundedButton(
-      withTitle:  appConfig?.stepConfig?[2].documents?[0].versions?[0].steps?[0].captureTitle ?? "Verify Phone",
+      // `captureTitle` belongs to document-capture steps (e.g. "Upload Front Side") — it was
+      // never the right source for this button and showed up here by mistake.
+      withTitle: "Verify Phone",
             withColor: hextoUIColor(hexString: appConfig?.generalconfigs?.primaryButtonBackgroundColor ?? "#EA3365")
     )
     
