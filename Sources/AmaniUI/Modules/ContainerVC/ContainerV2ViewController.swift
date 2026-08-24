@@ -491,11 +491,18 @@ class ContainerV2ViewController: BaseViewController {
     }
     
     didStartBoundFlow = true
-    
+
 
     print("[ContainerV2] starting bound flow")
 
-    
+
     callback?()
+  }
+
+  /// Re-arms the one-shot Continue-tap latch. Called when a "Try Again" on the confirmation
+  /// screen pops back to this (already-used) screen, so tapping Continue/Open Camera again
+  /// re-invokes the bound capture-start flow instead of being silently ignored.
+  func resetBoundFlow() {
+    didStartBoundFlow = false
   }
 }

@@ -143,18 +143,24 @@ class SelfieHandler: DocumentHandler {
         self?.stepView?.removeFromSuperview()
       }
 
-      // Re-invoked directly on "Try Again" so retaking reopens the camera immediately instead
-      // of leaving the user on the (bypassed) preparation screen.
-      var startCapture: (() -> Void)!
-      startCapture = { [weak self, weak containerVC] in
+      containerVC.bind(
+        animationName: nil,
+        docStep: version.steps![steps.front.rawValue],
+        documentVersion: version,
+        step: .front,
+        totalSteps: 1,
+        isSelfie: true,
+        bypassIntro: true
+      ) { [weak self, weak containerVC] in
         guard let self = self, let containerVC = containerVC else { return }
 
+        // "Try Again" pops back to this (bypassed) screen — re-arm its latch so it
+        // auto-restarts the capture on reappearance instead of staying permanently spent.
         guard let stepView = self.runPoseEstimationV2(
           step: docStep,
           version: version,
-          retake: { [weak self] in
-            self?.stepView?.removeFromSuperview()
-            startCapture()
+          retake: { [weak containerVC] in
+            containerVC?.resetBoundFlow()
           },
           completion: completion
         ) else {
@@ -165,18 +171,6 @@ class SelfieHandler: DocumentHandler {
         self.stepView = stepView
         containerVC.view.addSubview(stepView)
         containerVC.view.bringSubviewToFront(stepView)
-      }
-
-      containerVC.bind(
-        animationName: nil,
-        docStep: version.steps![steps.front.rawValue],
-        documentVersion: version,
-        step: .front,
-        totalSteps: 1,
-        isSelfie: true,
-        bypassIntro: true
-      ) {
-        startCapture()
       }
 
       self.topVC?.navigationController?.pushViewController(containerVC, animated: true)
@@ -260,14 +254,13 @@ class SelfieHandler: DocumentHandler {
     selfieType: Int,
     docStep: AmaniSDK.DocumentStepModel,
     version: AmaniSDK.DocumentVersion,
-    hostVC: UIViewController,
+    hostVC: ContainerV2ViewController,
     completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
   ) {
-    // Re-invoked directly on "Try Again" so retaking a selfie reopens the camera immediately
-    // instead of leaving the user on the preparation/animation screen.
-    let retake: () -> Void = { [weak self] in
-      self?.stepView?.removeFromSuperview()
-      self?.startSelfieCapture(selfieType: selfieType, docStep: docStep, version: version, hostVC: hostVC, completion: completion)
+    // "Try Again" pops back to hostVC — re-arm its latch so tapping Continue/Open Camera
+    // again re-invokes the bound capture-start flow instead of being silently ignored.
+    let retake: () -> Void = { [weak hostVC] in
+      hostVC?.resetBoundFlow()
     }
 
     let producedStepView: UIView?

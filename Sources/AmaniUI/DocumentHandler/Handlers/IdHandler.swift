@@ -85,22 +85,20 @@ class IdHandler: DocumentHandler {
           self?.frontView?.removeFromSuperview()
         }
 
-        // Re-invoked directly on "Try Again" so retaking a capture reopens the camera
-        // immediately instead of leaving the user on the preparation/animation screen.
-        var startCapture: (() -> Void)!
-        startCapture = { [weak self, weak containerVC] in
-            guard let self = self, let containerVC = containerVC else { return }
+        containerVC.bind(animationName: version.type, docStep: version.steps![workingStep], documentVersion: version, step: steps(rawValue: workingStep) ?? steps.front, totalSteps: version.steps?.count ?? 1) { [weak self, weak containerVC] in
+          guard let self = self, let containerVC = containerVC else { return }
             self.frontView = try? self.idCaptureModule.start(stepId: workingStep) { [weak self] image in
                 DispatchQueue.main.async {
                     self?.frontView?.removeFromSuperview()
+                    // "Try Again" pops back to this screen — re-arm its Continue button
+                    // instead of leaving it permanently spent by the one-shot latch.
                     self?.startConfirmVC(
                         image: image,
                         docStep: version.steps![workingStep],
                         docVer: version,
                         stepId: workingStep,
-                        retake: { [weak self] in
-                            self?.frontView?.removeFromSuperview()
-                            startCapture()
+                        retake: { [weak containerVC] in
+                            containerVC?.resetBoundFlow()
                         }
                     ) { [weak self] () in
                       completion(.success(self!.stepViewModel))
@@ -109,10 +107,6 @@ class IdHandler: DocumentHandler {
             }
             containerVC.view.addSubview(self.frontView!)
             containerVC.view.bringSubviewToFront(self.frontView!)
-        }
-
-        containerVC.bind(animationName: version.type, docStep: version.steps![workingStep], documentVersion: version, step: steps(rawValue: workingStep) ?? steps.front, totalSteps: version.steps?.count ?? 1) {
-            startCapture()
         }
       topVC?.navigationController?.pushViewController(containerVC, animated: true)
     }
