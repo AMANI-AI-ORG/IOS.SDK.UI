@@ -329,7 +329,12 @@ class ContainerV2ViewController: BaseViewController {
         illustrationCard.clipsToBounds = false
 
         let side = step == .front ? "front" : "back"
-        let primaryName = isSelfie ? "xxx_se_0_front" : "\((animationName ?? "id").lowercased())_\(side)"
+        // Pose estimation is the only selfie flow that reaches a secondary (step == .back) guide screen
+        // (see SelfieHandler.showsSecondaryGuide) — so this only ever affects that second screen.
+        let isSecondarySelfieGuide = isSelfie && step == .back
+        let primaryName = isSelfie
+            ? (isSecondarySelfieGuide ? "xxx_se_1_front" : "xxx_se_0_front")
+            : "\((animationName ?? "id").lowercased())_\(side)"
         let fallbackName = isSelfie ? "xxx_se_0_front" : "xxx_id_\(side)"
         let animation = LottieAnimation.named(primaryName, bundle: AmaniUI.sharedInstance.getBundle())
             ?? LottieAnimation.named(fallbackName, bundle: AmaniUI.sharedInstance.getBundle())
