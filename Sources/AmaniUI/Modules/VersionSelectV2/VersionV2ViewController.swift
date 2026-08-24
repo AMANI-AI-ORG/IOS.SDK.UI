@@ -8,8 +8,6 @@ class VersionV2ViewController: BaseViewController {
     var documentHandler: DocumentHandlerHelper?
     var stepVM: KYCStepViewModel!
     private var allStepModels: [KYCStepViewModel]?
-    private var selectedVersion: DocumentVersion?
-    private var optionCards: [DocumentOptionCard] = []
 
     // MARK: - UI
 
@@ -18,7 +16,6 @@ class VersionV2ViewController: BaseViewController {
     private let subtitleLabel = UILabel()
     private let scrollView = UIScrollView()
     private let cardsStack = UIStackView()
-    private let ctaButton = UIButton(type: .custom)
 
     // MARK: - Lifecycle
 
@@ -116,33 +113,13 @@ class VersionV2ViewController: BaseViewController {
         scrollView.showsVerticalScrollIndicator = false
         scrollView.addSubview(contentStack)
 
-        // CTA button (disabled until a selection is made)
-        ctaButton.translatesAutoresizingMaskIntoConstraints = false
-        ctaButton.backgroundColor = accentColor.withAlphaComponent(0.35)
-        ctaButton.setTitleColor(.white, for: .normal)
-        ctaButton.setTitleColor(UIColor.white.withAlphaComponent(0.6), for: .disabled)
-        ctaButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
-        ctaButton.layer.cornerRadius = AmaniUI.sharedInstance.style.ctaButtonCornerRadius
-        let firstVersion = stepVM?.documents.first?.versions?.first
-        ctaButton.setTitle(firstVersion?.v2DocSelectionPlaceholder ?? gc?.v2DocSelectionPlaceholder ?? "Select a document to continue", for: .normal)
-        ctaButton.isEnabled = false
-        ctaButton.addTarget(self, action: #selector(ctaTapped), for: .touchUpInside)
-
         view.addSubview(scrollView)
-        view.addSubview(ctaButton)
-
-        let ctaBottomPad: CGFloat = 16
 
         NSLayoutConstraint.activate([
-            ctaButton.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
-            ctaButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
-            ctaButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -ctaBottomPad),
-            ctaButton.heightAnchor.constraint(equalToConstant: AmaniUI.sharedInstance.style.ctaButtonHeight),
-
             scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: ctaButton.topAnchor, constant: -10),
+            scrollView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
 
             contentStack.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: 20),
             contentStack.leadingAnchor.constraint(equalTo: scrollView.leadingAnchor, constant: 20),
@@ -158,45 +135,14 @@ class VersionV2ViewController: BaseViewController {
         guard let versions = documentHandler?.versionList, !versions.isEmpty else { return }
 
         cardsStack.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        optionCards.removeAll()
 
-        for (i, version) in versions.enumerated() {
+        for version in versions {
             let card = DocumentOptionCard()
-            card.configure(version: version, isSelected: false, accentColor: accentColor, fontColor: fontColor) { [weak self] in
-                self?.selectVersion(at: i)
+            card.configure(version: version, accentColor: accentColor, fontColor: fontColor) { [weak self] in
+                self?.documentHandler?.onVersionPressed(version: version)
             }
             cardsStack.addArrangedSubview(card)
-            optionCards.append(card)
         }
-    }
-
-    private func selectVersion(at index: Int) {
-        let gc = AmaniUI.sharedInstance.config?.generalconfigs
-        let accentColor = hextoUIColor(hexString: gc?.primaryButtonBackgroundColor ?? "#C0395A")
-        let fontColor = hextoUIColor(hexString: gc?.appFontColor ?? "FFFFFF")
-        guard let versions = documentHandler?.versionList, index < versions.count else { return }
-
-        selectedVersion = versions[index]
-
-        for (i, card) in optionCards.enumerated() {
-            card.configure(version: versions[i], isSelected: i == index, accentColor: accentColor, fontColor: fontColor) { [weak self] in
-                self?.selectVersion(at: i)
-            }
-        }
-
-        let title = selectedVersion?.title ?? "Continue"
-        UIView.animate(withDuration: 0.2) {
-            self.ctaButton.backgroundColor = accentColor
-            self.ctaButton.setTitle("\(gc?.v2HomeCtaContinue ?? "Continue with") \(title)", for: .normal)
-            self.ctaButton.isEnabled = true
-        }
-    }
-
-    // MARK: - Actions
-
-    @objc private func ctaTapped() {
-        guard let version = selectedVersion else { return }
-        documentHandler?.onVersionPressed(version: version)
     }
 
     // MARK: - Nav button helper

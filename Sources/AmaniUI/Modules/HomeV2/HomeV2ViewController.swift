@@ -10,9 +10,7 @@ class HomeV2ViewController: HomeViewController {
     private let subtitleLabel = UILabel()
     private let scrollView = UIScrollView()
     private let stepsStack = UIStackView()
-    private let ctaButton = UIButton(type: .custom)
     private var stepCards: [HomeV2StepCard] = []
-    private var selectedStepIndex: Int? = nil
 
     // MARK: - Lifecycle
 
@@ -28,7 +26,7 @@ class HomeV2ViewController: HomeViewController {
 
         isSuccess = false
         configureNavigationBar(appConfig: appConfig, accentColor: accentColor)
-        buildV2Layout(accentColor: accentColor)
+        buildV2Layout()
 
         let customerInfo = resolvedCustomerInfo()
         configureAllViews(customerInfo: customerInfo, accentColor: accentColor)
@@ -98,7 +96,7 @@ class HomeV2ViewController: HomeViewController {
 
     // MARK: - Build layout (called once)
 
-    private func buildV2Layout(accentColor: UIColor) {
+    private func buildV2Layout() {
         guard stepsStack.arrangedSubviews.isEmpty else { return }
 
         view.subviews.forEach { $0.removeFromSuperview() }
@@ -141,31 +139,13 @@ class HomeV2ViewController: HomeViewController {
         scrollView.showsVerticalScrollIndicator = false
         scrollView.addSubview(contentStack)
 
-        // CTA button
-        ctaButton.translatesAutoresizingMaskIntoConstraints = false
-        ctaButton.backgroundColor = accentColor
-        ctaButton.setTitleColor(.white, for: .normal)
-        ctaButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
-        ctaButton.layer.cornerRadius = AmaniUI.sharedInstance.style.ctaButtonCornerRadius
-        ctaButton.addTarget(self, action: #selector(ctaTapped), for: .touchUpInside)
-
         view.addSubview(scrollView)
-        view.addSubview(ctaButton)
-
-        let ctaBottomPad: CGFloat = 16
 
         NSLayoutConstraint.activate([
-            // CTA pinned to bottom
-            ctaButton.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
-            ctaButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
-            ctaButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -ctaBottomPad),
-            ctaButton.heightAnchor.constraint(equalToConstant: AmaniUI.sharedInstance.style.ctaButtonHeight),
-
-            // ScrollView above CTA
             scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: ctaButton.topAnchor, constant: -10),
+            scrollView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
 
             // Content stack fills scroll view width
             contentStack.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: 20),
@@ -184,7 +164,6 @@ class HomeV2ViewController: HomeViewController {
     private func configureAllViews(customerInfo: CustomerResponseModel?, accentColor: UIColor) {
         guard let steps = stepModels, !steps.isEmpty else { return }
 
-        selectedStepIndex = nil
         let hasProgress = steps.contains { $0.status == .APPROVED || $0.status == .PENDING_REVIEW }
 
         // Progress indicator
@@ -206,14 +185,11 @@ class HomeV2ViewController: HomeViewController {
                 index: i,
                 accentColor: accentColor,
                 hasProgress: hasProgress,
-                onTap: isSelectable(step) ? { [weak self] in self?.selectStep(at: i) } : nil
+                onTap: isSelectable(step) ? { [weak self] in self?.navigateToStep(step: step) } : nil
             )
             stepsStack.addArrangedSubview(card)
             stepCards.append(card)
         }
-
-        // Auto-select the first actionable step so there is always a clear visual state
-        autoSelectFirstActionable(steps: steps, accentColor: accentColor)
     }
 
     // MARK: - Selection
@@ -223,63 +199,6 @@ class HomeV2ViewController: HomeViewController {
             && step.status != .APPROVED
             && step.status != .PENDING_REVIEW
             && step.status != .PROCESSING
-    }
-
-    private func autoSelectFirstActionable(steps: [KYCStepViewModel], accentColor: UIColor) {
-        let idx = steps.firstIndex(where: { isSelectable($0) })
-        if let idx = idx {
-            selectStep(at: idx, animated: false)
-        } else {
-            let gc = AmaniUI.sharedInstance.config?.generalconfigs
-            ctaButton.backgroundColor = accentColor
-            ctaButton.setTitle(gc?.continueText ?? "Continue", for: .normal)
-        }
-    }
-
-    private func selectStep(at index: Int, animated: Bool = true) {
-        guard let steps = stepModels, index < steps.count else { return }
-        selectedStepIndex = index
-
-        let accentColor = accentColor(from: AmaniUI.sharedInstance.config)
-        let hasProgress = steps.contains { $0.status == .APPROVED || $0.status == .PENDING_REVIEW }
-        let step = steps[index]
-
-        let applyChanges = {
-            for (i, card) in self.stepCards.enumerated() {
-                if self.isSelectable(steps[i]) {
-                    let isRejected = steps[i].status == .REJECTED || steps[i].status == .AUTOMATICALLY_REJECTED
-                    card.alpha = (i == index || isRejected) ? 1.0 : 0.75
-                    if isRejected {
-                        card.setContentDimmed(i != index)
-                    }
-                } else {
-                    card.alpha = 1.0
-                }
-            }
-            self.ctaButton.backgroundColor = accentColor
-            self.ctaButton.setTitle(self.ctaTitleForStep(step, hasProgress: hasProgress), for: .normal)
-        }
-
-        if animated {
-            UIView.animate(withDuration: 0.2, animations: applyChanges)
-        } else {
-            applyChanges()
-        }
-    }
-
-    // MARK: - CTA action
-
-    @objc private func ctaTapped() {
-        guard let steps = stepModels else { return }
-        let index: Int
-        if let selected = selectedStepIndex {
-            index = selected
-        } else if let i = steps.firstIndex(where: { isSelectable($0) }) {
-            index = i
-        } else {
-            return
-        }
-        navigateToStep(step: steps[index])
     }
 
     private func navigateToStep(step: KYCStepViewModel) {
@@ -331,16 +250,6 @@ class HomeV2ViewController: HomeViewController {
                 "\(numberWord(remainingCount).capitalized) \(noun) \(suffix)"
             )
         }
-    }
-
-    private func ctaTitleForStep(_ step: KYCStepViewModel, hasProgress: Bool) -> String {
-        let gc = AmaniUI.sharedInstance.config?.generalconfigs
-        let name = step.stepConfig.title ?? step.title
-        if step.status == .REJECTED || step.status == .AUTOMATICALLY_REJECTED {
-            return "\(gc?.v2HomeCtaRetake ?? "Retake") \(name)"
-        }
-        let prefix = hasProgress ? (gc?.v2HomeCtaContinue ?? "Continue with") : (gc?.v2HomeCtaStart ?? "Start with")
-        return "\(prefix) \(name)"
     }
 
     // MARK: - Helpers

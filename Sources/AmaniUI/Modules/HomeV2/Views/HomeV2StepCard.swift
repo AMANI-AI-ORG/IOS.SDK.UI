@@ -169,10 +169,6 @@ final class HomeV2StepCard: UIView {
         tapAction?()
     }
 
-    func setContentDimmed(_ dimmed: Bool) {
-        contentStack.alpha = dimmed ? 0.75 : 1.0
-    }
-
     // MARK: - Configure
 
     func configure(

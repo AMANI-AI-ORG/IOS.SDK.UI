@@ -14,9 +14,6 @@ final class DocumentOptionCard: UIView {
 
     private let chevronIcon = UIImageView()
 
-    private let checkmarkContainer = UIView()
-    private let checkmarkIcon = UIImageView()
-
     private let chipsRow = UIStackView()
 
     private var tapAction: (() -> Void)?
@@ -54,34 +51,23 @@ final class DocumentOptionCard: UIView {
         titleLabel.font = UIFont.systemFont(ofSize: 15, weight: .semibold)
         titleLabel.numberOfLines = 2
 
-        // Chevron (not selected)
+        // Chevron — the tap-to-proceed affordance (tapping the card navigates immediately)
         chevronIcon.translatesAutoresizingMaskIntoConstraints = false
         chevronIcon.contentMode = .scaleAspectFit
         chevronIcon.image = UIImage(systemName: "chevron.right")?.withRenderingMode(.alwaysTemplate)
 
-        // Checkmark circle (selected)
-        checkmarkContainer.translatesAutoresizingMaskIntoConstraints = false
-        checkmarkContainer.clipsToBounds = true
-        checkmarkContainer.layer.cornerRadius = 12
-        checkmarkIcon.translatesAutoresizingMaskIntoConstraints = false
-        checkmarkIcon.contentMode = .scaleAspectFit
-        checkmarkIcon.tintColor = .white
-        checkmarkIcon.image = UIImage(systemName: "checkmark")?.withRenderingMode(.alwaysTemplate)
-        checkmarkContainer.addSubview(checkmarkIcon)
-
-        // Top row: icon | title | chevron OR checkmark
-        let topRow = UIStackView(arrangedSubviews: [iconContainer, titleLabel, chevronIcon, checkmarkContainer])
+        // Top row: icon | title | chevron
+        let topRow = UIStackView(arrangedSubviews: [iconContainer, titleLabel, chevronIcon])
         topRow.axis = .horizontal
         topRow.spacing = 12
         topRow.alignment = .center
         topRow.translatesAutoresizingMaskIntoConstraints = false
 
-        // Chips row (shown when selected)
+        // Chips row (NFC / time estimate info)
         chipsRow.axis = .horizontal
         chipsRow.spacing = 8
         chipsRow.alignment = .center
         chipsRow.translatesAutoresizingMaskIntoConstraints = false
-        chipsRow.isHidden = true
 
         // Content stack
         let contentStack = UIStackView(arrangedSubviews: [topRow, chipsRow])
@@ -106,13 +92,6 @@ final class DocumentOptionCard: UIView {
             chevronIcon.widthAnchor.constraint(equalToConstant: 18),
             chevronIcon.heightAnchor.constraint(equalToConstant: 18),
 
-            checkmarkContainer.widthAnchor.constraint(equalToConstant: 24),
-            checkmarkContainer.heightAnchor.constraint(equalToConstant: 24),
-            checkmarkIcon.centerXAnchor.constraint(equalTo: checkmarkContainer.centerXAnchor),
-            checkmarkIcon.centerYAnchor.constraint(equalTo: checkmarkContainer.centerYAnchor),
-            checkmarkIcon.widthAnchor.constraint(equalToConstant: 12),
-            checkmarkIcon.heightAnchor.constraint(equalToConstant: 12),
-
             contentStack.topAnchor.constraint(equalTo: cardView.topAnchor, constant: 14),
             contentStack.leadingAnchor.constraint(equalTo: cardView.leadingAnchor, constant: 14),
             contentStack.trailingAnchor.constraint(equalTo: cardView.trailingAnchor, constant: -14),
@@ -128,64 +107,50 @@ final class DocumentOptionCard: UIView {
 
     // MARK: - Configure
 
-    func configure(version: DocumentVersion, isSelected: Bool, accentColor: UIColor, fontColor: UIColor, onTap: @escaping () -> Void) {
+    func configure(version: DocumentVersion, accentColor: UIColor, fontColor: UIColor, onTap: @escaping () -> Void) {
         tapAction = onTap
         let style = AmaniUI.sharedInstance.style
 
         // Card
         cardView.layer.cornerRadius = style.cardCornerRadius
-        if isSelected {
-            cardView.layer.borderWidth = style.cardBorderWidth
-            cardView.layer.borderColor = accentColor.cgColor
-            cardView.backgroundColor = accentColor.withAlphaComponent(0.07)
-        } else {
-            cardView.layer.borderWidth = 1
-            cardView.layer.borderColor = fontColor.withAlphaComponent(0.18).cgColor
-            cardView.backgroundColor = fontColor.withAlphaComponent(0.07)
-        }
+        cardView.layer.borderWidth = 1
+        cardView.layer.borderColor = fontColor.withAlphaComponent(0.18).cgColor
+        cardView.backgroundColor = fontColor.withAlphaComponent(0.07)
 
         // Icon
-        iconContainer.backgroundColor = isSelected ? accentColor : accentColor.withAlphaComponent(0.12)
+        iconContainer.backgroundColor = accentColor.withAlphaComponent(0.12)
         iconImageView.image = iconForDocID(version.docID)?.withRenderingMode(.alwaysTemplate)
-        iconImageView.tintColor = isSelected ? .white : accentColor
+        iconImageView.tintColor = accentColor
 
         // Title
         titleLabel.text = version.title
-        titleLabel.textColor = isSelected ? fontColor : fontColor.withAlphaComponent(0.7)
+        titleLabel.textColor = fontColor.withAlphaComponent(0.7)
 
-        // Right indicator: show chevron or checkmark
-        chevronIcon.isHidden = isSelected
-        checkmarkContainer.isHidden = !isSelected
+        // Right indicator — tapping the card navigates immediately, no separate confirm step
         chevronIcon.tintColor = fontColor.withAlphaComponent(0.35)
-        checkmarkContainer.backgroundColor = accentColor
 
-        // Chips
+        // Chips — surfaced upfront now that there's no longer a "select then confirm" step
         chipsRow.arrangedSubviews.forEach { $0.removeFromSuperview() }
-        if isSelected {
-            chipsRow.isHidden = false
-            if version.nfc == true {
-                let nfcLabel = version.v2NfcChipLabel ?? AmaniUI.sharedInstance.config?.generalconfigs?.v2NfcChipLabel ?? "Fastest with NFC"
-                chipsRow.addArrangedSubview(makeChip(
-                    text: nfcLabel,
-                    filled: true,
-                    accentColor: accentColor,
-                    fontColor: fontColor,
-                    icon: "bolt.fill"
-                ))
-            }
+        if version.nfc == true {
+            let nfcLabel = version.v2NfcChipLabel ?? AmaniUI.sharedInstance.config?.generalconfigs?.v2NfcChipLabel ?? "Fastest with NFC"
             chipsRow.addArrangedSubview(makeChip(
-                text: timeEstimate(for: version),
-                filled: false,
+                text: nfcLabel,
+                filled: true,
                 accentColor: accentColor,
-                fontColor: fontColor
+                fontColor: fontColor,
+                icon: "bolt.fill"
             ))
-            let spacer = UIView()
-            spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
-            spacer.translatesAutoresizingMaskIntoConstraints = false
-            chipsRow.addArrangedSubview(spacer)
-        } else {
-            chipsRow.isHidden = true
         }
+        chipsRow.addArrangedSubview(makeChip(
+            text: timeEstimate(for: version),
+            filled: false,
+            accentColor: accentColor,
+            fontColor: fontColor
+        ))
+        let spacer = UIView()
+        spacer.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        spacer.translatesAutoresizingMaskIntoConstraints = false
+        chipsRow.addArrangedSubview(spacer)
     }
 
     // MARK: - Chip factory
