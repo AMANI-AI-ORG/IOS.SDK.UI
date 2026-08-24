@@ -143,20 +143,19 @@ class SelfieHandler: DocumentHandler {
         self?.stepView?.removeFromSuperview()
       }
 
-      containerVC.bind(
-        animationName: nil,
-        docStep: version.steps![steps.front.rawValue],
-        documentVersion: version,
-        step: .front,
-        totalSteps: 1,
-        isSelfie: true,
-        bypassIntro: true
-      ) { [weak self, weak containerVC] in
+      // Re-invoked directly on "Try Again" so retaking reopens the camera immediately instead
+      // of leaving the user on the (bypassed) preparation screen.
+      var startCapture: (() -> Void)!
+      startCapture = { [weak self, weak containerVC] in
         guard let self = self, let containerVC = containerVC else { return }
 
         guard let stepView = self.runPoseEstimationV2(
           step: docStep,
           version: version,
+          retake: { [weak self] in
+            self?.stepView?.removeFromSuperview()
+            startCapture()
+          },
           completion: completion
         ) else {
           completion(.failure(.moduleError))
@@ -166,6 +165,18 @@ class SelfieHandler: DocumentHandler {
         self.stepView = stepView
         containerVC.view.addSubview(stepView)
         containerVC.view.bringSubviewToFront(stepView)
+      }
+
+      containerVC.bind(
+        animationName: nil,
+        docStep: version.steps![steps.front.rawValue],
+        documentVersion: version,
+        step: .front,
+        totalSteps: 1,
+        isSelfie: true,
+        bypassIntro: true
+      ) {
+        startCapture()
       }
 
       self.topVC?.navigationController?.pushViewController(containerVC, animated: true)
@@ -252,14 +263,21 @@ class SelfieHandler: DocumentHandler {
     hostVC: UIViewController,
     completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
   ) {
+    // Re-invoked directly on "Try Again" so retaking a selfie reopens the camera immediately
+    // instead of leaving the user on the preparation/animation screen.
+    let retake: () -> Void = { [weak self] in
+      self?.stepView?.removeFromSuperview()
+      self?.startSelfieCapture(selfieType: selfieType, docStep: docStep, version: version, hostVC: hostVC, completion: completion)
+    }
+
     let producedStepView: UIView?
 
     if selfieType == -1 {
-      producedStepView = runManualSelfie(step: docStep, version: version, completion: completion)
+      producedStepView = runManualSelfie(step: docStep, version: version, retake: retake, completion: completion)
     } else if selfieType == 0 {
-      producedStepView = runAutoSelfie(step: docStep, version: version, completion: completion)
+      producedStepView = runAutoSelfie(step: docStep, version: version, retake: retake, completion: completion)
     } else if selfieType >= 1 {
-      producedStepView = runPoseEstimation(step: docStep, version: version, completion: completion)
+      producedStepView = runPoseEstimation(step: docStep, version: version, retake: retake, completion: completion)
     } else {
       producedStepView = nil
     }
@@ -304,19 +322,19 @@ class SelfieHandler: DocumentHandler {
     }
   }
   
-  private func runManualSelfie(step: DocumentStepModel, version: DocumentVersion, completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void) -> UIView?{
+  private func runManualSelfie(step: DocumentStepModel, version: DocumentVersion, retake: (() -> Void)? = nil, completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void) -> UIView?{
     selfieModule = Amani.sharedInstance.selfie()
     guard let currentSelfieModule = selfieModule as? Selfie else {
       print("cant return")
       return nil
     }
-    
+
     do {
-      
+
       stepView = try currentSelfieModule.start { [weak self] image in
         self?.stepView?.removeFromSuperview()
         DispatchQueue.main.async {
-          self?.startConfirmVC(image: image, docStep: step, docVer: version) { [weak self] () in
+          self?.startConfirmVC(image: image, docStep: step, docVer: version, retake: retake) { [weak self] () in
             self?.goNextStep(completion: completion)
           }
         }
@@ -330,7 +348,7 @@ class SelfieHandler: DocumentHandler {
   }
   
   
-  private func runAutoSelfie(step: DocumentStepModel, version: DocumentVersion, completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void)-> UIView? {
+  private func runAutoSelfie(step: DocumentStepModel, version: DocumentVersion, retake: (() -> Void)? = nil, completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void)-> UIView? {
     selfieModule = Amani.sharedInstance.autoSelfie()
     
     guard let currentSelfieModule = selfieModule as? AutoSelfie else {
@@ -361,7 +379,7 @@ class SelfieHandler: DocumentHandler {
       stepView = try currentSelfieModule.start { [weak self]  image in
         self?.stepView?.removeFromSuperview()
         DispatchQueue.main.async {
-          self?.startConfirmVC(image: image, docStep: step, docVer: version) { [weak self] () in
+          self?.startConfirmVC(image: image, docStep: step, docVer: version, retake: retake) { [weak self] () in
             self?.goNextStep(completion: completion)
           }
         }
@@ -373,11 +391,12 @@ class SelfieHandler: DocumentHandler {
       return nil
     }
   }
-  
+
 
   private func runPoseEstimation(
     step: DocumentStepModel,
     version: DocumentVersion,
+    retake: (() -> Void)? = nil,
     completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
   ) -> UIView? {
     let poseCount = version.selfieType ?? 1
@@ -433,12 +452,12 @@ class SelfieHandler: DocumentHandler {
       stepView = try builder.start { [weak self] image in
         self?.stepView?.removeFromSuperview()
         DispatchQueue.main.async {
-          self?.startConfirmVC(image: image, docStep: step, docVer: version) { [weak self] in
+          self?.startConfirmVC(image: image, docStep: step, docVer: version, retake: retake) { [weak self] in
             self?.goNextStep(completion: completion)
           }
         }
       }
-      
+
       return stepView
     } catch {
       print("runPoseEstimation error:", error)
@@ -446,11 +465,12 @@ class SelfieHandler: DocumentHandler {
       return nil
     }
   }
-  
+
   private func runPoseEstimationV2(
     step: DocumentStepModel,
     version: DocumentVersion,
     onUIStateChanged: ((PoseEstimationV2UIState) -> Void)? = nil,
+    retake: (() -> Void)? = nil,
     completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
   ) -> UIView? {
     do {
@@ -489,14 +509,14 @@ class SelfieHandler: DocumentHandler {
       
       stepView = try builder.start { [weak self] image in
         self?.stepView?.removeFromSuperview()
-        
+
         DispatchQueue.main.async {
-          self?.startConfirmVC(image: image, docStep: step, docVer: version) { [weak self] in
+          self?.startConfirmVC(image: image, docStep: step, docVer: version, retake: retake) { [weak self] in
             self?.goNextStep(completion: completion)
           }
         }
       }
-      
+
       return stepView
     } catch {
       print("runPoseEstimationV2 error:", error)
