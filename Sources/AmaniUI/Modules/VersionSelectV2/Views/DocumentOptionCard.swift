@@ -227,12 +227,6 @@ final class DocumentOptionCard: UIView {
         let gc = AmaniUI.sharedInstance.config?.generalconfigs
         if let configured = version.v2EstimatedTime { return configured }
         if let configured = gc?.v2EstimatedTime { return configured }
-        if version.nfc == true { return "~2 min" }
-        switch version.docID?.uppercased() {
-        case "NF": return "~2 min"
-        case "IB": return "~1 min"
-        case "SE": return "~30 sec"
-        default:   return gc?.v2StepDefaultDuration ?? "~30 sec"
-        }
+        return gc?.v2StepDefaultDuration ?? "~30 sec"
     }
 }
