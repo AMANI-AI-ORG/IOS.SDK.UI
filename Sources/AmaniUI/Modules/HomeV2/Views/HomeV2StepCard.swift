@@ -371,7 +371,12 @@ final class HomeV2StepCard: UIView {
 
     private func estimatedTime(for step: KYCStepViewModel) -> String {
         let gc = AmaniUI.sharedInstance.config?.generalconfigs
-        if let configured = step.documents.first?.versions?.first?.v2EstimatedTime { return configured }
+        // A step can offer several document versions (e.g. old ID / new ID / passport / driving
+        // license) before the user has picked one — checking only documents.first?.versions?.first
+        // meant every step's card showed whichever value happened to sit at that one index,
+        // ignoring a v2EstimatedTime configured on any other version. Check all of them instead.
+        let allVersions = step.documents.compactMap { $0.versions }.flatMap { $0 }
+        if let configured = allVersions.compactMap({ $0.v2EstimatedTime }).first { return configured }
         if let configured = gc?.v2EstimatedTime { return configured }
         return gc?.v2StepDefaultDuration ?? "~30 sec"
     }
