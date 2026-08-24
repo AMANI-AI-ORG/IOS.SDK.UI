@@ -22,9 +22,9 @@ class RoundedButton: UIButton {
     backgroundColor = color
     
     layer.borderColor = color.cgColor
-    layer.cornerRadius = 24.0
+    layer.cornerRadius = AmaniUI.sharedInstance.style.ctaButtonCornerRadius
     
-    titleLabel?.font = UIFont.systemFont(ofSize: 16.0, weight: .bold)
+    titleLabel?.font = UIFont.systemFont(ofSize: 16.0, weight: AmaniUI.sharedInstance.uiVersion == .v2 ? .semibold : .bold)
     contentEdgeInsets = UIEdgeInsets(top: 10, left: 20, bottom: 10, right: 20)
     
     // Create and configure the activity indicator
@@ -43,7 +43,7 @@ class RoundedButton: UIButton {
     }
     
     NSLayoutConstraint.activate([
-      heightAnchor.constraint(equalToConstant: 50.0)
+      heightAnchor.constraint(equalToConstant: AmaniUI.sharedInstance.style.ctaButtonHeight)
     ])
     
   }

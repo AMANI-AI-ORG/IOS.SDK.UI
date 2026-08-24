@@ -205,7 +205,7 @@ class CheckSMSView: UIView {
     viewModel.isOTPValidPublisher.sink(receiveValue: { [weak self] isValidOTP in
       if !isValidOTP && (self?.shouldShowError != nil) {
         self?.shouldShowError = true
-        self?.otpInput.showError(message: "OTP Code is not valid")
+        self?.otpInput.showError(message: self?.invalidOtpMessage() ?? "OTP Code is not valid")
       } else {
         self?.otpInput.hideError()
       }
@@ -296,13 +296,18 @@ class CheckSMSView: UIView {
           }
         } else {
           DispatchQueue.main.async {
-            self.otpInput.showError(message: "There is a problem with OTP Code")
+            self.otpInput.showError(message: self.invalidOtpMessage() ?? "There is a problem with OTP Code")
           }
         }
       }
     }
   }
-  
+
+  private func invalidOtpMessage() -> String? {
+    guard AmaniUI.sharedInstance.uiVersion == .v2 else { return nil }
+    return appConfig?.generalconfigs?.v2InvalidOtpText
+  }
+
   private func setTextsFrom(document: DocumentVersion) {
     if let step = document.steps?.first {
       DispatchQueue.main.async {

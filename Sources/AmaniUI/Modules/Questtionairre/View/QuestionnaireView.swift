@@ -24,6 +24,9 @@ class QuestionnaireView: UIView {
     }
   
   private var tableView = UITableView()
+  private let errorBanner = UIView()
+  private let errorBannerLabel = UILabel()
+  private var errorBannerHideWorkItem: DispatchWorkItem?
 
   override init(frame: CGRect) {
     super.init(frame: frame)
@@ -41,19 +44,62 @@ class QuestionnaireView: UIView {
     self.tableView.register(QuestionViewCell.self, forCellReuseIdentifier: String(describing: QuestionViewCell.self))
     self.tableView.backgroundColor = hextoUIColor(hexString: appConfig?.generalconfigs?.appBackground ?? "#EEF4FA")
     backgroundColor = hextoUIColor(hexString: appConfig?.generalconfigs?.appBackground ?? "#EEF4FA")
-    
+
+    // Error banner (V2 only) — surfaces v2QuestionnaireErrorText / v2QuestionnaireSubmitErrorText,
+    // which previously had no visible UI at all on failure.
+    errorBanner.translatesAutoresizingMaskIntoConstraints = false
+    errorBanner.backgroundColor = hextoUIColor(hexString: appConfig?.generalconfigs?.primaryButtonBackgroundColor ?? "#C0395A")
+    errorBanner.layer.cornerRadius = AmaniUI.sharedInstance.style.cardCornerRadius
+    errorBanner.isHidden = true
+    errorBanner.alpha = 0
+
+    errorBannerLabel.translatesAutoresizingMaskIntoConstraints = false
+    errorBannerLabel.textColor = .white
+    errorBannerLabel.font = UIFont.systemFont(ofSize: 13, weight: .semibold)
+    errorBannerLabel.numberOfLines = 0
+    errorBannerLabel.textAlignment = .center
+    errorBanner.addSubview(errorBannerLabel)
+
     setConstraints()
   }
-  
+
   private func setConstraints() {
     addSubview(tableView)
+    addSubview(errorBanner)
     tableView.translatesAutoresizingMaskIntoConstraints = false
     NSLayoutConstraint.activate([
       tableView.topAnchor.constraint(equalTo: topAnchor),
       tableView.leadingAnchor.constraint(equalTo: leadingAnchor),
       tableView.bottomAnchor.constraint(equalTo: bottomAnchor),
       tableView.trailingAnchor.constraint(equalTo: trailingAnchor),
+
+      errorBannerLabel.topAnchor.constraint(equalTo: errorBanner.topAnchor, constant: 10),
+      errorBannerLabel.bottomAnchor.constraint(equalTo: errorBanner.bottomAnchor, constant: -10),
+      errorBannerLabel.leadingAnchor.constraint(equalTo: errorBanner.leadingAnchor, constant: 14),
+      errorBannerLabel.trailingAnchor.constraint(equalTo: errorBanner.trailingAnchor, constant: -14),
+
+      errorBanner.topAnchor.constraint(equalTo: safeAreaLayoutGuide.topAnchor, constant: 8),
+      errorBanner.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
+      errorBanner.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
     ])
+  }
+
+  private func showErrorBanner(message: String) {
+    errorBannerHideWorkItem?.cancel()
+    errorBannerLabel.text = message
+    errorBanner.isHidden = false
+    bringSubviewToFront(errorBanner)
+    UIView.animate(withDuration: 0.2) { self.errorBanner.alpha = 1 }
+
+    let workItem = DispatchWorkItem { [weak self] in
+      UIView.animate(withDuration: 0.2, animations: {
+        self?.errorBanner.alpha = 0
+      }, completion: { _ in
+        self?.errorBanner.isHidden = true
+      })
+    }
+    errorBannerHideWorkItem = workItem
+    DispatchQueue.main.asyncAfter(deadline: .now() + 3.0, execute: workItem)
   }
 
   func bind(with viewModel: QuestionnaireViewModel, step: KYCStepViewModel? = nil, completionHandler: @escaping () -> Void) {
@@ -81,6 +127,11 @@ class QuestionnaireView: UIView {
           }
           break
         case .failed:
+          if AmaniUI.sharedInstance.uiVersion == .v2, let message = viewModel.errorMessage {
+            DispatchQueue.main.async {
+              self?.showErrorBanner(message: message)
+            }
+          }
           if let nextRequiredIdx = viewModel.getNextEmptyRequiredIndex() {
             DispatchQueue.main.async {
               self?.tableView.scrollToRow(at: IndexPath(row: nextRequiredIdx, section: 0), at: .top, animated: true)
@@ -149,7 +200,7 @@ extension QuestionnaireView: QuestionDelegate {
       viewModel.addMultipleAnswer(for: questionID, answerID: answerID)
     case "single_choice":
       viewModel.addSingleAnswer(for: questionID, answerID: answerID)
-    case "text":
+    case "text", "number":
       viewModel.addTextAnswer(for: questionID, text: answerID)
     default:
       break

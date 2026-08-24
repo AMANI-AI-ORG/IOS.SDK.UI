@@ -23,6 +23,7 @@ class QuestionnaireViewModel {
   }
 
   @Published var state: ViewState = .none
+  @Published var errorMessage: String?
 
   init() {
     questionnaire.getQuestions(completion: { questions in
@@ -81,6 +82,8 @@ class QuestionnaireViewModel {
     questionnaire.submitAnswers(answers: answers,
                                 completion: { [weak self] answerState in
       if answerState == false {
+        let gc = AmaniUI.sharedInstance.config?.generalconfigs
+        self?.errorMessage = gc?.v2QuestionnaireSubmitErrorText ?? "Could not submit your answers. Please try again."
         self?.state = .failed
       }
                                 })
@@ -140,6 +143,8 @@ class QuestionnaireViewModel {
          rule.status == DocumentStatus.APPROVED.rawValue {
         state = .success
       } else {
+        let gc = AmaniUI.sharedInstance.config?.generalconfigs
+        errorMessage = gc?.v2QuestionnaireErrorText ?? "Something went wrong!"
         state = .failed
       }
     }

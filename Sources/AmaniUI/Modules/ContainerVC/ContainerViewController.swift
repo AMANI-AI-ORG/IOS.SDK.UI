@@ -28,9 +28,10 @@ class ContainerViewController: BaseViewController {
   private var selfieInstructionSteps: [(animation: String, text: String)] = []
   private var currentSelfieStepIndex = 0
   var bypassIntroForPoseV2 = false
-  
+  var isSpeechFlow = false
   var stepConfig: StepConfig?
   var docID: DocumentID?
+  private var isLeavingViewHierarchy = false
   
   func bind(animationName:String?,
             docStep:DocumentStepModel,
@@ -63,6 +64,7 @@ class ContainerViewController: BaseViewController {
     super.viewWillAppear(animated)
       
       isDissapeared = false
+    isLeavingViewHierarchy = false
     
     if bypassIntroForPoseV2 {
       lottieAnimationView?.stop()
@@ -116,31 +118,65 @@ class ContainerViewController: BaseViewController {
 
   }
   
-
+  override func viewDidDisappear(_ animated: Bool) {
+    super.viewDidDisappear(animated)
     
-  override func viewWillDisappear(_ animated: Bool) {
-    // remove the sdk view on exiting by calling the callback
-      #if canImport(AmaniVoiceAssistantSDK)
-      
-          Task { @MainActor in
-            do {
-              try? await AmaniUI.sharedInstance.voiceAssistant?.stop()
-            }catch(let error) {
-              debugPrint("\(error)")
-            }
-            
-          }
-        
-        
-      #endif
-    print("Container View disappear")
-//    cleanupViews()
-    if let disappearCb = self.disappearCallback {
-      disappearCb()
+    guard isLeavingViewHierarchy,
+          !isDissapeared else {
+      return
     }
-      isDissapeared = true
-    super.viewWillDisappear(animated)
+    
+    isDissapeared = true
+    disappearCallback?()
   }
+  
+  override func viewWillDisappear(_ animated: Bool) {
+    super.viewWillDisappear(animated)
+    
+#if canImport(AmaniVoiceAssistantSDK)
+    Task { @MainActor in
+      do {
+        try? await AmaniUI.sharedInstance.voiceAssistant?.stop()
+      } catch {
+        debugPrint("\(error)")
+      }
+    }
+#endif
+    
+    /*
+     Settings açılması veya başka bir geçici görünüm değişimi SDK akışını
+     temizlememeli. Cleanup yalnızca controller gerçekten pop veya dismiss
+     ediliyorsa çalıştırılacak.
+     */
+    isLeavingViewHierarchy =
+    isMovingFromParent ||
+    isBeingDismissed ||
+    navigationController?.isBeingDismissed == true
+  }
+    
+//  override func viewWillDisappear(_ animated: Bool) {
+//    // remove the sdk view on exiting by calling the callback
+//      #if canImport(AmaniVoiceAssistantSDK)
+//      
+//          Task { @MainActor in
+//            do {
+//              try? await AmaniUI.sharedInstance.voiceAssistant?.stop()
+//            }catch(let error) {
+//              debugPrint("\(error)")
+//            }
+//            
+//          }
+//        
+//        
+//      #endif
+//    print("Container View disappear")
+////    cleanupViews()
+//    if let disappearCb = self.disappearCallback {
+//      disappearCb()
+//    }
+//    isDissapeared = true
+//    super.viewWillDisappear(animated)
+//  }
 
 }
 extension ContainerViewController {
@@ -155,7 +191,9 @@ extension ContainerViewController {
         Amani.sharedInstance.setMRZDelegate(delegate: self)
       }
       let appConfig = try! Amani.sharedInstance.appConfig().getApplicationConfig()
-      let buttonRadious = CGFloat(appConfig.generalconfigs?.buttonRadius ?? 10)
+      let buttonRadious: CGFloat = AmaniUI.sharedInstance.uiVersion == .v2
+          ? AmaniUI.sharedInstance.style.ctaButtonCornerRadius
+          : CGFloat(appConfig.generalconfigs?.buttonRadius ?? 10)
       
       self.btnContinue.translatesAutoresizingMaskIntoConstraints = false
       self.titleDescription.translatesAutoresizingMaskIntoConstraints = false
@@ -203,7 +241,8 @@ extension ContainerViewController {
       self.animationView.translatesAutoresizingMaskIntoConstraints = false
       self.animationView.backgroundColor = .clear
       
-      if bypassIntroForPoseV2 {
+      
+      if bypassIntroForPoseV2 || isSpeechFlow {
         self.btnContinue.isHidden = true
         self.titleDescription.isHidden = true
         self.setNavigationLeftButton(TintColor: appConfig.generalconfigs?.topBarFontColor ?? "#ffffff")
@@ -224,7 +263,10 @@ extension ContainerViewController {
             btnContinue.setTitleColor(hextoUIColor(hexString: appConfig.generalconfigs?.primaryButtonTextColor ?? ThemeColor.whiteColor.toHexString()), for: .normal)
             btnContinue.tintColor = hextoUIColor(hexString: appConfig.generalconfigs?.primaryButtonTextColor ?? ThemeColor.whiteColor.toHexString())
             btnContinue.addCornerRadiousWith(radious: buttonRadious)
-            
+            if AmaniUI.sharedInstance.uiVersion == .v2 {
+              btnContinue.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
+            }
+
         }
 
       // Navigation Bar
@@ -338,7 +380,7 @@ extension ContainerViewController {
                 btnContinue.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
                 btnContinue.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
                 btnContinue.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
-                btnContinue.heightAnchor.constraint(equalToConstant: 50),
+                btnContinue.heightAnchor.constraint(equalToConstant: AmaniUI.sharedInstance.uiVersion == .v2 ? AmaniUI.sharedInstance.style.ctaButtonHeight : 50),
 
             ])
         }
