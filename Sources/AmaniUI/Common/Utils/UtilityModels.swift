@@ -22,6 +22,7 @@ enum DocumentID: Equatable {
     case IB  // Proof of address
     case SG  // Signature
     case VA  // Visa
+    case ST //Speech to text
     case OD(String)  // Other document types.
 
     init?(rawValue: String) {
@@ -36,7 +37,8 @@ enum DocumentID: Equatable {
            case "IB": self = .IB
            case "SG": self = .SG
            case "VA": self = .VA
-           default: self = .OD(rawValue) 
+           case "ST": self = .ST
+           default: self = .OD(rawValue)
            }
        }
     
@@ -52,6 +54,7 @@ enum DocumentID: Equatable {
         case .IB: return "IB"
         case .SG: return "SG"
         case .VA: return "VA"
+        case .ST: return "ST"
         case .OD(let customType): return customType
         }
     }

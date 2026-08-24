@@ -33,7 +33,12 @@ class SelfieHandler: DocumentHandler {
       completion(.failure(.configError))
       return
     }
-    
+
+    if AmaniUI.sharedInstance.uiVersion == .v2 {
+      startV2(selfieType: selfieType, docStep: docStep, version: version, completion: completion)
+      return
+    }
+
      //Only for posev2 bypassing intro animation
     if selfieType == -2 {
       let containerVC = ContainerViewController()
@@ -124,7 +129,162 @@ class SelfieHandler: DocumentHandler {
     
     self.topVC?.navigationController?.pushViewController(animationVC, animated: true)
   }
-  
+
+  private func startV2(
+    selfieType: Int,
+    docStep: AmaniSDK.DocumentStepModel,
+    version: AmaniSDK.DocumentVersion,
+    completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
+  ) {
+    //Only for posev2 bypassing intro animation
+    if selfieType == -2 {
+      let containerVC = ContainerV2ViewController()
+      containerVC.setDisappearCallback { [weak self] in
+        self?.stepView?.removeFromSuperview()
+      }
+
+      containerVC.bind(
+        animationName: nil,
+        docStep: version.steps![steps.front.rawValue],
+        documentVersion: version,
+        step: .front,
+        totalSteps: 1,
+        isSelfie: true,
+        bypassIntro: true
+      ) { [weak self, weak containerVC] in
+        guard let self = self, let containerVC = containerVC else { return }
+
+        // "Try Again" pops back to this (bypassed) screen — re-arm its latch so it
+        // auto-restarts the capture on reappearance instead of staying permanently spent.
+        guard let stepView = self.runPoseEstimationV2(
+          step: docStep,
+          version: version,
+          retake: { [weak containerVC] in
+            containerVC?.resetBoundFlow()
+          },
+          completion: completion
+        ) else {
+          completion(.failure(.moduleError))
+          return
+        }
+
+        self.stepView = stepView
+        containerVC.view.addSubview(stepView)
+        containerVC.view.bringSubviewToFront(stepView)
+      }
+
+      self.topVC?.navigationController?.pushViewController(containerVC, animated: true)
+      return
+    }
+
+    // Pose estimation (selfieType >= 1) gets a two-screen guide (primary then secondary),
+    // matching V1's existing 2-step pose-estimation instruction sequence. Manual/auto
+    // selfie (selfieType -1 / 0) only ever had one instruction step, so they keep one screen.
+    let showsSecondaryGuide = selfieType >= 1
+    let totalGuideSteps = showsSecondaryGuide ? 2 : 1
+
+    let primaryVC = ContainerV2ViewController()
+    primaryVC.setDisappearCallback { [weak self] in
+      self?.stepView?.removeFromSuperview()
+    }
+    primaryVC.bind(
+      animationName: version.type,
+      docStep: version.steps![steps.front.rawValue],
+      documentVersion: version,
+      step: .front,
+      totalSteps: totalGuideSteps,
+      isSelfie: true,
+      bypassIntro: false
+    ) { [weak self, weak primaryVC] in
+      guard let self = self else { return }
+
+      if showsSecondaryGuide {
+        self.showSecondarySelfieGuide(
+          selfieType: selfieType,
+          docStep: docStep,
+          version: version,
+          completion: completion
+        )
+      } else if let primaryVC = primaryVC {
+        self.startSelfieCapture(
+          selfieType: selfieType,
+          docStep: docStep,
+          version: version,
+          hostVC: primaryVC,
+          completion: completion
+        )
+      }
+    }
+
+    self.topVC?.navigationController?.pushViewController(primaryVC, animated: true)
+  }
+
+  private func showSecondarySelfieGuide(
+    selfieType: Int,
+    docStep: AmaniSDK.DocumentStepModel,
+    version: AmaniSDK.DocumentVersion,
+    completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
+  ) {
+    let secondaryVC = ContainerV2ViewController()
+    secondaryVC.setDisappearCallback { [weak self] in
+      self?.stepView?.removeFromSuperview()
+    }
+    secondaryVC.bind(
+      animationName: version.type,
+      docStep: version.steps![steps.front.rawValue],
+      documentVersion: version,
+      step: .back,
+      totalSteps: 2,
+      isSelfie: true,
+      bypassIntro: false
+    ) { [weak self, weak secondaryVC] in
+      guard let self = self, let secondaryVC = secondaryVC else { return }
+      self.startSelfieCapture(
+        selfieType: selfieType,
+        docStep: docStep,
+        version: version,
+        hostVC: secondaryVC,
+        completion: completion
+      )
+    }
+    self.topVC?.navigationController?.pushViewController(secondaryVC, animated: true)
+  }
+
+  private func startSelfieCapture(
+    selfieType: Int,
+    docStep: AmaniSDK.DocumentStepModel,
+    version: AmaniSDK.DocumentVersion,
+    hostVC: ContainerV2ViewController,
+    completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
+  ) {
+    // "Try Again" pops back to hostVC — re-arm its latch so tapping Continue/Open Camera
+    // again re-invokes the bound capture-start flow instead of being silently ignored.
+    let retake: () -> Void = { [weak hostVC] in
+      hostVC?.resetBoundFlow()
+    }
+
+    let producedStepView: UIView?
+
+    if selfieType == -1 {
+      producedStepView = runManualSelfie(step: docStep, version: version, retake: retake, completion: completion)
+    } else if selfieType == 0 {
+      producedStepView = runAutoSelfie(step: docStep, version: version, retake: retake, completion: completion)
+    } else if selfieType >= 1 {
+      producedStepView = runPoseEstimation(step: docStep, version: version, retake: retake, completion: completion)
+    } else {
+      producedStepView = nil
+    }
+
+    guard let stepView = producedStepView else {
+      completion(.failure(.moduleError))
+      return
+    }
+
+    self.stepView = stepView
+    hostVC.view.addSubview(stepView)
+    hostVC.view.bringSubviewToFront(stepView)
+  }
+
   deinit {
     selfieModule = nil
   }
@@ -150,24 +310,24 @@ class SelfieHandler: DocumentHandler {
   
   func goNextStep( completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void) {
     DispatchQueue.main.async {
-      self.topVC?.navigationController?.popToViewController(ofClass: HomeViewController.self)
       completion(.success(self.stepViewModel))
+      self.topVC?.navigationController?.popToViewController(ofClass: HomeViewController.self)
     }
   }
   
-  private func runManualSelfie(step: DocumentStepModel, version: DocumentVersion, completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void) -> UIView?{
+  private func runManualSelfie(step: DocumentStepModel, version: DocumentVersion, retake: (() -> Void)? = nil, completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void) -> UIView?{
     selfieModule = Amani.sharedInstance.selfie()
     guard let currentSelfieModule = selfieModule as? Selfie else {
       print("cant return")
       return nil
     }
-    
+
     do {
-      
+
       stepView = try currentSelfieModule.start { [weak self] image in
         self?.stepView?.removeFromSuperview()
         DispatchQueue.main.async {
-          self?.startConfirmVC(image: image, docStep: step, docVer: version) { [weak self] () in
+          self?.startConfirmVC(image: image, docStep: step, docVer: version, retake: retake) { [weak self] () in
             self?.goNextStep(completion: completion)
           }
         }
@@ -181,7 +341,7 @@ class SelfieHandler: DocumentHandler {
   }
   
   
-  private func runAutoSelfie(step: DocumentStepModel, version: DocumentVersion, completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void)-> UIView? {
+  private func runAutoSelfie(step: DocumentStepModel, version: DocumentVersion, retake: (() -> Void)? = nil, completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void)-> UIView? {
     selfieModule = Amani.sharedInstance.autoSelfie()
     
     guard let currentSelfieModule = selfieModule as? AutoSelfie else {
@@ -212,7 +372,7 @@ class SelfieHandler: DocumentHandler {
       stepView = try currentSelfieModule.start { [weak self]  image in
         self?.stepView?.removeFromSuperview()
         DispatchQueue.main.async {
-          self?.startConfirmVC(image: image, docStep: step, docVer: version) { [weak self] () in
+          self?.startConfirmVC(image: image, docStep: step, docVer: version, retake: retake) { [weak self] () in
             self?.goNextStep(completion: completion)
           }
         }
@@ -224,11 +384,12 @@ class SelfieHandler: DocumentHandler {
       return nil
     }
   }
-  
+
 
   private func runPoseEstimation(
     step: DocumentStepModel,
     version: DocumentVersion,
+    retake: (() -> Void)? = nil,
     completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
   ) -> UIView? {
     let poseCount = version.selfieType ?? 1
@@ -284,12 +445,12 @@ class SelfieHandler: DocumentHandler {
       stepView = try builder.start { [weak self] image in
         self?.stepView?.removeFromSuperview()
         DispatchQueue.main.async {
-          self?.startConfirmVC(image: image, docStep: step, docVer: version) { [weak self] in
+          self?.startConfirmVC(image: image, docStep: step, docVer: version, retake: retake) { [weak self] in
             self?.goNextStep(completion: completion)
           }
         }
       }
-      
+
       return stepView
     } catch {
       print("runPoseEstimation error:", error)
@@ -297,11 +458,12 @@ class SelfieHandler: DocumentHandler {
       return nil
     }
   }
-  
+
   private func runPoseEstimationV2(
     step: DocumentStepModel,
     version: DocumentVersion,
     onUIStateChanged: ((PoseEstimationV2UIState) -> Void)? = nil,
+    retake: (() -> Void)? = nil,
     completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
   ) -> UIView? {
     do {
@@ -340,14 +502,14 @@ class SelfieHandler: DocumentHandler {
       
       stepView = try builder.start { [weak self] image in
         self?.stepView?.removeFromSuperview()
-        
+
         DispatchQueue.main.async {
-          self?.startConfirmVC(image: image, docStep: step, docVer: version) { [weak self] in
+          self?.startConfirmVC(image: image, docStep: step, docVer: version, retake: retake) { [weak self] in
             self?.goNextStep(completion: completion)
           }
         }
       }
-      
+
       return stepView
     } catch {
       print("runPoseEstimationV2 error:", error)

@@ -26,7 +26,10 @@ class QuestionSubmitButton: UIStackView {
     submit.setTitleColor(.white, for: .normal)
     submit.backgroundColor = hextoUIColor(hexString: genConfig?.primaryButtonBackgroundColor ?? "#EA3365")
     submit.addTarget(self, action: #selector(didTapNext), for: .touchUpInside)
-      submit.addCornerRadiousWith(radious: 25.0)
+      submit.addCornerRadiousWith(radious: AmaniUI.sharedInstance.style.ctaButtonCornerRadius)
+      if AmaniUI.sharedInstance.uiVersion == .v2 {
+        submit.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
+      }
     return submit
   }()
   
@@ -56,7 +59,7 @@ class QuestionSubmitButton: UIStackView {
         self.axis = .vertical
         self.layoutMargins = UIEdgeInsets(top: 10, left: 20, bottom: -10, right: 20)
         self.isLayoutMarginsRelativeArrangement = true
-        self.heightAnchor.constraint(equalToConstant: 50).isActive = true
+        self.heightAnchor.constraint(equalToConstant: AmaniUI.sharedInstance.style.ctaButtonHeight).isActive = true
 
     }
 }

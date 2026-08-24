@@ -34,14 +34,18 @@ class IdHandler: DocumentHandler {
           if version.nfc == true && NFCNDEFReaderSession.readingAvailable {
                 self.startNFCCapture(docVer: version, completion: completion)
             } else {
+              completion(.success(self.stepViewModel))
               self.topVC?.navigationController?.popToViewController(ofClass: HomeViewController.self)
-                completion(.success(self.stepViewModel))
             }
         }
     }
 
     func showContainerVC(version: DocumentVersion, workingStep: Int, completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void) {
-      
+        if AmaniUI.sharedInstance.uiVersion == .v2 {
+            showContainerV2VC(version: version, workingStep: workingStep, completion: completion)
+            return
+        }
+
         let containerVC = ContainerViewController()
         containerVC.stepConfig = stepViewModel.stepConfig
         containerVC.setDisappearCallback {
@@ -71,6 +75,38 @@ class IdHandler: DocumentHandler {
             containerVC.view.bringSubviewToFront(self.frontView!)
             // Show the front capture view
 //        self.showStepView(navbarHidden: false)
+        }
+      topVC?.navigationController?.pushViewController(containerVC, animated: true)
+    }
+
+    private func showContainerV2VC(version: DocumentVersion, workingStep: Int, completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void) {
+        let containerVC = ContainerV2ViewController()
+        containerVC.setDisappearCallback { [weak self] in
+          self?.frontView?.removeFromSuperview()
+        }
+
+        containerVC.bind(animationName: version.type, docStep: version.steps![workingStep], documentVersion: version, step: steps(rawValue: workingStep) ?? steps.front, totalSteps: version.steps?.count ?? 1) { [weak self, weak containerVC] in
+          guard let self = self, let containerVC = containerVC else { return }
+            self.frontView = try? self.idCaptureModule.start(stepId: workingStep) { [weak self] image in
+                DispatchQueue.main.async {
+                    self?.frontView?.removeFromSuperview()
+                    // "Try Again" pops back to this screen — re-arm its Continue button
+                    // instead of leaving it permanently spent by the one-shot latch.
+                    self?.startConfirmVC(
+                        image: image,
+                        docStep: version.steps![workingStep],
+                        docVer: version,
+                        stepId: workingStep,
+                        retake: { [weak containerVC] in
+                            containerVC?.resetBoundFlow()
+                        }
+                    ) { [weak self] () in
+                      completion(.success(self!.stepViewModel))
+                    }
+                }
+            }
+            containerVC.view.addSubview(self.frontView!)
+            containerVC.view.bringSubviewToFront(self.frontView!)
         }
       topVC?.navigationController?.pushViewController(containerVC, animated: true)
     }
@@ -121,22 +157,25 @@ class IdHandler: DocumentHandler {
     }
 
     private func startNFCCapture(docVer: DocumentVersion, completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void) {
-        let nfcCaptureView = NFCViewController()
-        nfcCaptureView.docID = "NFC"
-//        let nfcCaptureView = NFCViewController(
-//            nibName: String(describing: NFCViewController.self),
-//            bundle: AmaniUI.sharedInstance.getBundle()
-//        )
-        DispatchQueue.main.async {
-            nfcCaptureView.bind(documentVersion: docVer) { [weak self] in
-                // ID is captured return to home!
-              guard let self = self else {return}
-              self.topVC?.navigationController?.popToViewController(ofClass: HomeViewController.self)
-                // Run the completion
+        DispatchQueue.main.async { [weak self] in
+            guard let self = self else { return }
+            let callback: () -> Void = { [weak self] in
+                guard let self = self else { return }
                 completion(.success(self.stepViewModel))
+                self.topVC?.navigationController?.popToViewController(ofClass: HomeViewController.self)
             }
-            nfcCaptureView.setNavigationLeftButton()
-            self.topVC?.navigationController?.pushViewController(nfcCaptureView, animated: true)
+            if AmaniUI.sharedInstance.uiVersion == .v2 {
+                let nfcCaptureView = NFCV2ViewController()
+                nfcCaptureView.docID = "NFC"
+                nfcCaptureView.bind(documentVersion: docVer, callback: callback)
+                self.topVC?.navigationController?.pushViewController(nfcCaptureView, animated: true)
+            } else {
+                let nfcCaptureView = NFCViewController()
+                nfcCaptureView.docID = "NFC"
+                nfcCaptureView.bind(documentVersion: docVer, callback: callback)
+                nfcCaptureView.setNavigationLeftButton()
+                self.topVC?.navigationController?.pushViewController(nfcCaptureView, animated: true)
+            }
         }
     }
   

@@ -1,0 +1,12 @@
+{
+  "data" : [
+    {
+      "filename" : "nfc_animation_v2.json",
+      "idiom" : "universal"
+    }
+  ],
+  "info" : {
+    "author" : "xcode",
+    "version" : 1
+  }
+}

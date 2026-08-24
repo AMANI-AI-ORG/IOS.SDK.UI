@@ -16,13 +16,7 @@ class QuestionDropdownView: UIView {
 
   private lazy var answerStackView: UIStackView = {
     let stackView = UIStackView()
-
     stackView.axis = .vertical
-
-    stackView.layer.cornerRadius = 10.0
-    stackView.layer.masksToBounds = true
-    stackView.layer.borderWidth = 1.0
-    stackView.layer.borderColor = hextoUIColor(hexString: "#565656").cgColor
     return stackView
   }()
 

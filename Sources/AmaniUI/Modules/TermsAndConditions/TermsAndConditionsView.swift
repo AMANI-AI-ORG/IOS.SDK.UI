@@ -240,7 +240,7 @@ extension TermsAndConditionsView: WKNavigationDelegate {
   ) {
     print("Failed to load T&C URL: \(error.localizedDescription)")
     
-     
+    
     enableActionButtons()
   }
   
@@ -260,3 +260,5 @@ extension TermsAndConditionsView: UIScrollViewDelegate {
     checkIfScrolledToBottom(scrollView)
   }
 }
+
+
