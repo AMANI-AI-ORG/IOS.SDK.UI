@@ -232,7 +232,7 @@ final class DocumentOptionCard: UIView {
         case "NF": return "~2 min"
         case "IB": return "~1 min"
         case "SE": return "~30 sec"
-        default:   return "~30 sec"
+        default:   return gc?.v2StepDefaultDuration ?? "~30 sec"
         }
     }
 }

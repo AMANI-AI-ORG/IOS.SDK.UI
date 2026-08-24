@@ -287,13 +287,18 @@ final class HomeV2StepCard: UIView {
             subtitleLabel.text = hasProgress ? "\(upNextLabel) · \(time)" : "\(startLabel) · \(time)"
             subtitleLabel.textColor = mutedColor
         case .completed:
-            subtitleLabel.text = step.stepConfig.buttonText?.approved ?? "Verified"
+            subtitleLabel.text = gc?.v2ApprovedBadgeText ?? step.stepConfig.buttonText?.approved ?? "Verified"
             subtitleLabel.textColor = mutedColor
         case .pendingReview:
             subtitleLabel.text = step.stepConfig.buttonText?.pendingReview ?? "Under review"
             subtitleLabel.textColor = mutedColor
         case .rejected:
-            subtitleLabel.text = step.stepConfig.buttonText?.rejected ?? "Rejected · Action needed"
+            let isProfileInfoStep = step.documents.contains { $0.id == "IB" }
+            if isProfileInfoStep, let rejectedText = gc?.v2StepRejectedText {
+                subtitleLabel.text = rejectedText
+            } else {
+                subtitleLabel.text = step.stepConfig.buttonText?.rejected ?? "Rejected · Action needed"
+            }
             subtitleLabel.textColor = mutedColor
         case .locked:
             subtitleLabel.text = time
@@ -337,10 +342,10 @@ final class HomeV2StepCard: UIView {
             errorIconView.tintColor = fontColor
 
             let firstVersion = step.documents.first?.versions?.first
-            errorTitleLabel.text = firstVersion?.v2StepRejectionTitle ?? gc?.v2StepRejectionTitle ?? "Verification could not be completed"
+            errorTitleLabel.text = firstVersion?.v2StepRejectionTitle ?? gc?.v2StepRejectionTitle ?? gc?.v2StepRejectionFallbackTitle ?? "Verification could not be completed"
             errorTitleLabel.textColor = fontColor
 
-            errorMessageLabel.text = firstVersion?.v2StepRejectionDescription ?? gc?.v2StepRejectionDescription ?? "Your submission could not be accepted. Please try again to continue."
+            errorMessageLabel.text = firstVersion?.v2StepRejectionDescription ?? gc?.v2StepRejectionDescription ?? gc?.v2StepRejectionFallbackDescription ?? "Your submission could not be accepted. Please try again to continue."
             errorMessageLabel.textColor = fontColor.withAlphaComponent(0.6)
         } else {
             errorCard.isHidden = true
@@ -373,6 +378,6 @@ final class HomeV2StepCard: UIView {
         if ids.contains("IB") { return "~1 min" }
         if ids.contains("SE") { return "~30 sec" }
         if ids.contains("ID") || ids.contains("DL") || ids.contains("PA") || ids.contains("VA") { return "~30 sec" }
-        return "~1 min"
+        return gc?.v2StepDefaultDuration ?? "~1 min"
     }
 }

@@ -208,6 +208,15 @@ class HomeV2ViewController: HomeViewController {
             switch result {
             case .failure(let error):
                 print("HomeV2: step press error \(error)")
+                DispatchQueue.main.async {
+                    guard let self = self else { return }
+                    let gc = AmaniUI.sharedInstance.config?.generalconfigs
+                    AlertDialogueUtility.shared.showAlertWithActions(
+                        vc: self,
+                        message: gc?.v2GenericErrorText ?? "Something went wrong. Please try again.",
+                        actions: [(gc?.okText ?? "OK", .default)]
+                    ) { _ in }
+                }
             case .success(let model):
                 AmaniUI.sharedInstance.markStepAsProcessing(id: model.id)
                 model.updateStatus(status: .PROCESSING)
@@ -230,24 +239,22 @@ class HomeV2ViewController: HomeViewController {
         let remainingCount = steps.count - completedCount
 
         if rejectedCount > 0 {
-            let noun = rejectedCount == 1 ? "step needs" : "steps need"
-            let suffix = gc?.v2HomeRejectedSubtitle ?? "your attention before we can continue."
+            let template = gc?.v2HomeRejectedSubtitle ?? "{count} steps need your attention before we can continue."
             return (
                 gc?.v2HomeRejectedTitle ?? "Verification incomplete",
-                "\(numberWord(rejectedCount).capitalized) \(noun) \(suffix)"
+                template.replacingOccurrences(of: "{count}", with: "\(rejectedCount)")
             )
         } else if completedCount == 0 {
-            let suffix = gc?.v2HomeInitialSubtitle ?? "quick steps. Should take about 2 minutes."
+            let template = gc?.v2HomeInitialSubtitle ?? "{count} quick steps. Should take about 2 minutes."
             return (
                 gc?.v2HomeInitialTitle ?? "Let's get you verified",
-                "\(numberWord(steps.count).capitalized) \(suffix)"
+                template.replacingOccurrences(of: "{count}", with: "\(steps.count)")
             )
         } else {
-            let noun = remainingCount == 1 ? "more step" : "more steps"
-            let suffix = gc?.v2HomeProgressSubtitle ?? "to finish verification."
+            let template = gc?.v2HomeProgressSubtitle ?? "{count} more steps to finish verification."
             return (
                 gc?.v2HomeProgressTitle ?? "You're making progress",
-                "\(numberWord(remainingCount).capitalized) \(noun) \(suffix)"
+                template.replacingOccurrences(of: "{count}", with: "\(remainingCount)")
             )
         }
     }
@@ -264,16 +271,5 @@ class HomeV2ViewController: HomeViewController {
             info = stored
         }
         return info
-    }
-
-    private func numberWord(_ n: Int) -> String {
-        switch n {
-        case 1: return "one"
-        case 2: return "two"
-        case 3: return "three"
-        case 4: return "four"
-        case 5: return "five"
-        default: return "\(n)"
-        }
     }
 }

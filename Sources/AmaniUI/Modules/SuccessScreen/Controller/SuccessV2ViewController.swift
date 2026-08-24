@@ -86,9 +86,13 @@ class SuccessV2ViewController: BaseViewController {
         iconCircle.addSubview(iconImageView)
         iconWrapperView.addSubview(iconCircle)
 
-        // Title
+        // Title — when every step was approved outright (nothing pending manual review),
+        // prefer the more confident v2ApprovedCardTitle copy over the generic success header.
+        let allStepsApproved = stepModels?.isEmpty == false && stepModels?.allSatisfy { $0.status == .APPROVED } == true
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        titleLabel.text = gc?.successHeaderText ?? "You're all done!"
+        titleLabel.text = allStepsApproved
+            ? (gc?.v2ApprovedCardTitle ?? gc?.successHeaderText ?? "All checks passed")
+            : (gc?.successHeaderText ?? "You're all done!")
         titleLabel.font = UIFont.systemFont(ofSize: 26, weight: .bold)
         titleLabel.textColor = fontColor
         titleLabel.textAlignment = .center

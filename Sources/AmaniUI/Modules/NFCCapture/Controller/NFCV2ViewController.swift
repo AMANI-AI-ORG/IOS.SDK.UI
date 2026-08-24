@@ -22,6 +22,7 @@ class NFCV2ViewController: BaseViewController {
 
     private let illustrationContainer = UIView()
     private var lottieAnimationView: LottieAnimationView?
+    private let hintLabel = UILabel()
     private let titleLabel = UILabel()
     private let subtitleLabel = UILabel()
     private let captionLabel = UILabel()
@@ -145,6 +146,14 @@ class NFCV2ViewController: BaseViewController {
 #endif
         navigationItem.leftBarButtonItem = backBarItem
 
+        // Hint — static instructional text shown above the animation
+        hintLabel.translatesAutoresizingMaskIntoConstraints = false
+        hintLabel.text = docVer.v2NfcAnimationHint ?? "Follow the instructions in the animation below"
+        hintLabel.font = UIFont.systemFont(ofSize: 13, weight: .medium)
+        hintLabel.textColor = fontColor.withAlphaComponent(0.55)
+        hintLabel.textAlignment = .center
+        hintLabel.numberOfLines = 0
+
         // Illustration
         buildIllustration()
 
@@ -182,6 +191,7 @@ class NFCV2ViewController: BaseViewController {
         continueButton.layer.cornerRadius = AmaniUI.sharedInstance.style.ctaButtonCornerRadius
         continueButton.addTarget(self, action: #selector(continueButtonPressed(_:)), for: .touchUpInside)
 
+        view.addSubview(hintLabel)
         view.addSubview(illustrationContainer)
         view.addSubview(titleLabel)
         view.addSubview(subtitleLabel)
@@ -191,8 +201,13 @@ class NFCV2ViewController: BaseViewController {
         let ctaHeight = AmaniUI.sharedInstance.style.ctaButtonHeight
 
         NSLayoutConstraint.activate([
-            // Illustration pinned near the top, 4:3 to match the animation's 800x600 canvas
-            illustrationContainer.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
+            // Hint pinned near the top, above the illustration
+            hintLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
+            hintLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 32),
+            hintLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -32),
+
+            // Illustration below the hint, 4:3 to match the animation's 800x600 canvas
+            illustrationContainer.topAnchor.constraint(equalTo: hintLabel.bottomAnchor, constant: 8),
             illustrationContainer.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 12),
             illustrationContainer.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -12),
             illustrationContainer.heightAnchor.constraint(equalTo: illustrationContainer.widthAnchor, multiplier: 0.75),
