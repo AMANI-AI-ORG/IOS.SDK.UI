@@ -1,5 +1,6 @@
 import UIKit
 import AmaniSDK
+import Lottie
 
 @available(iOS 13, *)
 class NFCV2ViewController: BaseViewController {
@@ -19,17 +20,57 @@ class NFCV2ViewController: BaseViewController {
 
     // MARK: - V2 UI
 
-    private let iconWrapperView = UIView()          // holds pulse layers + icon circle
-    private let iconCircle = UIView()
-    private let iconImageView = UIImageView()
+    private let illustrationContainer = UIView()
+    private var lottieAnimationView: LottieAnimationView?
     private let titleLabel = UILabel()
     private let subtitleLabel = UILabel()
-    private let searchingRow = UIView()
-    private let searchingDot = UIView()
-    private let searchingLabel = UILabel()
+    private let captionLabel = UILabel()
     private let continueButton = UIButton(type: .custom)
 
-    private var pulseLayers: [CAShapeLayer] = []
+    private var captionTimer: Timer?
+
+    // MARK: - Animation states (mirrors nfc_animation_v2.json's `amani.textStates` markers)
+
+    private struct AnimationState {
+        let marker: String
+        let key: String
+        let frame: CGFloat
+    }
+
+    private static let animationStates: [AnimationState] = [
+        AnimationState(marker: "state:place", key: "place", frame: 0),
+        AnimationState(marker: "state:detected", key: "detected", frame: 36),
+        AnimationState(marker: "state:hold", key: "hold", frame: 66),
+        AnimationState(marker: "state:reading", key: "reading", frame: 96),
+        AnimationState(marker: "state:dontMove", key: "dontMove", frame: 132),
+        AnimationState(marker: "state:remove", key: "remove", frame: 164),
+        AnimationState(marker: "state:retry", key: "retry", frame: 224),
+        AnimationState(marker: "state:success", key: "success", frame: 267),
+    ]
+
+    /// Proposed future server config key: `nfcV2.animationStates`. Deferred, per spec — hardcoded until that config exists.
+    private static let defaultCaptions: [String: String] = [
+        "place": "Place the document behind your phone",
+        "detected": "Chip located",
+        "hold": "Hold still",
+        "reading": "Reading…",
+        "dontMove": "Don't move your phone",
+        "remove": "You can take the phone away",
+        "retry": "Try again and reposition the phone",
+        "success": "Read complete",
+    ]
+
+    /// Recolor defaults for the semantic keypaths authored in nfc_animation_v2.json.
+    /// Per spec these are NOT config-driven — override here if the palette ever needs to change.
+    private enum AnimationColor {
+        static let accent = hextoUIColor(hexString: "ED2C5F")
+        static let accentStroke = hextoUIColor(hexString: "ED2C5F")
+        static let onColor = hextoUIColor(hexString: "FFFFFF")
+        static let device = hextoUIColor(hexString: "2A3143")
+        static let deviceStroke = hextoUIColor(hexString: "2A3143")
+        static let document = hextoUIColor(hexString: "D8B45E")
+        static let documentStroke = hextoUIColor(hexString: "A8873C")
+    }
 
     // MARK: - Lifecycle
 
@@ -41,12 +82,14 @@ class NFCV2ViewController: BaseViewController {
 
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
-        startPulseAnimations()
-        startBlinkAnimation()
+        playIdleLoop()
+        startCaptionSync()
     }
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        lottieAnimationView?.pause()
+        stopCaptionSync()
 #if canImport(AmaniVoiceAssistantSDK)
         Task { @MainActor in
             try? await AmaniUI.sharedInstance.voiceAssistant?.stop()
@@ -102,25 +145,8 @@ class NFCV2ViewController: BaseViewController {
 #endif
         navigationItem.leftBarButtonItem = backBarItem
 
-        // Pulse wrapper — clips turned OFF so rings can bleed outside
-        iconWrapperView.translatesAutoresizingMaskIntoConstraints = false
-        iconWrapperView.clipsToBounds = false
-
-        // Icon circle — bigger
-        let circleSize: CGFloat = 148
-        iconCircle.translatesAutoresizingMaskIntoConstraints = false
-        iconCircle.backgroundColor = accentColor
-        iconCircle.layer.cornerRadius = circleSize / 2
-        iconCircle.clipsToBounds = true
-
-        // NFC icon
-        iconImageView.translatesAutoresizingMaskIntoConstraints = false
-        let nfcSymbol = UIImage(systemName: "wave.3.right") ?? UIImage(systemName: "wifi")
-        iconImageView.image = nfcSymbol?.withRenderingMode(.alwaysTemplate)
-        iconImageView.tintColor = .white
-        iconImageView.contentMode = .scaleAspectFit
-        iconCircle.addSubview(iconImageView)
-        iconWrapperView.addSubview(iconCircle)
+        // Illustration
+        buildIllustration()
 
         // Title
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
@@ -138,8 +164,13 @@ class NFCV2ViewController: BaseViewController {
         subtitleLabel.textAlignment = .center
         subtitleLabel.numberOfLines = 0
 
-        // Searching row
-        buildSearchingRow(fontColor: fontColor, accentColor: accentColor)
+        // Caption — native label under the animation, driven by its marker timeline
+        captionLabel.translatesAutoresizingMaskIntoConstraints = false
+        captionLabel.text = Self.defaultCaptions[Self.animationStates[0].key]
+        captionLabel.font = UIFont.systemFont(ofSize: 14, weight: .medium)
+        captionLabel.textColor = accentColor
+        captionLabel.textAlignment = .center
+        captionLabel.numberOfLines = 0
 
         // Continue button
         continueButton.translatesAutoresizingMaskIntoConstraints = false
@@ -151,40 +182,26 @@ class NFCV2ViewController: BaseViewController {
         continueButton.layer.cornerRadius = AmaniUI.sharedInstance.style.ctaButtonCornerRadius
         continueButton.addTarget(self, action: #selector(continueButtonPressed(_:)), for: .touchUpInside)
 
-        view.addSubview(iconWrapperView)
+        view.addSubview(illustrationContainer)
         view.addSubview(titleLabel)
         view.addSubview(subtitleLabel)
-        view.addSubview(searchingRow)
+        view.addSubview(captionLabel)
         view.addSubview(continueButton)
 
         let ctaHeight = AmaniUI.sharedInstance.style.ctaButtonHeight
-        // Wrapper must fit the rings: startRadius = circleSize/2 = 74, scaled ×2.0 = 148pt radius → diameter 296
-        let wrapperSize: CGFloat = 300
 
         NSLayoutConstraint.activate([
-            // Icon wrapper pinned near the top — this drives everything upward
-            iconWrapperView.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            iconWrapperView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 16),
-            iconWrapperView.widthAnchor.constraint(equalToConstant: wrapperSize),
-            iconWrapperView.heightAnchor.constraint(equalToConstant: wrapperSize),
+            // Illustration pinned near the top, 4:3 to match the animation's 800x600 canvas
+            illustrationContainer.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
+            illustrationContainer.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 12),
+            illustrationContainer.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -12),
+            illustrationContainer.heightAnchor.constraint(equalTo: illustrationContainer.widthAnchor, multiplier: 0.75),
 
-            // Icon circle centered in wrapper
-            iconCircle.centerXAnchor.constraint(equalTo: iconWrapperView.centerXAnchor),
-            iconCircle.centerYAnchor.constraint(equalTo: iconWrapperView.centerYAnchor),
-            iconCircle.widthAnchor.constraint(equalToConstant: circleSize),
-            iconCircle.heightAnchor.constraint(equalToConstant: circleSize),
-
-            // NFC icon inside circle
-            iconImageView.centerXAnchor.constraint(equalTo: iconCircle.centerXAnchor),
-            iconImageView.centerYAnchor.constraint(equalTo: iconCircle.centerYAnchor),
-            iconImageView.widthAnchor.constraint(equalToConstant: 64),
-            iconImageView.heightAnchor.constraint(equalToConstant: 64),
-
-            // Title below icon
+            // Title below the illustration
             titleLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             titleLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 32),
             titleLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -32),
-            titleLabel.topAnchor.constraint(equalTo: iconWrapperView.bottomAnchor, constant: 24),
+            titleLabel.topAnchor.constraint(equalTo: illustrationContainer.bottomAnchor, constant: 12),
 
             // Subtitle below title
             subtitleLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
@@ -192,9 +209,11 @@ class NFCV2ViewController: BaseViewController {
             subtitleLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -32),
             subtitleLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 8),
 
-            // Searching row below subtitle
-            searchingRow.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            searchingRow.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 20),
+            // Caption below subtitle
+            captionLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            captionLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 32),
+            captionLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -32),
+            captionLabel.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 16),
 
             // Continue button pinned to bottom
             continueButton.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
@@ -202,104 +221,105 @@ class NFCV2ViewController: BaseViewController {
             continueButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
             continueButton.heightAnchor.constraint(equalToConstant: ctaHeight),
         ])
-
-        buildPulseLayers(accentColor: accentColor, circleSize: circleSize, wrapperSize: wrapperSize)
     }
 
-    private func buildSearchingRow(fontColor: UIColor, accentColor: UIColor) {
-        searchingRow.translatesAutoresizingMaskIntoConstraints = false
+    // MARK: - Illustration (Lottie)
 
-        searchingDot.translatesAutoresizingMaskIntoConstraints = false
-        searchingDot.backgroundColor = accentColor
-        searchingDot.layer.cornerRadius = 5
+    private func buildIllustration() {
+        illustrationContainer.translatesAutoresizingMaskIntoConstraints = false
+        illustrationContainer.backgroundColor = .clear
 
-        searchingLabel.translatesAutoresizingMaskIntoConstraints = false
-        searchingLabel.text = documentVersion?.v2NfcSearchingText ?? appConfig?.generalconfigs?.v2NfcSearchingText ?? "Searching for chip..."
-        searchingLabel.font = UIFont.systemFont(ofSize: 14, weight: .medium)
-        searchingLabel.textColor = fontColor.withAlphaComponent(0.55)
-
-        searchingRow.addSubview(searchingDot)
-        searchingRow.addSubview(searchingLabel)
+        let animation = LottieAnimation.named("nfc_animation_v2", bundle: AmaniUI.sharedInstance.getBundle())
+        let lottieView = LottieAnimationView(animation: animation)
+        lottieView.translatesAutoresizingMaskIntoConstraints = false
+        lottieView.backgroundColor = .clear
+        lottieView.contentMode = .scaleAspectFit
+        applyDynamicColors(to: lottieView)
+        illustrationContainer.addSubview(lottieView)
+        self.lottieAnimationView = lottieView
 
         NSLayoutConstraint.activate([
-            searchingDot.leadingAnchor.constraint(equalTo: searchingRow.leadingAnchor),
-            searchingDot.centerYAnchor.constraint(equalTo: searchingRow.centerYAnchor),
-            searchingDot.widthAnchor.constraint(equalToConstant: 10),
-            searchingDot.heightAnchor.constraint(equalToConstant: 10),
-
-            searchingLabel.leadingAnchor.constraint(equalTo: searchingDot.trailingAnchor, constant: 8),
-            searchingLabel.trailingAnchor.constraint(equalTo: searchingRow.trailingAnchor),
-            searchingLabel.topAnchor.constraint(equalTo: searchingRow.topAnchor),
-            searchingLabel.bottomAnchor.constraint(equalTo: searchingRow.bottomAnchor),
+            lottieView.topAnchor.constraint(equalTo: illustrationContainer.topAnchor),
+            lottieView.bottomAnchor.constraint(equalTo: illustrationContainer.bottomAnchor),
+            lottieView.leadingAnchor.constraint(equalTo: illustrationContainer.leadingAnchor),
+            lottieView.trailingAnchor.constraint(equalTo: illustrationContainer.trailingAnchor),
         ])
     }
 
-    // MARK: - Pulse ring layers
-
-    private func buildPulseLayers(accentColor: UIColor, circleSize: CGFloat, wrapperSize: CGFloat) {
-        pulseLayers.forEach { $0.removeFromSuperlayer() }
-        pulseLayers.removeAll()
-
-        // The ring path is centered at the wrapper's midpoint.
-        // Setting frame = wrapper bounds ensures anchorPoint (0.5, 0.5)
-        // sits exactly on the path center — so transform.scale expands outward uniformly.
-        let center = CGPoint(x: wrapperSize / 2, y: wrapperSize / 2)
-        let startRadius = circleSize / 2
-
-        for i in 0..<3 {
-            let ring = CAShapeLayer()
-            ring.frame = CGRect(x: 0, y: 0, width: wrapperSize, height: wrapperSize)
-            let path = UIBezierPath(
-                arcCenter: center,
-                radius: startRadius,
-                startAngle: 0,
-                endAngle: 2 * .pi,
-                clockwise: true
+    /// Recolors the animation's semantic keypaths (see nfc_animation_v2.json's `amani.colorTokens`),
+    /// using a `**` wildcard head so one value recolors every shape sharing that name.
+    /// Per spec: colors stay code-level defaults (not server-config-driven); only `background` is forced transparent
+    /// so the phone-screen cutout shows this screen's real background through it.
+    private func applyDynamicColors(to lottieView: LottieAnimationView) {
+        let overrides: [(name: String, color: UIColor)] = [
+            ("accent", AnimationColor.accent),
+            ("accentStroke", AnimationColor.accentStroke),
+            ("onColor", AnimationColor.onColor),
+            ("device", AnimationColor.device),
+            ("deviceStroke", AnimationColor.deviceStroke),
+            ("document", AnimationColor.document),
+            ("documentStroke", AnimationColor.documentStroke),
+        ]
+        for override in overrides {
+            lottieView.setValueProvider(
+                ColorValueProvider(override.color.lottieColorValue),
+                keypath: AnimationKeypath(keypath: "**.\(override.name).Color")
             )
-            ring.path = path.cgPath
-            ring.fillColor = UIColor.clear.cgColor
-            ring.strokeColor = accentColor.cgColor
-            ring.lineWidth = 1.5
-            ring.opacity = 0
-            iconWrapperView.layer.insertSublayer(ring, at: 0)
-            pulseLayers.append(ring)
-
-            let scaleAnim = CABasicAnimation(keyPath: "transform.scale")
-            scaleAnim.fromValue = 1.0
-            scaleAnim.toValue = 2.0
-
-            let opacityAnim = CABasicAnimation(keyPath: "opacity")
-            opacityAnim.fromValue = 0.5
-            opacityAnim.toValue = 0.0
-
-            let group = CAAnimationGroup()
-            group.animations = [scaleAnim, opacityAnim]
-            group.duration = 2.4
-            group.beginTime = CACurrentMediaTime() + Double(i) * 0.8
-            group.repeatCount = .infinity
-            group.timingFunction = CAMediaTimingFunction(name: .easeOut)
-            group.isRemovedOnCompletion = false
-            ring.add(group, forKey: "pulse_\(i)")
         }
+        lottieView.setValueProvider(
+            ColorValueProvider(UIColor.clear.lottieColorValue),
+            keypath: AnimationKeypath(keypath: "**.background.Color")
+        )
     }
 
-    private func startPulseAnimations() {
-        pulseLayers.forEach { layer in
-            if layer.animation(forKey: "pulse_0") == nil {
-                layer.resumeAnimation()
+    // MARK: - Animation playback / caption sync
+
+    private func playIdleLoop() {
+        guard let lottieView = lottieAnimationView else { return }
+        let removeFrame = Self.animationStates.first(where: { $0.key == "remove" })?.frame ?? 164
+        lottieView.play(fromFrame: 0, toFrame: removeFrame, loopMode: .loop)
+    }
+
+    /// Plays the phone-removal → checkmark segment on success, or the "try again" cue (stopping
+    /// before the checkmark fades in) on failure, then resumes once the animation settles.
+    private func playOutcome(success: Bool) async {
+        guard let lottieView = lottieAnimationView else { return }
+        let removeFrame = Self.animationStates.first(where: { $0.key == "remove" })?.frame ?? 164
+        let retryFrame = Self.animationStates.first(where: { $0.key == "retry" })?.frame ?? 224
+        let successFrame = Self.animationStates.first(where: { $0.key == "success" })?.frame ?? 267
+        let endFrame = lottieView.animation?.endFrame ?? 300
+        await withCheckedContinuation { continuation in
+            if success {
+                lottieView.play(fromFrame: removeFrame, toFrame: endFrame, loopMode: .playOnce) { _ in
+                    continuation.resume()
+                }
+            } else {
+                lottieView.play(fromFrame: retryFrame, toFrame: successFrame, loopMode: .playOnce) { _ in
+                    continuation.resume()
+                }
             }
         }
     }
 
-    private func startBlinkAnimation() {
-        let blink = CABasicAnimation(keyPath: "opacity")
-        blink.fromValue = 1.0
-        blink.toValue = 0.15
-        blink.duration = 0.9
-        blink.autoreverses = true
-        blink.repeatCount = .infinity
-        blink.timingFunction = CAMediaTimingFunction(name: .easeInEaseOut)
-        searchingDot.layer.add(blink, forKey: "blink")
+    private func startCaptionSync() {
+        captionTimer?.invalidate()
+        captionTimer = Timer.scheduledTimer(withTimeInterval: 1.0 / 20.0, repeats: true) { [weak self] _ in
+            self?.updateCaption()
+        }
+    }
+
+    private func stopCaptionSync() {
+        captionTimer?.invalidate()
+        captionTimer = nil
+    }
+
+    private func updateCaption() {
+        guard let frame = lottieAnimationView?.currentFrame,
+              let state = Self.animationStates.last(where: { $0.frame <= frame }) else { return }
+        let caption = Self.defaultCaptions[state.key]
+        if captionLabel.text != caption {
+            captionLabel.text = caption
+        }
     }
 
     // MARK: - Nav button helper
@@ -351,6 +371,7 @@ class NFCV2ViewController: BaseViewController {
         continueButton.isEnabled = false
         if let nvi: NviModel = AmaniUI.sharedInstance.nviData {
             let isDone = await idCaptureModule.startNFC(nvi: nvi)
+            await playOutcome(success: isDone)
             if isDone {
                 self.doNext(done: isDone)
             } else {
@@ -444,18 +465,5 @@ extension NFCV2ViewController: AlertDelegate {
             alert.addAction(UIAlertAction(title: action.0, style: action.1) { _ in completion?(index) })
         }
         self.present(alert, animated: true)
-    }
-}
-
-// MARK: - CALayer resume helper
-
-private extension CALayer {
-    func resumeAnimation() {
-        let pausedTime = timeOffset
-        speed = 1.0
-        timeOffset = 0.0
-        beginTime = 0.0
-        let timeSincePause = convertTime(CACurrentMediaTime(), from: nil) - pausedTime
-        beginTime = timeSincePause
     }
 }
