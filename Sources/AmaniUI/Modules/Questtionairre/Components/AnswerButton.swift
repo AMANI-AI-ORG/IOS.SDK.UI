@@ -32,6 +32,8 @@ class AnswerButton: UIButton {
     }
   }
 
+  private var didInstallImageConstraints = false
+
   convenience init(
     with answer: QuestionAnswerModel,
     type: AnswerButtonType = .single
@@ -102,20 +104,21 @@ class AnswerButton: UIButton {
   override func layoutSubviews() {
     super.layoutSubviews()
 
-    // Overriding in init doesn't work
-    guard imageView?.image != nil else { return }
-    if let imageView = imageView {
-      imageView.translatesAutoresizingMaskIntoConstraints = false
-      let sizeConstraints = [
-        imageView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20.0),
-        imageView.widthAnchor.constraint(equalToConstant: 18.0),
-        imageView.heightAnchor.constraint(equalToConstant: 18.0),
-        imageView.centerYAnchor.constraint(equalTo: centerYAnchor),
-      ]
-      sizeConstraints.forEach { $0.priority = .required }
-      NSLayoutConstraint.activate(sizeConstraints)
-      imageView.contentMode = .scaleAspectFit
-    }
+    // Overriding in init doesn't work — the button's imageView isn't ready yet. Install these
+    // constraints only once: re-activating a fresh set on every layoutSubviews() pass (which
+    // fires repeatedly during scrolling) piled up unbounded duplicate constraints over time.
+    guard !didInstallImageConstraints, let imageView = imageView, imageView.image != nil else { return }
+    didInstallImageConstraints = true
+    imageView.translatesAutoresizingMaskIntoConstraints = false
+    let sizeConstraints = [
+      imageView.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 20.0),
+      imageView.widthAnchor.constraint(equalToConstant: 18.0),
+      imageView.heightAnchor.constraint(equalToConstant: 18.0),
+      imageView.centerYAnchor.constraint(equalTo: centerYAnchor),
+    ]
+    sizeConstraints.forEach { $0.priority = .required }
+    NSLayoutConstraint.activate(sizeConstraints)
+    imageView.contentMode = .scaleAspectFit
   }
 
   func bind(didPressAnswerFN: @escaping (String) -> Void) {

@@ -26,24 +26,25 @@ class QuestionViewCell: UITableViewCell {
   
   private var dropdownView: QuestionDropdownView?
   private var singleOption: SingleAnswerButton?
-    
+
     var genConfig: GeneralConfig? {
         didSet {
-            setupUI()
+            applyConfigStyling()
         }
     }
-  
- 
-  
+
+
+
   override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
     super.init(style: style, reuseIdentifier: reuseIdentifier)
-    setupUI()
+    buildLayout()
+    applyConfigStyling()
   }
-  
+
   required init?(coder: NSCoder) {
     fatalError("init(coder:) has not been implemented")
   }
-  
+
   override func prepareForReuse() {
     super.prepareForReuse()
     // Reset the cell's state when preparing for reuse
@@ -52,6 +53,8 @@ class QuestionViewCell: UITableViewCell {
     dropdownView = nil
     singleOption?.removeFromSuperview()
     singleOption = nil
+    textInputView?.removeFromSuperview()
+    textInputView = nil
   }
   
   func configure(delegate: QuestionDelegate, selectedAnswers: QuestionAnswerRequestModel? = nil) {
@@ -132,29 +135,33 @@ class QuestionViewCell: UITableViewCell {
     dropdownView!.layoutIfNeeded()
   }
   
-  func setupUI() {
-    // pin.
-    
+  // Builds the cell's static view hierarchy exactly once (from init). Must not run again on
+  // reuse/reconfigure — doing so used to create a brand new stackView on every `genConfig`
+  // assignment (i.e. every reuse) without removing the previous one, leaving stale, overlapping
+  // stacks (and orphaned answer views) permanently attached to contentView.
+  private func buildLayout() {
     self.questionTitle.font = UIFont.systemFont(ofSize: 16.0, weight: .regular)
     self.questionTitle.textColor = .black
     self.questionTitle.numberOfLines = 0
     self.questionTitle.text = "Temporary title, please initialize correctly"
-    
+
     self.questionDescription.font = UIFont.systemFont(ofSize: 13.0, weight: .light)
     self.questionDescription.textColor = hextoUIColor(hexString: "#465364")
     self.questionDescription.text = "Temporary title, please initialize correctly"
-    
-    
+
     self.stackView = UIStackView(arrangedSubviews: [questionTitle])
     self.stackView.spacing = 8.0
     self.stackView.axis = .vertical
     self.stackView.alignment = .fill
     self.stackView.distribution = .fillProportionally
     self.stackView.layer.masksToBounds = true
-    
-    self.backgroundColor = hextoUIColor(hexString: genConfig?.appBackground ?? "#EEF4FA")
-    
+
     setConstraints()
+  }
+
+  // Config-dependent styling only — safe to re-run every time `genConfig` changes.
+  private func applyConfigStyling() {
+    self.backgroundColor = hextoUIColor(hexString: genConfig?.appBackground ?? "#EEF4FA")
   }
   
   private func setConstraints() {

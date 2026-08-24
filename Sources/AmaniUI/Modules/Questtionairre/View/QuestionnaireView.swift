@@ -200,7 +200,7 @@ extension QuestionnaireView: QuestionDelegate {
       viewModel.addMultipleAnswer(for: questionID, answerID: answerID)
     case "single_choice":
       viewModel.addSingleAnswer(for: questionID, answerID: answerID)
-    case "text":
+    case "text", "number":
       viewModel.addTextAnswer(for: questionID, text: answerID)
     default:
       break
