@@ -373,11 +373,6 @@ final class HomeV2StepCard: UIView {
         let gc = AmaniUI.sharedInstance.config?.generalconfigs
         if let configured = step.documents.first?.versions?.first?.v2EstimatedTime { return configured }
         if let configured = gc?.v2EstimatedTime { return configured }
-        let ids = Set(step.documents.compactMap { $0.id })
-        if ids.contains("NF") { return "~2 min" }
-        if ids.contains("IB") { return "~1 min" }
-        if ids.contains("SE") { return "~30 sec" }
-        if ids.contains("ID") || ids.contains("DL") || ids.contains("PA") || ids.contains("VA") { return "~30 sec" }
-        return gc?.v2StepDefaultDuration ?? "~1 min"
+        return gc?.v2StepDefaultDuration ?? "~30 sec"
     }
 }
