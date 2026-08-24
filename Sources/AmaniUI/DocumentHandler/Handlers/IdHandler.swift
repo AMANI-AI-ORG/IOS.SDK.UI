@@ -85,18 +85,34 @@ class IdHandler: DocumentHandler {
           self?.frontView?.removeFromSuperview()
         }
 
-        containerVC.bind(animationName: version.type, docStep: version.steps![workingStep], documentVersion: version, step: steps(rawValue: workingStep) ?? steps.front, totalSteps: version.steps?.count ?? 1) { [weak self] in
-          guard let self = self else { return }
+        // Re-invoked directly on "Try Again" so retaking a capture reopens the camera
+        // immediately instead of leaving the user on the preparation/animation screen.
+        var startCapture: (() -> Void)!
+        startCapture = { [weak self, weak containerVC] in
+            guard let self = self, let containerVC = containerVC else { return }
             self.frontView = try? self.idCaptureModule.start(stepId: workingStep) { [weak self] image in
                 DispatchQueue.main.async {
                     self?.frontView?.removeFromSuperview()
-                    self?.startConfirmVC(image: image, docStep: version.steps![workingStep], docVer: version, stepId: workingStep) { [weak self] () in
+                    self?.startConfirmVC(
+                        image: image,
+                        docStep: version.steps![workingStep],
+                        docVer: version,
+                        stepId: workingStep,
+                        retake: { [weak self] in
+                            self?.frontView?.removeFromSuperview()
+                            startCapture()
+                        }
+                    ) { [weak self] () in
                       completion(.success(self!.stepViewModel))
                     }
                 }
             }
             containerVC.view.addSubview(self.frontView!)
             containerVC.view.bringSubviewToFront(self.frontView!)
+        }
+
+        containerVC.bind(animationName: version.type, docStep: version.steps![workingStep], documentVersion: version, step: steps(rawValue: workingStep) ?? steps.front, totalSteps: version.steps?.count ?? 1) {
+            startCapture()
         }
       topVC?.navigationController?.pushViewController(containerVC, animated: true)
     }

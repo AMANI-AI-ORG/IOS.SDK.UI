@@ -7,6 +7,7 @@ class DocConfirmationV2ViewController: BaseViewController {
 
     private var image: UIImage?
     private var confirmCallback: (() -> Void)?
+    private var retakeCallback: (() -> Void)?
     private var documentID: DocumentID?
     private var documentVersion: DocumentVersion?
     private var documentStep: DocumentStepModel?
@@ -47,12 +48,13 @@ class DocConfirmationV2ViewController: BaseViewController {
 
     // MARK: - Bind
 
-    func bind(image: UIImage, documentID: DocumentID, docVer: DocumentVersion, docStep: DocumentStepModel, stepid: Int, callback: @escaping () -> Void) {
+    func bind(image: UIImage, documentID: DocumentID, docVer: DocumentVersion, docStep: DocumentStepModel, stepid: Int, retake: (() -> Void)? = nil, callback: @escaping () -> Void) {
         self.image = image
         self.documentID = documentID
         self.documentVersion = docVer
         self.documentStep = docStep
         self.stepid = stepid
+        self.retakeCallback = retake
         self.confirmCallback = callback
         self.confirmClicked = false
     }
@@ -285,6 +287,9 @@ class DocConfirmationV2ViewController: BaseViewController {
 
     @objc func tryAgainAction(_ sender: Any) {
         navigationController?.popViewController(animated: true)
+        // When a retake callback is supplied, reopen the capture screen directly instead of
+        // leaving the user on the preparation/animation screen underneath.
+        retakeCallback?()
     }
 
     @objc func confirmAction(_ sender: Any) {
