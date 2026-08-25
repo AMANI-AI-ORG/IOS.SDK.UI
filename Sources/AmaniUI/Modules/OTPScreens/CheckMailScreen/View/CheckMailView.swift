@@ -136,9 +136,7 @@ class CheckMailView: UIView {
     self.formStackView.setCustomSpacing(32.0, after: otpInput)
     
     self.submitButton = RoundedButton(
-      // `captureTitle` belongs to document-capture steps (e.g. "Upload Front Side") — it was
-      // never the right source for this button and showed up here by mistake.
-      withTitle: "Verify E-mail",
+      withTitle: appConfig?.generalconfigs?.continueText ?? "Verify E-mail",
       withColor: hextoUIColor(hexString: appConfig?.generalconfigs?.primaryButtonBackgroundColor ?? "#EA3365")
     )
     
