@@ -43,9 +43,7 @@ class CheckMailViewModel {
     state = .loading
     customerInfo.submitEmailOTP(code: otp) { [weak self] success in
       guard let self = self else { return }
-      if success == false {
-        self.state = .failed
-      }
+      self.state = success == true ? .success : .failed
     }
   }
 

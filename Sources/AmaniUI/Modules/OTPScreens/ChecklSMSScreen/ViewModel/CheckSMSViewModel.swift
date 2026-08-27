@@ -42,9 +42,7 @@ class CheckSMSViewModel {
     
     self.state = .loading
     customerInfo.submitPhoneOTP(code: otp) {[weak self] success in
-      if success == false {
-        self?.state = .failed
-      }
+      self?.state = success == true ? .success : .failed
     }
   }
   
