@@ -91,11 +91,10 @@ class NFCV2ViewController: BaseViewController {
         super.viewWillDisappear(animated)
         lottieAnimationView?.pause()
         stopCaptionSync()
-#if canImport(AmaniVoiceAssistantSDK)
         Task { @MainActor in
             try? await AmaniUI.sharedInstance.voiceAssistant?.stop()
         }
-#endif
+
     }
 
     override func popViewController() {
@@ -360,11 +359,11 @@ class NFCV2ViewController: BaseViewController {
 
     @objc func continueButtonPressed(_ sender: Any) {
         Task { @MainActor in
-#if canImport(AmaniVoiceAssistantSDK)
+
             if let docID = self.docID {
                 try? await AmaniUI.sharedInstance.voiceAssistant?.play(key: "VOICE_\(docID)")
             }
-#endif
+
             maxAttempts += 1
             let sdkMaxAttemptValue = (documentVersion?.maxNfcAttempt ?? (documentVersion?.maxAttempt ?? 3))
             if maxAttempts <= sdkMaxAttemptValue {
@@ -448,9 +447,9 @@ class NFCV2ViewController: BaseViewController {
         await animateAsync(withDuration: 0.3) { [weak self] in
             Task {
                 guard let self = self else { return }
-#if canImport(AmaniVoiceAssistantSDK)
+
                 try? await AmaniUI.sharedInstance.voiceAssistant?.stop()
-#endif
+
                 let sdkMaxAttemptValue = (self.documentVersion?.maxNfcAttempt ?? (self.documentVersion?.maxAttempt ?? 3))
                 if self.maxAttempts <= sdkMaxAttemptValue {
                     await self.setNFCFormUIView(nvi: nvi)

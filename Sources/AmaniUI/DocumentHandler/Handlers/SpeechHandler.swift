@@ -153,6 +153,7 @@ private extension SpeechHandler {
     
     verifier
       .setVideoRecording(enabled: true)
+//      .setEnableSpeechVoices(true)
       .onSuccess { [weak self] result in
         guard let self else { return }
         
@@ -186,30 +187,56 @@ private extension SpeechHandler {
     step: DocumentStepModel,
     version: DocumentVersion
   ) {
-    let type = normalizedSpeechType(from: version)
     
-    verifier.setType(type: type)
-    verifier.setTimeout(seconds: version.timeoutSeconds ?? 30)
+    let type = normalizedSpeechType(
+      from: version
+    )
+    
+    verifier.setType(
+      type: type
+    )
+    
+    verifier.setTimeout(
+      seconds:
+        version.timeoutSeconds ?? 30
+    )
     
     applySpeechVerifierAppearance(
       verifier,
       version: version
     )
     
-    switch speechPhase(from: type) {
+    applySpeechVerifierUITexts(
+      verifier,
+      version: version
+    )
+//    
+    applySpeechVerifierPrompts(
+      verifier,
+      step: step,
+      version: version
+    )
+    
+    switch speechPhase(
+      from: type
+    ) {
+      
     case .identityAnswers:
+      
       configureIdentityAnswersFlow(
         verifier,
         version: version
       )
       
     case .spokenText:
+      
       configureSpokenTextFlow(
         verifier,
         version: version
       )
     }
   }
+
 }
 
   // MARK: - Phase
@@ -271,15 +298,7 @@ private extension SpeechHandler {
       verifier.setIdentityQuestion(configurations)
     }
     
-    /*
-     Burada identityAnswers(...) çağırma.
-     
-     Bu sayede Core SDK:
-     - getDocuments request'e çıkar
-     - API'den idNumber / motherName / fatherName / documentNumber değerlerini alır
-     - ekranda sadece question prompt gösterir
-     - expected answer'ı hiçbir zaman ekrana basmaz
-     */
+   
   }
   
   func identityQuestionConfigurations(
@@ -684,6 +703,90 @@ private extension SpeechHandler {
     
     topVC?.navigationController?.popToViewController(
       ofClass: HomeViewController.self
+    )
+  }
+}
+
+
+  // MARK: - Prompts
+
+private extension SpeechHandler {
+  
+  func applySpeechVerifierUITexts(
+    _ verifier: SpeechVerifier,
+    version: DocumentVersion
+  ) {
+    
+    let texts =
+    version.speechVerifierUiTexts
+    
+    verifier.setUITexts(
+      SpeechVerifierUITexts(
+        retry: texts?.retry,
+        failed: texts?.failed,
+        verified: texts?.verified,
+        listening: texts?.listening,
+        verifying: texts?.verifying,
+        instruction: texts?.instruction,
+        recognizerNotAvailable:
+          texts?.recognizerNotAvailable
+      )
+    )
+  }
+//  
+  func applySpeechVerifierPrompts(
+    _ verifier: SpeechVerifier,
+    step: DocumentStepModel,
+    version: DocumentVersion
+  ) {
+    verifier.setPrompts(
+      makeSpeechVerifierPrompts(
+        step: step,
+        version: version
+      )
+    )
+  }
+  
+  func makeSpeechVerifierPrompts(
+    step: DocumentStepModel,
+    version: DocumentVersion
+  ) -> SpeechVerifierPrompts {
+  
+    let captureDescription = step.captureDescription?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    
+    let instructionText =
+    (captureDescription?.isEmpty == false) ? captureDescription : nil
+    
+    let configPrompts = version.speechVerifierIdentityPrompts ?? [:]
+    
+    var identityPrompts:
+    [SpeechVerifierIdentityQuestionType: SpeechVerifierStepPrompt] = [:]
+    
+    for (rawType, promptText) in configPrompts {
+      guard let mappedType = mapIdentityQuestionType(rawType) else {
+        continue
+      }
+      
+      let cleaned = promptText.trimmingCharacters(
+        in: .whitespacesAndNewlines
+      )
+      
+      guard !cleaned.isEmpty else {
+        continue
+      }
+      
+      
+    
+      identityPrompts[mappedType] = SpeechVerifierStepPrompt(
+        visibleText: cleaned,
+        instructionText: instructionText
+      )
+    }
+    
+    return SpeechVerifierPrompts(
+      identityPrompts: identityPrompts,
+      spokenTextInstruction: instructionText
     )
   }
 }

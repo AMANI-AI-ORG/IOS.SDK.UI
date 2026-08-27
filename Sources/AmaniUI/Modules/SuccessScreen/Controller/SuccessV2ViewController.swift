@@ -29,11 +29,11 @@ class SuccessV2ViewController: BaseViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         startPulseAnimations()
-#if canImport(AmaniVoiceAssistantSDK)
+
         Task { @MainActor in
             try? await AmaniUI.sharedInstance.voiceAssistant?.play(key: "VOICE_SUCCESS")
         }
-#endif
+
     }
 
     override func popViewController() {

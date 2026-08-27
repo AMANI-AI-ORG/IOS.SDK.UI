@@ -8,9 +8,7 @@
 import Lottie
 import UIKit
 import AmaniSDK
-#if canImport(AmaniVoiceAssistantSDK)
-import AmaniVoiceAssistantSDK
-#endif
+
 
 class ContainerViewController: BaseViewController {
     // MARK: Properties
@@ -133,7 +131,7 @@ class ContainerViewController: BaseViewController {
   override func viewWillDisappear(_ animated: Bool) {
     super.viewWillDisappear(animated)
     
-#if canImport(AmaniVoiceAssistantSDK)
+
     Task { @MainActor in
       do {
         try? await AmaniUI.sharedInstance.voiceAssistant?.stop()
@@ -141,7 +139,7 @@ class ContainerViewController: BaseViewController {
         debugPrint("\(error)")
       }
     }
-#endif
+
     
     /*
      Settings açılması veya başka bir geçici görünüm değişimi SDK akışını
@@ -446,7 +444,7 @@ extension ContainerViewController {
   }
   
   private func playVoiceAssistantSoundForPosev2() {
-#if canImport(AmaniVoiceAssistantSDK)
+
     Task { @MainActor in
       do {
         try await AmaniUI.sharedInstance.voiceAssistant?.play(key: "VOICE_SE1")
@@ -454,11 +452,11 @@ extension ContainerViewController {
         debugPrint("VoiceAssistant play failed for key: \(error)")
       }
     }
-#endif
+
   }
   
   private func playVoiceAssistantSounds() {
-#if canImport(AmaniVoiceAssistantSDK)
+
     if let docID = self.docID {
       Task { @MainActor in
         do {
@@ -470,12 +468,11 @@ extension ContainerViewController {
         
       }
     }
-    
-#endif
+
   }
   
   private func stopVoiceAssistantSound() {
-#if canImport(AmaniVoiceAssistantSDK)
+
     Task { @MainActor in
       do {
        try? await AmaniUI.sharedInstance.voiceAssistant?.stop()
@@ -483,6 +480,6 @@ extension ContainerViewController {
         debugPrint("VoiceAssistant stop failed: \(error)")
       }
     }
-#endif
+
   }
 }
