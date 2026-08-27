@@ -95,7 +95,7 @@ class CheckMailView: UIView {
     if appConfig?.generalconfigs?.language != "ar" {
       let captureDescriptionText = appConfig?.stepConfig?[1].documents?[0].versions?[0].steps?[0].captureDescription
       let otpLangauge = captureDescriptionText?.extractTextWithinSingleQuotes()
-      self.otpLegend.text = "OTP (\(otpLangauge ?? "One time PIN"))"
+      self.otpLegend.text = "OTP (\((otpLangauge?.isEmpty == false ? otpLangauge : nil) ?? "One time PIN"))"
     } else {
       self.otpLegend.text = "OTP (دبوس مرة واحدة)"
     }
@@ -136,7 +136,7 @@ class CheckMailView: UIView {
     self.formStackView.setCustomSpacing(32.0, after: otpInput)
     
     self.submitButton = RoundedButton(
-      withTitle: appConfig?.stepConfig?[1].documents?[0].versions?[0].steps?[0].captureTitle ?? "Verify E-mail",
+      withTitle: appConfig?.generalconfigs?.continueText ?? "Verify E-mail",
       withColor: hextoUIColor(hexString: appConfig?.generalconfigs?.primaryButtonBackgroundColor ?? "#EA3365")
     )
     
