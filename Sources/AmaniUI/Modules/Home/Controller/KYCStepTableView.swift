@@ -49,7 +49,7 @@ class KYCStepTblView: UITableView {
         //      self.register(UINib(nibName: String(describing: KYCStepTableViewCell.self), bundle: AmaniUI.sharedInstance.getBundle()), forCellReuseIdentifier: String(describing: KYCStepTableViewCell.self))
         //      self.reloadData()
       self.register(KYCStepTableViewCell.self, forCellReuseIdentifier: String(describing: KYCStepTableViewCell.self))
-      self.isScrollEnabled = false
+      self.isScrollEnabled = true
       self.showsVerticalScrollIndicator = false
       self.showsHorizontalScrollIndicator = false
       self.separatorStyle = .none

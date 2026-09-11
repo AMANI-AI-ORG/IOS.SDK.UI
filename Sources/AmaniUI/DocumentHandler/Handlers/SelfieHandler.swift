@@ -16,7 +16,15 @@ class SelfieHandler: DocumentHandler {
   
   // Might be Selfie, AutoSelfie or PoseEstimation.
   private var selfieModule: Any!
-  
+
+  // Pose V2's preparation screen forces the user to watch the guide animation
+  // once (its continue button stays disabled for a delay). On a "Try Again"
+  // retry from the confirmation screen, the user has already sat through it,
+  // so subsequent visits skip the wait. Scoped to this handler instance, i.e.
+  // per selfie document-step - a fresh step gets a fresh handler and starts
+  // this back at false.
+  private var hasShownPoseV2PreparationScreen = false
+
   required init(topVC: UIViewController, stepVM: KYCStepViewModel, docID: DocumentID) {
     self.topVC = topVC
     self.stepViewModel = stepVM
@@ -484,8 +492,12 @@ class SelfieHandler: DocumentHandler {
       infoMessages[.keepRotating] = step.captureDescription
       infoMessages[.completed] = ""
       
-      screenConfig[.progressRingColor] = version.ovalViewStartColor
-      screenConfig[.progressRingTrackColor] = version.ovalViewSuccessColor
+      // AmaniSDK's `progressRingColor`/`progressRingTrackColor` internal mapping was
+      // corrected to match Android's naming (progressRingColor = the moving arc,
+      // progressRingTrackColor = the dim base ring) - these two values are swapped
+      // here to match, so the actual rendered colors are unchanged.
+      screenConfig[.progressRingColor] = version.ovalViewSuccessColor
+      screenConfig[.progressRingTrackColor] = version.ovalViewStartColor
       
       let poseModule = Amani.sharedInstance.poseEstimation()
       self.selfieModule = poseModule
@@ -495,11 +507,26 @@ class SelfieHandler: DocumentHandler {
         .setInfoMessages(infoMessages: infoMessages)
         .setScreenConfig(screenConfig: screenConfig)
         .setVideoRecording(enabled: version.recordVideo ?? false)
-      
-      if let onUIStateChanged {
-        builder.setOnUIStateChanged(onUIStateChanged)
+        .setStraightGuideImage(UIImage(named: "v2PoseStraightGuide", in: AmaniUI.sharedInstance.getBundle(), compatibleWith: nil))
+        .setPreparationButtonEnableDelay(
+          hasShownPoseV2PreparationScreen
+            ? 0
+            : PoseEstimationV2Builder.defaultPreparationButtonEnableDelay
+        )
+
+      // Always observe UI state ourselves (regardless of whether the caller also
+      // wants updates) so we catch preparationScreenDidShow and can skip the wait
+      // on the next retry; forward to the caller's callback when present.
+      builder.setOnUIStateChanged { [weak self] state in
+        switch state {
+        case .preparationScreenDidShow:
+          self?.hasShownPoseV2PreparationScreen = true
+        case .preparationStartButtonTapped, .captureFlowDidStart:
+          break
+        }
+        onUIStateChanged?(state)
       }
-      
+
       stepView = try builder.start { [weak self] image in
         self?.stepView?.removeFromSuperview()
 

@@ -20,12 +20,23 @@ class NFCV2ViewController: BaseViewController {
 
     // MARK: - V2 UI
 
+    private let topDescriptionLabel = UILabel()
     private let illustrationContainer = UIView()
     private var lottieAnimationView: LottieAnimationView?
     private let captionLabel = UILabel()
     private let continueButton = UIButton(type: .custom)
+    private lazy var screenBlurView: UIVisualEffectView = {
+        let blurView = UIVisualEffectView(effect: UIBlurEffect(style: .systemMaterial))
+        blurView.translatesAutoresizingMaskIntoConstraints = false
+        blurView.alpha = 0
+        blurView.isUserInteractionEnabled = false
+        return blurView
+    }()
 
     private var captionTimer: Timer?
+
+    /// Gates the Continue button until the idle animation has played through once in full.
+    private var hasPlayedIntroOnce = false
 
     // MARK: - Animation states (mirrors nfc_animation_v2.json's `amani.textStates` markers)
 
@@ -92,7 +103,7 @@ class NFCV2ViewController: BaseViewController {
         stopCaptionSync()
 #if canImport(AmaniVoiceAssistantSDK)
         Task { @MainActor in
-            try? await AmaniUI.sharedInstance.voiceAssistant?.stop()
+//            try? await AmaniUI.sharedInstance.voiceAssistant?.stop()
         }
 #endif
     }
@@ -143,16 +154,26 @@ class NFCV2ViewController: BaseViewController {
       }
 #endif
         navigationItem.leftBarButtonItem = backBarItem
+        let fontColor = hextoUIColor(hexString: gc?.appFontColor ?? "1A1A2E")
 
-        // Illustration — sized as large as possible and centered on screen.
+        // Top description — a single instructional line explaining the animation below.
+        topDescriptionLabel.translatesAutoresizingMaskIntoConstraints = false
+        topDescriptionLabel.text = docVer.nfcDescription1 ?? "Follow the instructions in the animation below"
+        topDescriptionLabel.font = UIFont.systemFont(ofSize: 18, weight: .medium)
+        topDescriptionLabel.textColor = fontColor
+        topDescriptionLabel.textAlignment = .center
+        topDescriptionLabel.numberOfLines = 0
+
+        // Illustration — centered and as large as possible in the space between the
+        // description and the caption/Continue button.
         buildIllustration()
 
         // Caption — the animation has no native text layers, so this is the only on-screen copy
         // describing each state, kept in sync with the animation's frame timeline.
         captionLabel.translatesAutoresizingMaskIntoConstraints = false
         captionLabel.text = Self.defaultCaptions[Self.animationStates[0].key]
-        captionLabel.font = UIFont.systemFont(ofSize: 15, weight: .semibold)
-        captionLabel.textColor = accentColor
+        captionLabel.font = UIFont.systemFont(ofSize: 17, weight: .semibold)
+        captionLabel.textColor = fontColor
         captionLabel.textAlignment = .center
         captionLabel.numberOfLines = 0
 
@@ -165,10 +186,14 @@ class NFCV2ViewController: BaseViewController {
         continueButton.backgroundColor = accentColor
         continueButton.layer.cornerRadius = AmaniUI.sharedInstance.style.ctaButtonCornerRadius
         continueButton.addTarget(self, action: #selector(continueButtonPressed(_:)), for: .touchUpInside)
+        // Stays disabled until the idle animation has played through once in full.
+        continueButton.isEnabled = false
 
+        view.addSubview(topDescriptionLabel)
         view.addSubview(illustrationContainer)
         view.addSubview(captionLabel)
         view.addSubview(continueButton)
+        view.addSubview(screenBlurView)
 
         let ctaHeight = AmaniUI.sharedInstance.style.ctaButtonHeight
 
@@ -179,21 +204,38 @@ class NFCV2ViewController: BaseViewController {
             continueButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
             continueButton.heightAnchor.constraint(equalToConstant: ctaHeight),
 
-            // Caption sits directly above the Continue button with a small gap
-            captionLabel.bottomAnchor.constraint(equalTo: continueButton.topAnchor, constant: -12),
+            // Top description sits just below the nav bar
+            topDescriptionLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 20),
+            topDescriptionLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            topDescriptionLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 24),
+            topDescriptionLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -24),
+
+            // Illustration centered in the space between the description and the Continue
+            // button, as large as it can be while keeping the 4:3 aspect ratio that matches
+            // the animation's 800x600 canvas, and reserving room below for the caption.
+            // Sized past the safe area on purpose (see the compensating zoom transform
+            // applied to the Lottie view itself in buildIllustration()) so it visually fills
+            // more of the screen, matching the Android reference.
+            illustrationContainer.centerXAnchor.constraint(equalTo: view.centerXAnchor),
+            illustrationContainer.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerYAnchor),
+            illustrationContainer.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: -12),
+            illustrationContainer.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: 12),
+            illustrationContainer.heightAnchor.constraint(equalTo: illustrationContainer.widthAnchor, multiplier: 1.0),
+            illustrationContainer.topAnchor.constraint(greaterThanOrEqualTo: topDescriptionLabel.bottomAnchor, constant: 8),
+            illustrationContainer.bottomAnchor.constraint(lessThanOrEqualTo: continueButton.topAnchor, constant: -56),
+
+            // Caption sits directly below the animation, above the Continue button
+            captionLabel.topAnchor.constraint(equalTo: illustrationContainer.bottomAnchor, constant: 12),
             captionLabel.centerXAnchor.constraint(equalTo: view.centerXAnchor),
             captionLabel.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 32),
             captionLabel.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -32),
+            captionLabel.bottomAnchor.constraint(lessThanOrEqualTo: continueButton.topAnchor, constant: -12),
 
-            // Illustration centered in the remaining space, as large as it can be while keeping
-            // the 4:3 aspect ratio that matches the animation's 800x600 canvas.
-            illustrationContainer.centerXAnchor.constraint(equalTo: view.centerXAnchor),
-            illustrationContainer.centerYAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerYAnchor),
-            illustrationContainer.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
-            illustrationContainer.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor),
-            illustrationContainer.heightAnchor.constraint(equalTo: illustrationContainer.widthAnchor, multiplier: 0.75),
-            illustrationContainer.topAnchor.constraint(greaterThanOrEqualTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
-            illustrationContainer.bottomAnchor.constraint(lessThanOrEqualTo: captionLabel.topAnchor, constant: -12),
+            // Blur overlay covers the entire screen
+            screenBlurView.topAnchor.constraint(equalTo: view.topAnchor),
+            screenBlurView.bottomAnchor.constraint(equalTo: view.bottomAnchor),
+            screenBlurView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
+            screenBlurView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
         ])
     }
 
@@ -218,6 +260,12 @@ class NFCV2ViewController: BaseViewController {
             lottieView.leadingAnchor.constraint(equalTo: illustrationContainer.leadingAnchor),
             lottieView.trailingAnchor.constraint(equalTo: illustrationContainer.trailingAnchor),
         ])
+
+        // The composition itself reserves ~8% margin around the artwork (its root "Reframe"
+        // layer scales to 92%), so scaleAspectFit alone renders it noticeably smaller than
+        // its box. Zoom in to compensate and make the phone/card graphic read as large as
+        // the Android reference.
+        lottieView.transform = CGAffineTransform(scaleX: 1.25, y: 1.25)
     }
 
     /// Recolors the animation's semantic keypaths (see nfc_animation_v2.json's `amani.colorTokens`),
@@ -251,6 +299,18 @@ class NFCV2ViewController: BaseViewController {
     private func playIdleLoop() {
         guard let lottieView = lottieAnimationView else { return }
         let removeFrame = Self.animationStates.first(where: { $0.key == "remove" })?.frame ?? 164
+
+        guard hasPlayedIntroOnce else {
+            // First run: play once in full before enabling Continue, then fall into the idle loop.
+            lottieView.play(fromFrame: 0, toFrame: removeFrame, loopMode: .playOnce) { [weak self] _ in
+                guard let self = self else { return }
+                self.hasPlayedIntroOnce = true
+                self.continueButton.isEnabled = true
+                self.playIdleLoop()
+            }
+            return
+        }
+
         lottieView.play(fromFrame: 0, toFrame: removeFrame, loopMode: .loop)
     }
 
@@ -272,6 +332,14 @@ class NFCV2ViewController: BaseViewController {
                     continuation.resume()
                 }
             }
+        }
+    }
+
+    /// Blurs (or unblurs) the whole screen while the system NFC pop-up is on screen, so the user
+    /// focuses on scanning instead of the screen underneath.
+    private func setScreenBlurred(_ blurred: Bool) {
+        UIView.animate(withDuration: 0.25) {
+            self.screenBlurView.alpha = blurred ? 0.7 : 0
         }
     }
 
@@ -321,7 +389,7 @@ class NFCV2ViewController: BaseViewController {
         Task { @MainActor in
 #if canImport(AmaniVoiceAssistantSDK)
             if let docID = self.docID {
-                try? await AmaniUI.sharedInstance.voiceAssistant?.play(key: "VOICE_\(docID)")
+//                try? await AmaniUI.sharedInstance.voiceAssistant?.play(key: "VOICE_\(docID)")
             }
 #endif
             maxAttempts += 1
@@ -344,7 +412,9 @@ class NFCV2ViewController: BaseViewController {
     func scanNFC() async {
         continueButton.isEnabled = false
         if let nvi: NviModel = AmaniUI.sharedInstance.nviData {
+            setScreenBlurred(true)
             let isDone = await idCaptureModule.startNFC(nvi: nvi)
+            setScreenBlurred(false)
             await playOutcome(success: isDone)
             if isDone {
                 self.doNext(done: isDone)
@@ -393,7 +463,9 @@ class NFCV2ViewController: BaseViewController {
             guard let self = self else { return }
             nfcFormView.removeFromSuperview()
             self.maxAttempts += 1
+            self.setScreenBlurred(true)
             let isDone = await self.idCaptureModule.startNFC(nvi: newNvi)
+            self.setScreenBlurred(false)
             if isDone {
                 self.doNext(done: isDone)
             } else {
@@ -408,7 +480,7 @@ class NFCV2ViewController: BaseViewController {
             Task {
                 guard let self = self else { return }
 #if canImport(AmaniVoiceAssistantSDK)
-                try? await AmaniUI.sharedInstance.voiceAssistant?.stop()
+//                try? await AmaniUI.sharedInstance.voiceAssistant?.stop()
 #endif
                 let sdkMaxAttemptValue = (self.documentVersion?.maxNfcAttempt ?? (self.documentVersion?.maxAttempt ?? 3))
                 if self.maxAttempts <= sdkMaxAttemptValue {

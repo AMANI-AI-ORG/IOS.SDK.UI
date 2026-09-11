@@ -267,7 +267,12 @@ class ProfileInfoView: UIView {
       .assign(to: \.birthDay, on: viewModel)
       .store(in: &cancellables)
 
-    submitButton.bind {
+    submitButton.bind { [weak self] in
+      guard let self = self else { return }
+      guard viewModel.isBirthDayValid() else {
+        self.showMsgAlertWithHandler(alertTitle: "Invalid Birthdate", message: "Please enter a valid birthdate", successTitle: "Ok")
+        return
+      }
       viewModel.submitForm()
     }
 
