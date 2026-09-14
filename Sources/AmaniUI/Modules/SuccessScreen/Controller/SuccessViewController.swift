@@ -21,7 +21,6 @@ class SuccessViewController: BaseViewController {
     super.viewWillAppear(true)
 
      
-#if canImport(AmaniVoiceAssistantSDK)
     
         Task { @MainActor in
           do {
@@ -31,7 +30,6 @@ class SuccessViewController: BaseViewController {
           }
           
         }
-#endif
 
   }
   

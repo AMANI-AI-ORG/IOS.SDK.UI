@@ -4,35 +4,49 @@ import AmaniSDK
  This class represents the KYC step list view
  */
 @objc(KYCStepTblView)
-class KYCStepTblView: UITableView {
-
-    // MARK: - Local properties
-
-    /// This property represents the rule selection callback
-  fileprivate var callback: ((KYCStepViewModel) -> Void)?
+final class KYCStepTblView: UITableView {
   
-    /// This property represents the list of KYC rules
+  private static let cellIdentifier =
+  String(describing: KYCStepTableViewCell.self)
+  
+  fileprivate var callback: ((KYCStepViewModel) -> Void)?
   fileprivate var kycSteps: [KYCStepViewModel] = []
   
-    // MARK: - Life cycle methods
-    //    override func awakeFromNib() {
-    //        self.delegate = self
-    //        self.dataSource = self
-    //        self.backgroundColor = .clear
-    //    }
-  
-  override init(frame: CGRect, style: UITableView.Style) {
+  override init(
+    frame: CGRect,
+    style: UITableView.Style
+  ) {
     super.init(frame: frame, style: style)
-    self.delegate = self
-    self.dataSource = self
-    self.backgroundColor = .clear
+    commonInit()
   }
   
   required init?(coder: NSCoder) {
     super.init(coder: coder)
-    self.delegate = self
-    self.dataSource = self
-    self.backgroundColor = .clear
+    commonInit()
+  }
+  
+  private func commonInit() {
+    
+    delegate = self
+    dataSource = self
+    
+    backgroundColor = .clear
+    
+    separatorStyle = .none
+    
+    isScrollEnabled = true
+    alwaysBounceVertical = false
+    
+    showsVerticalScrollIndicator = false
+    showsHorizontalScrollIndicator = false
+    
+    rowHeight = 73
+    estimatedRowHeight = 73
+    
+    register(
+      KYCStepTableViewCell.self,
+      forCellReuseIdentifier: Self.cellIdentifier
+    )
   }
   
     // MARK: - Helper methods
@@ -56,95 +70,174 @@ class KYCStepTblView: UITableView {
       self.reloadData()
     }
     
-  }
-  
-  func updateStatus(for step: KYCStepViewModel, status: DocumentStatus) {
-    DispatchQueue.main.async {
-      if let tableIndex:Int = self.kycSteps.firstIndex(where:{ $0.id == step.id}) {
-        step.updateStatus(status: status)
-        
-        self.reloadRows(at: [IndexPath(row: tableIndex, section: 0)], with: .fade)
-      }
-
-
+    if Thread.isMainThread {
+      update()
+    } else {
+      DispatchQueue.main.async(execute: update)
     }
   }
   
-  func updateDataAndReload(stepModels: [KYCStepViewModel]) {
-
-    DispatchQueue.main.async {
-      var indexpaths:[IndexPath] = []
+  func updateStatus(
+    for step: KYCStepViewModel,
+    status: DocumentStatus
+  ) {
+    
+    DispatchQueue.main.async { [weak self] in
+      
+      guard let self else { return }
+      
+      guard let tableIndex = self.kycSteps.firstIndex(
+        where: { $0.id == step.id }
+      ) else {
+        return
+      }
+      
+      step.updateStatus(status: status)
+      
+      self.reloadRows(
+        at: [
+          IndexPath(
+            row: tableIndex,
+            section: 0
+          )
+        ],
+        with: .fade
+      )
+    }
+  }
+  
+  func updateDataAndReload(
+    stepModels: [KYCStepViewModel]
+  ) {
+    
+    DispatchQueue.main.async { [weak self] in
+      
+      guard let self else { return }
+      
+      var indexPaths = Set<IndexPath>()
+      
       for stepModel in stepModels {
-        if let tableIndex:Int = self.kycSteps.firstIndex(where:{ $0.id == stepModel.id}) {
-          self.kycSteps[tableIndex] = stepModel
-          if !stepModel.mandatoryStepIDs.isEmpty {
-            for mandatoryStepId in stepModel.mandatoryStepIDs {
-              if let mandatoryIndex = self.kycSteps.firstIndex(where: {$0.id == mandatoryStepId}) {
-                indexpaths.append(IndexPath(row: mandatoryIndex, section: 0))
-              }
-            }
+        
+        guard let tableIndex = self.kycSteps.firstIndex(
+          where: {
+            $0.id == stepModel.id
           }
-          indexpaths.append(IndexPath(row: tableIndex, section: 0))
+        ) else {
+          continue
         }
-
+        
+        self.kycSteps[tableIndex] = stepModel
+        
+        for mandatoryStepId in stepModel.mandatoryStepIDs {
+          
+          if let mandatoryIndex =
+              self.kycSteps.firstIndex(
+                where: {
+                  $0.id == mandatoryStepId
+                }
+              ) {
+            
+            indexPaths.insert(
+              IndexPath(
+                row: mandatoryIndex,
+                section: 0
+              )
+            )
+          }
+        }
+        
+        indexPaths.insert(
+          IndexPath(
+            row: tableIndex,
+            section: 0
+          )
+        )
       }
-      self.reloadRows(at:indexpaths, with: .fade)
+      
+      guard !indexPaths.isEmpty else {
+        return
+      }
+      
+      self.reloadRows(
+        at: Array(indexPaths),
+        with: .fade
+      )
     }
   }
-  
 }
 
   // MARK: - Table view datasource and delegate methods
-extension KYCStepTblView: UITableViewDelegate, UITableViewDataSource {
-  func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-    return self.kycSteps.count
+extension KYCStepTblView:
+  UITableViewDelegate,
+  UITableViewDataSource {
+  
+  func tableView(
+    _ tableView: UITableView,
+    numberOfRowsInSection section: Int
+  ) -> Int {
+    kycSteps.count
   }
   
-  func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-    guard let cell = tableView.dequeueReusableCell(withIdentifier: "KYCStepTableViewCell", for: indexPath) as? KYCStepTableViewCell else {
+  func tableView(
+    _ tableView: UITableView,
+    cellForRowAt indexPath: IndexPath
+  ) -> UITableViewCell {
+    
+    guard let cell = tableView.dequeueReusableCell(
+      withIdentifier: Self.cellIdentifier,
+      for: indexPath
+    ) as? KYCStepTableViewCell else {
+      
+      assertionFailure(
+        "KYCStepTableViewCell could not be dequeued"
+      )
+      
       return UITableViewCell()
     }
-      //      guard let cell: KYCStepTableViewCell = tableView.dequeueReusableCell(withIdentifier: String(describing: KYCStepTableViewCell.self), for: indexPath) as? KYCStepTableViewCell else {
-      //        return UITableViewCell()
-      //      }
     
-    let stepViewModel = self.kycSteps[indexPath.row]
+    let step = kycSteps[indexPath.row]
     
-    if !stepViewModel.isEnabled() {
-      cell.bind(model: stepViewModel, alpha: 0.8, isEnabled: false)
-    } else {
-      cell.bind(model: stepViewModel, isEnabled: true)
-    }
+    let isEnabled = step.isEnabled()
+    
+    cell.bind(
+      model: step,
+      alpha: isEnabled ? 1.0 : 0.8,
+      isEnabled: isEnabled
+    )
     
     return cell
   }
   
-  func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
-    return 73
-  }
-  
-  func tableView(_ tableView: UITableView, estimatedHeightForRowAt indexPath: IndexPath) -> CGFloat {
-    return 73
-  }
-  
-  func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
-      let step = self.kycSteps[indexPath.row]
+  func tableView(
+    _ tableView: UITableView,
+    didSelectRowAt indexPath: IndexPath
+  ) {
+    
+    tableView.deselectRow(
+      at: indexPath,
+      animated: true
+    )
+    
+    let step = kycSteps[indexPath.row]
+    
+    guard
+      step.status != .APPROVED,
+      step.status != .PROCESSING,
+      step.isEnabled()
+    else {
+      return
+    }
+    
+    step.onStepPressed { [weak self] result in
       
-      
-      if (step.status != DocumentStatus.APPROVED && step.status != DocumentStatus.PROCESSING && step.isEnabled()) {
-        step.onStepPressed { [weak self] result in
-          switch result {
-          case .failure(let error):
-            print(error)
-          case .success(let model):
-            guard let callback = self?.callback else { return }
-            callback(model)
-          }
-        }
+      switch result {
+        
+      case .failure(let error):
+        print(error)
+        
+      case .success(let model):
+        self?.callback?(model)
       }
     }
-
-    
-  
+  }
 }
-

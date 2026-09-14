@@ -25,19 +25,13 @@ let package = Package(
             name: "AmaniSDK",
             url: "https://github.com/AMANI-AI-ORG/AmaniSDK-iOS",
             from: "3.7.2"
-        ),
-        .package(
-            name: "AmaniVoiceAssistantSDK",
-            url: "https://github.com/AMANI-AI-ORG/AmaniVoiceAssistantSDK",
-            from: "1.1.2"
-          )
+        )
     ],
     targets: [
         .target(
             name: "AmaniUI",
             dependencies: [
                     .product(name:"AmaniSDK", package:"AmaniSDK"),
-                    .product(name:"AmaniVoiceAssistantSDK", package:"AmaniVoiceAssistantSDK"),
                     "Lottie"
                 ],
             resources: [

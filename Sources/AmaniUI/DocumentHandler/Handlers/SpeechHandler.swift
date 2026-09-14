@@ -17,7 +17,7 @@ final class SpeechHandler: DocumentHandler {
   var stepView: UIView?
   private var containerVC: ContainerViewController?
   private var speechVerifierModule: SpeechVerifier?
-  
+  private var uploadLoadingView: UIView?
   private var isUploadInProgress: Bool = false
   private var cachedUploadResult: Bool?
   private var uploadCallbacks: [((Bool?, [String: Any]?) -> Void)] = []
@@ -38,8 +38,11 @@ final class SpeechHandler: DocumentHandler {
     docStep: DocumentStepModel,
     version: DocumentVersion,
     workingStepIndex: Int,
-    completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
+    completion: @escaping (
+      Result<KYCStepViewModel, KYCStepError>
+    ) -> Void
   ) {
+    
     resetFlowState()
     
     let containerVC = ContainerViewController()
@@ -48,13 +51,33 @@ final class SpeechHandler: DocumentHandler {
     containerVC.docID = self.docID
     containerVC.stepConfig = stepViewModel.stepConfig
     containerVC.isSpeechFlow = true
-    containerVC.setDisappearCallback { [weak self] in
-      self?.stepView?.removeFromSuperview()
-      self?.stepView = nil
-      self?.speechVerifierModule = nil
+    
+    containerVC.setWillDisappearCallback {
+      [weak self] in
+      
+      guard let self else {
+        return
+      }
+      
+      self.speechVerifierModule?.stop()
     }
     
-    let containerStep = version.steps?[workingStepIndex] ?? docStep
+
+    containerVC.setDisappearCallback {
+      [weak self] in
+      
+      guard let self else {
+        return
+      }
+      
+      self.stepView?.removeFromSuperview()
+      self.stepView = nil
+      self.speechVerifierModule = nil
+      self.containerVC = nil
+    }
+    
+    let containerStep =
+    version.steps?[workingStepIndex] ?? docStep
     
     containerVC.bind(
       animationName: nil,
@@ -62,36 +85,83 @@ final class SpeechHandler: DocumentHandler {
       step: steps.front,
       docID: docID
     ) { [weak self, weak containerVC] in
-      guard let self else { return }
-      guard let containerVC else { return }
       
-      guard let speechView = self.runSpeechVerifier(
-        step: docStep,
-        version: version,
-        completion: completion
-      ) else {
-        completion(.failure(.moduleError))
+      guard let self else {
+        return
+      }
+      
+      guard let containerVC else {
+        return
+      }
+      
+      guard let speechView =
+              self.runSpeechVerifier(
+                step: docStep,
+                version: version,
+                completion: completion
+              )
+      else {
+        completion(
+          .failure(.moduleError)
+        )
         return
       }
       
       self.stepView = speechView
       
-      containerVC.view.addSubview(speechView)
-      containerVC.view.bringSubviewToFront(speechView)
+      containerVC.view.addSubview(
+        speechView
+      )
       
-      speechView.translatesAutoresizingMaskIntoConstraints = false
+      containerVC.view.bringSubviewToFront(
+        speechView
+      )
+      
+      speechView.translatesAutoresizingMaskIntoConstraints =
+      false
       
       NSLayoutConstraint.activate([
-        speechView.leadingAnchor.constraint(equalTo: containerVC.view.leadingAnchor),
-        speechView.trailingAnchor.constraint(equalTo: containerVC.view.trailingAnchor),
-        speechView.topAnchor.constraint(equalTo: containerVC.view.safeAreaLayoutGuide.topAnchor),
-        speechView.bottomAnchor.constraint(equalTo: containerVC.view.bottomAnchor)
+        speechView.leadingAnchor.constraint(
+          equalTo:
+            containerVC.view.leadingAnchor
+        ),
+        
+        speechView.trailingAnchor.constraint(
+          equalTo:
+            containerVC.view.trailingAnchor
+        ),
+        
+        speechView.topAnchor.constraint(
+          equalTo:
+            containerVC
+            .view
+            .safeAreaLayoutGuide
+            .topAnchor
+        ),
+        
+        speechView.bottomAnchor.constraint(
+          equalTo:
+            containerVC.view.bottomAnchor
+        )
       ])
     }
     
-    topVC?.navigationController?.setNavigationBarHidden(false, animated: false)
-    topVC?.navigationController?.pushViewController(containerVC, animated: true)
+    topVC?
+      .navigationController?
+      .setNavigationBarHidden(
+        false,
+        animated: false
+      )
+    
+    topVC?
+      .navigationController?
+      .pushViewController(
+        containerVC,
+        animated: true
+      )
   }
+  
+  
   
   func upload(
     completion: @escaping ((Bool?, [String: Any]?) -> Void)
@@ -153,6 +223,7 @@ private extension SpeechHandler {
     
     verifier
       .setVideoRecording(enabled: true)
+//      .setEnableSpeechVoices(true)
       .onSuccess { [weak self] result in
         guard let self else { return }
         
@@ -186,30 +257,56 @@ private extension SpeechHandler {
     step: DocumentStepModel,
     version: DocumentVersion
   ) {
-    let type = normalizedSpeechType(from: version)
     
-    verifier.setType(type: type)
-    verifier.setTimeout(seconds: version.timeoutSeconds ?? 30)
+    let type = normalizedSpeechType(
+      from: version
+    )
+    
+    verifier.setType(
+      type: type
+    )
+    
+    verifier.setTimeout(
+      seconds:
+        version.timeoutSeconds ?? 30
+    )
     
     applySpeechVerifierAppearance(
       verifier,
       version: version
     )
     
-    switch speechPhase(from: type) {
+    applySpeechVerifierUITexts(
+      verifier,
+      version: version
+    )
+//    
+    applySpeechVerifierPrompts(
+      verifier,
+      step: step,
+      version: version
+    )
+    
+    switch speechPhase(
+      from: type
+    ) {
+      
     case .identityAnswers:
+      
       configureIdentityAnswersFlow(
         verifier,
         version: version
       )
       
     case .spokenText:
+      
       configureSpokenTextFlow(
         verifier,
         version: version
       )
     }
   }
+
 }
 
   // MARK: - Phase
@@ -271,15 +368,7 @@ private extension SpeechHandler {
       verifier.setIdentityQuestion(configurations)
     }
     
-    /*
-     Burada identityAnswers(...) çağırma.
-     
-     Bu sayede Core SDK:
-     - getDocuments request'e çıkar
-     - API'den idNumber / motherName / fatherName / documentNumber değerlerini alır
-     - ekranda sadece question prompt gösterir
-     - expected answer'ı hiçbir zaman ekrana basmaz
-     */
+   
   }
   
   func identityQuestionConfigurations(
@@ -546,12 +635,22 @@ private extension SpeechHandler {
 private extension SpeechHandler {
   
   func resetFlowState() {
+    
     didFinishFlow = false
+    
     cachedUploadResult = nil
+    
     uploadCallbacks.removeAll()
+    
     isUploadInProgress = false
+    
+    uploadLoadingView?.removeFromSuperview()
+    uploadLoadingView = nil
+    
     stepView = nil
+    
     speechVerifierModule = nil
+    
     containerVC = nil
   }
   
@@ -573,39 +672,61 @@ private extension SpeechHandler {
 private extension SpeechHandler {
   
   func handleSpeechSuccess(
-    completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
+    completion: @escaping (
+      Result<KYCStepViewModel, KYCStepError>
+    ) -> Void
   ) {
-    guard !didFinishFlow else { return }
-    didFinishFlow = true
-    
-    DispatchQueue.main.async {
-      self.stepView?.removeFromSuperview()
-      self.stepView = nil
+    guard !didFinishFlow else {
+      return
     }
     
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-      guard let self else { return }
+    didFinishFlow = true
+    
+    debugPrint(
+      "SpeechHandler: success received, starting upload."
+    )
+    
+    showUploadLoading()
+    
+    upload { [weak self] result, _ in
+      guard let self else {
+        return
+      }
       
-      self.upload { [weak self] result, _ in
-        guard let self else { return }
+      DispatchQueue.main.async {
+        self.hideUploadLoading()
         
-        DispatchQueue.main.async {
-          guard self.isOwnContainerOnTop() else {
-            print("SpeechHandler success ignored: stale handler callback.")
-            return
-          }
+        guard self.isOwnContainerOnTop() else {
+          print(
+            "SpeechHandler success ignored: stale handler callback."
+          )
+          return
+        }
+        
+        self.stepView?.removeFromSuperview()
+        self.stepView = nil
+        
+        if result == true {
+          self.popOwnContainerIfNeeded()
           
-          if result == true {
-            self.popOwnContainerIfNeeded()
-            completion(.success(self.stepViewModel))
-          } else {
-            completion(.failure(.moduleError))
-          }
+          completion(
+            .success(
+              self.stepViewModel
+            )
+          )
+        } else {
+          self.popOwnContainerIfNeeded()
+          
+          completion(
+            .failure(
+              .moduleError
+            )
+          )
         }
       }
     }
   }
-  
+ 
   func handleSpeechFailure(
     reason: SpeechVerifierFailureReason,
     currentAttempt: Int,
@@ -685,5 +806,212 @@ private extension SpeechHandler {
     topVC?.navigationController?.popToViewController(
       ofClass: HomeViewController.self
     )
+  }
+}
+
+
+  // MARK: - Prompts
+
+private extension SpeechHandler {
+  
+  func applySpeechVerifierUITexts(
+    _ verifier: SpeechVerifier,
+    version: DocumentVersion
+  ) {
+    
+    let texts =
+    version.speechVerifierUiTexts
+    
+    verifier.setUITexts(
+      SpeechVerifierUITexts(
+        retry: texts?.retry,
+        failed: texts?.failed,
+        verified: texts?.verified,
+        listening: texts?.listening,
+        verifying: texts?.verifying,
+        instruction: texts?.instruction,
+        recognizerNotAvailable:
+          texts?.recognizerNotAvailable
+      )
+    )
+  }
+//  
+  func applySpeechVerifierPrompts(
+    _ verifier: SpeechVerifier,
+    step: DocumentStepModel,
+    version: DocumentVersion
+  ) {
+    verifier.setPrompts(
+      makeSpeechVerifierPrompts(
+        step: step,
+        version: version
+      )
+    )
+  }
+  
+  func makeSpeechVerifierPrompts(
+    step: DocumentStepModel,
+    version: DocumentVersion
+  ) -> SpeechVerifierPrompts {
+  
+    let captureDescription = step.captureDescription?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    
+    let instructionText =
+    (captureDescription?.isEmpty == false) ? captureDescription : nil
+    
+    let configPrompts = version.speechVerifierIdentityPrompts ?? [:]
+    
+    var identityPrompts:
+    [SpeechVerifierIdentityQuestionType: SpeechVerifierStepPrompt] = [:]
+    
+    for (rawType, promptText) in configPrompts {
+      guard let mappedType = mapIdentityQuestionType(rawType) else {
+        continue
+      }
+      
+      let cleaned = promptText.trimmingCharacters(
+        in: .whitespacesAndNewlines
+      )
+      
+      guard !cleaned.isEmpty else {
+        continue
+      }
+      
+      
+    
+      identityPrompts[mappedType] = SpeechVerifierStepPrompt(
+        visibleText: cleaned,
+        instructionText: instructionText
+      )
+    }
+    
+    return SpeechVerifierPrompts(
+      identityPrompts: identityPrompts,
+      spokenTextInstruction: instructionText
+    )
+  }
+  
+  func showUploadLoading() {
+    
+    guard let containerView =
+            containerVC?.view
+    else {
+      return
+    }
+    
+    guard uploadLoadingView == nil else {
+      return
+    }
+    
+    let loadingView =
+    SpeechVerifierUploadLoadingView()
+    
+    loadingView.translatesAutoresizingMaskIntoConstraints =
+    false
+    
+    uploadLoadingView =
+    loadingView
+    
+    containerView.addSubview(
+      loadingView
+    )
+    
+    containerView.bringSubviewToFront(
+      loadingView
+    )
+    
+    NSLayoutConstraint.activate([
+      
+      loadingView.leadingAnchor.constraint(
+        equalTo: containerView.leadingAnchor
+      ),
+      
+      loadingView.trailingAnchor.constraint(
+        equalTo: containerView.trailingAnchor
+      ),
+      
+      loadingView.topAnchor.constraint(
+        equalTo: containerView.topAnchor
+      ),
+      
+      loadingView.bottomAnchor.constraint(
+        equalTo: containerView.bottomAnchor
+      )
+    ])
+  }
+  
+  func hideUploadLoading() {
+    
+    uploadLoadingView?.removeFromSuperview()
+    
+    uploadLoadingView = nil
+  }
+}
+
+
+private final class SpeechVerifierUploadLoadingView: UIView {
+  
+  private let spinner =
+  UIActivityIndicatorView(
+    style: .large
+  )
+  
+  override init(
+    frame: CGRect
+  ) {
+    
+    super.init(
+      frame: frame
+    )
+    
+    setupUI()
+  }
+  
+  required init?(
+    coder: NSCoder
+  ) {
+    
+    super.init(
+      coder: coder
+    )
+    
+    setupUI()
+  }
+  
+  private func setupUI() {
+    
+    backgroundColor =
+    UIColor.black
+      .withAlphaComponent(0.45)
+    
+    isUserInteractionEnabled = true
+    
+    spinner.color = .white
+    spinner.hidesWhenStopped = true
+    
+    spinner.translatesAutoresizingMaskIntoConstraints =
+    false
+    
+    addSubview(
+      spinner
+    )
+    
+    NSLayoutConstraint.activate([
+      
+      spinner.centerXAnchor.constraint(
+        equalTo: centerXAnchor
+      ),
+      
+      spinner.centerYAnchor.constraint(
+        equalTo: centerYAnchor
+      )
+    ])
+    
+    spinner.startAnimating()
+  }
+  
+  deinit {
+    spinner.stopAnimating()
   }
 }
