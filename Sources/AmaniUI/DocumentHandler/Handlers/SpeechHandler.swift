@@ -38,8 +38,11 @@ final class SpeechHandler: DocumentHandler {
     docStep: DocumentStepModel,
     version: DocumentVersion,
     workingStepIndex: Int,
-    completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
+    completion: @escaping (
+      Result<KYCStepViewModel, KYCStepError>
+    ) -> Void
   ) {
+    
     resetFlowState()
     
     let containerVC = ContainerViewController()
@@ -48,13 +51,33 @@ final class SpeechHandler: DocumentHandler {
     containerVC.docID = self.docID
     containerVC.stepConfig = stepViewModel.stepConfig
     containerVC.isSpeechFlow = true
-    containerVC.setDisappearCallback { [weak self] in
-      self?.stepView?.removeFromSuperview()
-      self?.stepView = nil
-      self?.speechVerifierModule = nil
+    
+    containerVC.setWillDisappearCallback {
+      [weak self] in
+      
+      guard let self else {
+        return
+      }
+      
+      self.speechVerifierModule?.stop()
     }
     
-    let containerStep = version.steps?[workingStepIndex] ?? docStep
+
+    containerVC.setDisappearCallback {
+      [weak self] in
+      
+      guard let self else {
+        return
+      }
+      
+      self.stepView?.removeFromSuperview()
+      self.stepView = nil
+      self.speechVerifierModule = nil
+      self.containerVC = nil
+    }
+    
+    let containerStep =
+    version.steps?[workingStepIndex] ?? docStep
     
     containerVC.bind(
       animationName: nil,
@@ -62,36 +85,83 @@ final class SpeechHandler: DocumentHandler {
       step: steps.front,
       docID: docID
     ) { [weak self, weak containerVC] in
-      guard let self else { return }
-      guard let containerVC else { return }
       
-      guard let speechView = self.runSpeechVerifier(
-        step: docStep,
-        version: version,
-        completion: completion
-      ) else {
-        completion(.failure(.moduleError))
+      guard let self else {
+        return
+      }
+      
+      guard let containerVC else {
+        return
+      }
+      
+      guard let speechView =
+              self.runSpeechVerifier(
+                step: docStep,
+                version: version,
+                completion: completion
+              )
+      else {
+        completion(
+          .failure(.moduleError)
+        )
         return
       }
       
       self.stepView = speechView
       
-      containerVC.view.addSubview(speechView)
-      containerVC.view.bringSubviewToFront(speechView)
+      containerVC.view.addSubview(
+        speechView
+      )
       
-      speechView.translatesAutoresizingMaskIntoConstraints = false
+      containerVC.view.bringSubviewToFront(
+        speechView
+      )
+      
+      speechView.translatesAutoresizingMaskIntoConstraints =
+      false
       
       NSLayoutConstraint.activate([
-        speechView.leadingAnchor.constraint(equalTo: containerVC.view.leadingAnchor),
-        speechView.trailingAnchor.constraint(equalTo: containerVC.view.trailingAnchor),
-        speechView.topAnchor.constraint(equalTo: containerVC.view.safeAreaLayoutGuide.topAnchor),
-        speechView.bottomAnchor.constraint(equalTo: containerVC.view.bottomAnchor)
+        speechView.leadingAnchor.constraint(
+          equalTo:
+            containerVC.view.leadingAnchor
+        ),
+        
+        speechView.trailingAnchor.constraint(
+          equalTo:
+            containerVC.view.trailingAnchor
+        ),
+        
+        speechView.topAnchor.constraint(
+          equalTo:
+            containerVC
+            .view
+            .safeAreaLayoutGuide
+            .topAnchor
+        ),
+        
+        speechView.bottomAnchor.constraint(
+          equalTo:
+            containerVC.view.bottomAnchor
+        )
       ])
     }
     
-    topVC?.navigationController?.setNavigationBarHidden(false, animated: false)
-    topVC?.navigationController?.pushViewController(containerVC, animated: true)
+    topVC?
+      .navigationController?
+      .setNavigationBarHidden(
+        false,
+        animated: false
+      )
+    
+    topVC?
+      .navigationController?
+      .pushViewController(
+        containerVC,
+        animated: true
+      )
   }
+  
+  
   
   func upload(
     completion: @escaping ((Bool?, [String: Any]?) -> Void)
@@ -603,77 +673,55 @@ private extension SpeechHandler {
   
   func handleSpeechSuccess(
     completion: @escaping (
-      Result<
-      KYCStepViewModel,
-      KYCStepError
-      >
+      Result<KYCStepViewModel, KYCStepError>
     ) -> Void
   ) {
-    
     guard !didFinishFlow else {
       return
     }
     
     didFinishFlow = true
     
-  
-    DispatchQueue.main.async {
-      
-      self.showUploadLoading()
-    }
+    debugPrint(
+      "SpeechHandler: success received, starting upload."
+    )
     
-    DispatchQueue.main.asyncAfter(
-      deadline: .now() + 0.5
-    ) { [weak self] in
-      
+    showUploadLoading()
+    
+    upload { [weak self] result, _ in
       guard let self else {
         return
       }
       
-      self.upload {
-        [weak self] result, _ in
+      DispatchQueue.main.async {
+        self.hideUploadLoading()
         
-        guard let self else {
+        guard self.isOwnContainerOnTop() else {
+          print(
+            "SpeechHandler success ignored: stale handler callback."
+          )
           return
         }
         
-        DispatchQueue.main.async {
+        self.stepView?.removeFromSuperview()
+        self.stepView = nil
+        
+        if result == true {
+          self.popOwnContainerIfNeeded()
           
-          self.hideUploadLoading()
-          
-          guard self.isOwnContainerOnTop() else {
-            
-            print(
-              "SpeechHandler success ignored: stale handler callback."
+          completion(
+            .success(
+              self.stepViewModel
             )
-            
-            return
-          }
+          )
+        } else {
+          self.popOwnContainerIfNeeded()
           
-          self.stepView?.removeFromSuperview()
-          
-          self.stepView = nil
-          
-          if result == true {
-            
-            self.popOwnContainerIfNeeded()
-            
-            completion(
-              .success(
-                self.stepViewModel
-              )
+          completion(
+            .failure(
+              .moduleError
             )
-            
-          } else {
-            
-            self.popOwnContainerIfNeeded()
-            
-            completion(
-              .failure(
-                .moduleError
-              )
-            )
-          }
+          )
         }
       }
     }

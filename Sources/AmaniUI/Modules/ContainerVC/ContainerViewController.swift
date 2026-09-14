@@ -30,6 +30,7 @@ class ContainerViewController: BaseViewController {
   var stepConfig: StepConfig?
   var docID: DocumentID?
   private var isLeavingViewHierarchy = false
+  private var willDisappearCallback: (() -> Void)?
   
   func bind(animationName:String?,
             docStep:DocumentStepModel,
@@ -128,53 +129,36 @@ class ContainerViewController: BaseViewController {
     disappearCallback?()
   }
   
-  override func viewWillDisappear(_ animated: Bool) {
+  override func viewWillDisappear(
+    _ animated: Bool
+  ) {
     super.viewWillDisappear(animated)
     
-
-    Task { @MainActor in
-      do {
-        try? await AmaniUI.sharedInstance.voiceAssistant?.stop()
-      } catch {
-        debugPrint("\(error)")
-      }
-    }
-
-    
-    /*
-     Settings açılması veya başka bir geçici görünüm değişimi SDK akışını
-     temizlememeli. Cleanup yalnızca controller gerçekten pop veya dismiss
-     ediliyorsa çalıştırılacak.
-     */
     isLeavingViewHierarchy =
     isMovingFromParent ||
     isBeingDismissed ||
     navigationController?.isBeingDismissed == true
+    
+    guard isLeavingViewHierarchy else {
+      return
+    }
+    
+    willDisappearCallback?()
+    
+   
+    Task { @MainActor in
+      try? await AmaniUI
+        .sharedInstance
+        .voiceAssistant?
+        .stop()
+    }
   }
     
-//  override func viewWillDisappear(_ animated: Bool) {
-//    // remove the sdk view on exiting by calling the callback
-//      #if canImport(AmaniVoiceAssistantSDK)
-//      
-//          Task { @MainActor in
-//            do {
-//              try? await AmaniUI.sharedInstance.voiceAssistant?.stop()
-//            }catch(let error) {
-//              debugPrint("\(error)")
-//            }
-//            
-//          }
-//        
-//        
-//      #endif
-//    print("Container View disappear")
-////    cleanupViews()
-//    if let disappearCb = self.disappearCallback {
-//      disappearCb()
-//    }
-//    isDissapeared = true
-//    super.viewWillDisappear(animated)
-//  }
+  func setWillDisappearCallback(
+    _ callback: @escaping () -> Void
+  ) {
+    willDisappearCallback = callback
+  }
 
 }
 extension ContainerViewController {
