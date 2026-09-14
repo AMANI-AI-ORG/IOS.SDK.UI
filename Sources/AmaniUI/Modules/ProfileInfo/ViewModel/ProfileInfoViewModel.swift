@@ -57,12 +57,12 @@ class ProfileInfoViewModel {
   }
 
   func submitForm() {
-    guard !name.isEmpty && !surname.isEmpty && !birthDay.isEmpty else {
+    guard !name.isEmpty && !surname.isEmpty else {
       state = .failed
       return
     }
 
-    guard isBdayValid(input: birthDay) else {
+    guard isBirthDayValid() else {
       state = .failed
       return
     }
@@ -90,6 +90,13 @@ class ProfileInfoViewModel {
     } else {
       return false
     }
+  }
+
+  /// The default/unedited state of the birthdate field reports as an empty string, which
+  /// `isBdayValid` treats as valid on its own (so the inline field error stays quiet). Submit
+  /// needs to reject that case too, so it's checked here rather than relying on `isBdayValid` alone.
+  func isBirthDayValid() -> Bool {
+    return !birthDay.isEmpty && isBdayValid(input: birthDay)
   }
 
   func setupRuleHook() {

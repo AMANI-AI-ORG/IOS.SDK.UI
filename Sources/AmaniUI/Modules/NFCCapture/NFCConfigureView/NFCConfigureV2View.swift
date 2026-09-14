@@ -30,6 +30,8 @@ class NFCConfigureV2View: UIView {
     private let documentNoField = UITextField()
     private let birthdateField = UITextField()
     private let expiryField = UITextField()
+    private let birthdatePicker = UIDatePicker()
+    private let expiryPicker = UIDatePicker()
     private let submitButton = UIButton(type: .custom)
     private var submitButtonBottomConstraint: NSLayoutConstraint!
     private weak var activeField: UITextField?
@@ -161,7 +163,7 @@ class NFCConfigureV2View: UIView {
         )
     }
 
-    // MARK: - Date input helpers (typed "DD/MM/YYYY" instead of a date-picker wheel)
+    // MARK: - Date formatting helpers ("DD/MM/YYYY" display text <-> Date)
 
     private func insertDateSlashes(_ digits: String) -> String {
         var result = ""
@@ -179,6 +181,38 @@ class NFCConfigureV2View: UIView {
         let digits = text.filter(\.isNumber)
         guard digits.count == 8 else { return nil }
         return numericDateFormatter.date(from: digits)
+    }
+
+    // MARK: - Date input helpers (date-picker wheel instead of a free-text keyboard)
+
+    private func setupDatePicker(for field: UITextField, picker: UIDatePicker, doneSelector: Selector) {
+        picker.datePickerMode = .date
+        if #available(iOS 13.4, *) {
+            picker.preferredDatePickerStyle = .wheels
+        }
+        field.inputView = picker
+        field.inputAccessoryView = makeDatePickerToolbar(doneSelector: doneSelector)
+    }
+
+    private func makeDatePickerToolbar(doneSelector: Selector) -> UIToolbar {
+        let toolbar = UIToolbar(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 44))
+        let flexibleSpace = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+        let doneButton = UIBarButtonItem(barButtonSystemItem: .done, target: self, action: doneSelector)
+        toolbar.setItems([flexibleSpace, doneButton], animated: false)
+        return toolbar
+    }
+
+    @objc private func birthdateDoneTapped() {
+        applyPickerSelection(from: birthdatePicker, to: birthdateField)
+    }
+
+    @objc private func expiryDoneTapped() {
+        applyPickerSelection(from: expiryPicker, to: expiryField)
+    }
+
+    private func applyPickerSelection(from picker: UIDatePicker, to field: UITextField) {
+        field.text = insertDateSlashes(numericDateFormatter.string(from: picker.date))
+        field.resignFirstResponder()
     }
 
     // MARK: - Submit (mirrored from NFCConfigureView.tapSubmitButton — same NviModel/setButtonCb contract)
@@ -237,10 +271,10 @@ class NFCConfigureV2View: UIView {
 
         // Detail rows
         documentNoField.keyboardType = .default
-        birthdateField.keyboardType = .numberPad
-        expiryField.keyboardType = .numberPad
         birthdateField.attributedPlaceholder = NSAttributedString(string: "DD/MM/YYYY", attributes: [.foregroundColor: fontColor.withAlphaComponent(0.3)])
         expiryField.attributedPlaceholder = NSAttributedString(string: "DD/MM/YYYY", attributes: [.foregroundColor: fontColor.withAlphaComponent(0.3)])
+        setupDatePicker(for: birthdateField, picker: birthdatePicker, doneSelector: #selector(birthdateDoneTapped))
+        setupDatePicker(for: expiryField, picker: expiryPicker, doneSelector: #selector(expiryDoneTapped))
 
         let documentRow = makeDetailRow(icon: "creditcard.fill", label: "Document number", field: documentNoField, fontColor: fontColor, accentColor: accentColor)
         let birthdateRow = makeDetailRow(icon: UIImage(systemName: "birthday.cake.fill") != nil ? "birthday.cake.fill" : "calendar", label: "Date of birth", field: birthdateField, fontColor: fontColor, accentColor: accentColor)
@@ -488,21 +522,16 @@ class NFCConfigureV2View: UIView {
 extension NFCConfigureV2View: UITextFieldDelegate {
     func textFieldDidBeginEditing(_ textField: UITextField) {
         activeField = textField
+        if textField === birthdateField, let date = parseTypedDate(from: textField.text) {
+            birthdatePicker.date = date
+        } else if textField === expiryField, let date = parseTypedDate(from: textField.text) {
+            expiryPicker.date = date
+        }
     }
 
     func textFieldShouldReturn(_ textField: UITextField) -> Bool {
         textField.resignFirstResponder()
         return true
-    }
-
-    func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
-        guard textField === birthdateField || textField === expiryField else { return true }
-
-        let current = (textField.text ?? "") as NSString
-        let updated = current.replacingCharacters(in: range, with: string)
-        let digits = String(updated.filter(\.isNumber).prefix(8))
-        textField.text = insertDateSlashes(digits)
-        return false
     }
 }
 

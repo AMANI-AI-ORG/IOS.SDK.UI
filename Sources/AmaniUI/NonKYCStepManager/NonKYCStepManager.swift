@@ -194,9 +194,15 @@ class NonKYCStepManager {
     
     var sorted = allStepModels.sorted { $0.sortOrder < $1.sortOrder }
     
-    // Inject T&C if active and not already accepted
+    // Inject T&C if active, not already accepted, and a URL is actually configured to show.
+    // showTermsAndConditions and termsConditionsURL are independent backend config fields, so a
+    // company can enable the flag without setting a URL (an admin-panel oversight). Injecting the
+    // step in that case pushes a screen with nothing to load, which auto-completes immediately
+    // (see TermsAndConditionsView.loadTermsAndConditionsURL's guard-fail branch) and flashes a
+    // blank screen before the next step replaces it.
     let appConfig = try? Amani.sharedInstance.appConfig().getApplicationConfig()
-    if appConfig?.generalconfigs?.showTermsAndConditions == true && customer.termsAcceptedAt == nil {
+    let hasValidTermsURL = (appConfig?.generalconfigs?.termsConditionsURL).flatMap { URL(string: $0) } != nil
+    if appConfig?.generalconfigs?.showTermsAndConditions == true && customer.termsAcceptedAt == nil && hasValidTermsURL {
         // Create a dummy config/rule for T&C if it doesn't exist in rules
         if !sorted.contains(where: { $0.identifier == AppConstants.StepsBeforeKYC.termsAndConditions.rawValue }) {
             var tcStepConfig = StepConfig(id: "TC", sortOrder: -1, identifier: AppConstants.StepsBeforeKYC.termsAndConditions.rawValue)

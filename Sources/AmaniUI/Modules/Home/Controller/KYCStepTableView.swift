@@ -49,16 +49,24 @@ final class KYCStepTblView: UITableView {
     )
   }
   
-  func showKYCStep(
-    stepModels: [KYCStepViewModel],
-    onSelectCallback: @escaping ((KYCStepViewModel?) -> Void)
-  ) {
+    // MARK: - Helper methods
+  /**
+   This method bind the kyc list model with view
+   - parameter array: [KYCRuleModel]
+   - parameter onSelectCallback: rule selection callback
+   */
+  func showKYCStep(stepModels: [KYCStepViewModel], onSelectCallback: @escaping ((KYCStepViewModel?) -> Void)) {
+    self.kycSteps = stepModels
     
-    let update = { [weak self] in
-      guard let self else { return }
-      
-      self.callback = onSelectCallback
-      self.kycSteps = stepModels
+    self.callback = onSelectCallback
+    DispatchQueue.main.async {
+        //      self.register(UINib(nibName: String(describing: KYCStepTableViewCell.self), bundle: AmaniUI.sharedInstance.getBundle()), forCellReuseIdentifier: String(describing: KYCStepTableViewCell.self))
+        //      self.reloadData()
+      self.register(KYCStepTableViewCell.self, forCellReuseIdentifier: String(describing: KYCStepTableViewCell.self))
+      self.isScrollEnabled = true
+      self.showsVerticalScrollIndicator = false
+      self.showsHorizontalScrollIndicator = false
+      self.separatorStyle = .none
       self.reloadData()
     }
     
