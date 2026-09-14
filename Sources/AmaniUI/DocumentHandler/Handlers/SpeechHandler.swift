@@ -17,7 +17,7 @@ final class SpeechHandler: DocumentHandler {
   var stepView: UIView?
   private var containerVC: ContainerViewController?
   private var speechVerifierModule: SpeechVerifier?
-  
+  private var uploadLoadingView: UIView?
   private var isUploadInProgress: Bool = false
   private var cachedUploadResult: Bool?
   private var uploadCallbacks: [((Bool?, [String: Any]?) -> Void)] = []
@@ -565,12 +565,22 @@ private extension SpeechHandler {
 private extension SpeechHandler {
   
   func resetFlowState() {
+    
     didFinishFlow = false
+    
     cachedUploadResult = nil
+    
     uploadCallbacks.removeAll()
+    
     isUploadInProgress = false
+    
+    uploadLoadingView?.removeFromSuperview()
+    uploadLoadingView = nil
+    
     stepView = nil
+    
     speechVerifierModule = nil
+    
     containerVC = nil
   }
   
@@ -592,39 +602,83 @@ private extension SpeechHandler {
 private extension SpeechHandler {
   
   func handleSpeechSuccess(
-    completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
+    completion: @escaping (
+      Result<
+      KYCStepViewModel,
+      KYCStepError
+      >
+    ) -> Void
   ) {
-    guard !didFinishFlow else { return }
-    didFinishFlow = true
     
-    DispatchQueue.main.async {
-      self.stepView?.removeFromSuperview()
-      self.stepView = nil
+    guard !didFinishFlow else {
+      return
     }
     
-    DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) { [weak self] in
-      guard let self else { return }
+    didFinishFlow = true
+    
+  
+    DispatchQueue.main.async {
       
-      self.upload { [weak self] result, _ in
-        guard let self else { return }
+      self.showUploadLoading()
+    }
+    
+    DispatchQueue.main.asyncAfter(
+      deadline: .now() + 0.5
+    ) { [weak self] in
+      
+      guard let self else {
+        return
+      }
+      
+      self.upload {
+        [weak self] result, _ in
+        
+        guard let self else {
+          return
+        }
         
         DispatchQueue.main.async {
+          
+          self.hideUploadLoading()
+          
           guard self.isOwnContainerOnTop() else {
-            print("SpeechHandler success ignored: stale handler callback.")
+            
+            print(
+              "SpeechHandler success ignored: stale handler callback."
+            )
+            
             return
           }
           
+          self.stepView?.removeFromSuperview()
+          
+          self.stepView = nil
+          
           if result == true {
+            
             self.popOwnContainerIfNeeded()
-            completion(.success(self.stepViewModel))
+            
+            completion(
+              .success(
+                self.stepViewModel
+              )
+            )
+            
           } else {
-            completion(.failure(.moduleError))
+            
+            self.popOwnContainerIfNeeded()
+            
+            completion(
+              .failure(
+                .moduleError
+              )
+            )
           }
         }
       }
     }
   }
-  
+ 
   func handleSpeechFailure(
     reason: SpeechVerifierFailureReason,
     currentAttempt: Int,
@@ -788,5 +842,128 @@ private extension SpeechHandler {
       identityPrompts: identityPrompts,
       spokenTextInstruction: instructionText
     )
+  }
+  
+  func showUploadLoading() {
+    
+    guard let containerView =
+            containerVC?.view
+    else {
+      return
+    }
+    
+    guard uploadLoadingView == nil else {
+      return
+    }
+    
+    let loadingView =
+    SpeechVerifierUploadLoadingView()
+    
+    loadingView.translatesAutoresizingMaskIntoConstraints =
+    false
+    
+    uploadLoadingView =
+    loadingView
+    
+    containerView.addSubview(
+      loadingView
+    )
+    
+    containerView.bringSubviewToFront(
+      loadingView
+    )
+    
+    NSLayoutConstraint.activate([
+      
+      loadingView.leadingAnchor.constraint(
+        equalTo: containerView.leadingAnchor
+      ),
+      
+      loadingView.trailingAnchor.constraint(
+        equalTo: containerView.trailingAnchor
+      ),
+      
+      loadingView.topAnchor.constraint(
+        equalTo: containerView.topAnchor
+      ),
+      
+      loadingView.bottomAnchor.constraint(
+        equalTo: containerView.bottomAnchor
+      )
+    ])
+  }
+  
+  func hideUploadLoading() {
+    
+    uploadLoadingView?.removeFromSuperview()
+    
+    uploadLoadingView = nil
+  }
+}
+
+
+private final class SpeechVerifierUploadLoadingView: UIView {
+  
+  private let spinner =
+  UIActivityIndicatorView(
+    style: .large
+  )
+  
+  override init(
+    frame: CGRect
+  ) {
+    
+    super.init(
+      frame: frame
+    )
+    
+    setupUI()
+  }
+  
+  required init?(
+    coder: NSCoder
+  ) {
+    
+    super.init(
+      coder: coder
+    )
+    
+    setupUI()
+  }
+  
+  private func setupUI() {
+    
+    backgroundColor =
+    UIColor.black
+      .withAlphaComponent(0.45)
+    
+    isUserInteractionEnabled = true
+    
+    spinner.color = .white
+    spinner.hidesWhenStopped = true
+    
+    spinner.translatesAutoresizingMaskIntoConstraints =
+    false
+    
+    addSubview(
+      spinner
+    )
+    
+    NSLayoutConstraint.activate([
+      
+      spinner.centerXAnchor.constraint(
+        equalTo: centerXAnchor
+      ),
+      
+      spinner.centerYAnchor.constraint(
+        equalTo: centerYAnchor
+      )
+    ])
+    
+    spinner.startAnimating()
+  }
+  
+  deinit {
+    spinner.stopAnimating()
   }
 }

@@ -46,69 +46,159 @@ class DocumentHandlerHelper {
   func onVersionPressed(version: DocumentVersion) {
     start(for: version.docID, docStep: (version.steps?.first)!, for: version)
   }
-
-  func start(for docID: String, docStep: DocumentStepModel? = nil, for version: DocumentVersion? = nil) {
-    guard let completion = completion else { return }
-
-    // Determining version to use
-    if let docVersion = version {
-      currentDocumentVersion = docVersion
-    } else {
-      // If no version is given, it is safe to assume it's single version.
-      currentDocumentVersion = versionList.first
-    }
-
-    guard let currentDocumentVersion = currentDocumentVersion else {
-      completion(.failure(.configError))
+  
+  func start(
+    for docID: String,
+    docStep: DocumentStepModel? = nil,
+    for version: DocumentVersion? = nil
+  ) {
+    
+    guard let completion else {
       return
     }
-
-    var step: DocumentStepModel?
-    // Determining step to use
-    if let stepToRun = docStep {
-      step = stepToRun
+    
+      // MARK: - Resolve version
+    
+    if let version {
+      currentDocumentVersion = version
     } else {
-      // If no step is given, it is safe to assume it's single step.
-      step = currentDocumentVersion.steps?.first
+      currentDocumentVersion = versionList.first
     }
-
-    guard let step = step else {
+    
+    guard let currentDocumentVersion else {
       completion(.failure(.configError))
       return
     }
     
-    switch DocumentID(rawValue: docID) {
-    case .ID, .DL, .PA, .VA:
-      currentDocumentHandler = IdHandler(topVC: topViewController, stepVM: stepViewModel, docID: DocumentID(rawValue: docID)!)
-      currentDocumentHandler?.start(docStep: step, version: currentDocumentVersion, workingStepIndex: 0, completion: completion)
-    case .NF:
-      currentDocumentHandler = NFHandler(topVC: topViewController, stepVM: stepViewModel, docID: DocumentID(rawValue: docID)!)
-      currentDocumentHandler?.start(docStep: step, version: currentDocumentVersion, workingStepIndex: 0, completion: completion)
-    case .SE:
-      currentDocumentHandler = SelfieHandler(topVC: topViewController, stepVM: stepViewModel, docID: DocumentID(rawValue: docID)!)
-      currentDocumentHandler?.start(docStep: step, version: currentDocumentVersion, workingStepIndex: 0, completion: completion)
-    case .ST:
-      currentDocumentHandler = SpeechHandler(topVC: topViewController, stepVM: stepViewModel, docID: DocumentID(rawValue: docID)!)
-      currentDocumentHandler?.start(docStep: step, version: currentDocumentVersion, workingStepIndex: 0, completion: completion)
-//    case .CO, .IB, .UB:
-//      currentDocumentHandler = DocumentsHandler(topVC: topViewController, stepVM: stepViewModel, docID: DocumentID(rawValue: docID)!)
-//      currentDocumentHandler?.start(docStep: step, version: currentDocumentVersion, workingStepIndex: 1, completion: completion)
-    case .IB:
-      currentDocumentHandler = AddressHandler(topVC: topViewController, stepVM: stepViewModel, docID: DocumentID(rawValue: docID)!)
-      currentDocumentHandler?.start(docStep: step, version: currentDocumentVersion, workingStepIndex: 0, completion: completion)
-    case .SG:
-      currentDocumentHandler = SignatureHandler(topVC: topViewController, stepVM: stepViewModel, docID: DocumentID(rawValue: docID)!)
-      currentDocumentHandler?.start(docStep: step, version: currentDocumentVersion, workingStepIndex: 0, completion: completion)
-    default:
-      currentDocumentHandler = DocumentsHandler(topVC: topViewController, stepVM: stepViewModel, docID: .OD(docID))
-      currentDocumentHandler?.start(docStep: step, version: currentDocumentVersion, workingStepIndex: 1, completion: completion)
-
+      // MARK: - Resolve step
+    
+    let step: DocumentStepModel?
+    
+    if let docStep {
+      step = docStep
+    } else {
+      step = currentDocumentVersion.steps?.first
+    }
+    
+    guard let step else {
+      completion(.failure(.configError))
       return
     }
-            
+    
+    let resolvedDocumentID =
+    DocumentID(rawValue: docID)
+    ?? .OD(docID)
+    
+      // MARK: - Source based handlers
+    
+    let documentSource = currentDocumentVersion
+      .documentSource?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+      .lowercased()
+    
+    switch documentSource {
+      
+    case "gallery":
+      
+      currentDocumentHandler = GalleryDocumentHandler(
+        topVC: topViewController,
+        stepVM: stepViewModel,
+        docID: resolvedDocumentID
+      )
+      
+    case "pdffile":
+      
+      currentDocumentHandler = PDFDocumentHandler(
+        topVC: topViewController,
+        stepVM: stepViewModel,
+        docID: resolvedDocumentID
+      )
+      
+    default:
+      
+      currentDocumentHandler = makeDefaultHandler(
+        for: docID
+      )
+    }
+    
+    guard let currentDocumentHandler else {
+      completion(.failure(.configError))
+      return
+    }
+    
+    currentDocumentHandler.start(
+      docStep: step,
+      version: currentDocumentVersion,
+      workingStepIndex: 0,
+      completion: completion
+    )
   }
 
   func upload(completion: @escaping ((Bool?, [String : Any]?) -> Void)) {
     currentDocumentHandler?.upload(completion: completion)
+  }
+  
+  private func makeDefaultHandler(
+    for docID: String
+  ) -> DocumentHandler {
+    
+    switch DocumentID(rawValue: docID) {
+      
+    case .ID, .DL, .PA, .VA:
+      
+      return IdHandler(
+        topVC: topViewController,
+        stepVM: stepViewModel,
+        docID: DocumentID(rawValue: docID)!
+      )
+      
+    case .NF:
+      
+      return NFHandler(
+        topVC: topViewController,
+        stepVM: stepViewModel,
+        docID: .NF
+      )
+      
+    case .SE:
+      
+      return SelfieHandler(
+        topVC: topViewController,
+        stepVM: stepViewModel,
+        docID: .SE
+      )
+      
+    case .ST:
+      
+      return SpeechHandler(
+        topVC: topViewController,
+        stepVM: stepViewModel,
+        docID: .ST
+      )
+      
+    case .IB:
+      
+      return AddressHandler(
+        topVC: topViewController,
+        stepVM: stepViewModel,
+        docID: .IB
+      )
+      
+    case .SG:
+      
+      return SignatureHandler(
+        topVC: topViewController,
+        stepVM: stepViewModel,
+        docID: .SG
+      )
+      
+    default:
+      
+      return DocumentsHandler(
+        topVC: topViewController,
+        stepVM: stepViewModel,
+        docID: .OD(docID)
+      )
+    }
   }
 }

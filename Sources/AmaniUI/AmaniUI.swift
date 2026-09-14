@@ -383,7 +383,7 @@ public class AmaniUI {
       case .v1:
         self.initialVC = HomeViewController()
       case .v2:
-        self.initialVC = HomeViewController()
+        self.initialVC = HomeV2ViewController()
       }
       self.initialVC?.bind(customerData: self.customerRespData!, nonKYCManager: self.nonKYCStepManager)
       try? self.initialVC?.generateKYCStepViewModels(from: self.rulesKYC)

@@ -23,28 +23,42 @@ class HomeViewController: BaseViewController {
   override func viewDidLoad() {
     super.viewDidLoad()
 //      setConstraints()
-      
+    setupUI()
   }
   
   override func viewWillAppear(_ animated: Bool) {
-    super.viewWillAppear(true)
-    NotificationCenter.default.addObserver(self, selector: #selector(didReceiveStepModel), name: Notification.Name(
-      AppConstants.AmaniDelegateNotifications.onStepModel.rawValue
-    ), object: nil)
+    super.viewWillAppear(animated)
     
-    NotificationCenter.default.addObserver(self, selector: #selector(didReceiveProfileStatus), name: NSNotification.Name(
-      AppConstants.AmaniDelegateNotifications.onProfileStatus.rawValue
-    ), object: nil)
+    NotificationCenter.default.addObserver(
+      self,
+      selector: #selector(didReceiveStepModel),
+      name: Notification.Name(
+        AppConstants.AmaniDelegateNotifications.onStepModel.rawValue
+      ),
+      object: nil
+    )
+    
+    NotificationCenter.default.addObserver(
+      self,
+      selector: #selector(didReceiveProfileStatus),
+      name: NSNotification.Name(
+        AppConstants.AmaniDelegateNotifications.onProfileStatus.rawValue
+      ),
+      object: nil
+    )
+    
     do {
-      try generateKYCStepViewModels(from: AmaniUI.sharedInstance.rulesKYC)
-    }catch(let error) {
+      try generateKYCStepViewModels(
+        from: AmaniUI.sharedInstance.rulesKYC
+      )
+    } catch {
       debugPrint(error)
     }
-    DispatchQueue.main.async {
-      self.setupUI()
-    }
     
+    refreshUI()
   }
+  
+
   
   override func viewDidAppear(_ animated: Bool) {
     super.viewDidAppear(true)
@@ -84,16 +98,32 @@ class HomeViewController: BaseViewController {
     self.setBackgroundColorOfTableView(color: hextoUIColor(hexString: appConfig.generalconfigs?.appBackground ?? "253C59"))
     setConstraints()
     
-    var customerInfo = Amani.sharedInstance.customerInfo().getCustomer()
-    if (customerInfo.rules != nil && customerInfo.rules!.isEmpty) {
-      if let customerResp = self.customerData {
-        customerInfo = customerResp
-      }
-    }
-    self.isSuccess = false
-    self.setCustomerInfo(model: customerInfo)
-      goToSuccess()
+//    var customerInfo = Amani.sharedInstance.customerInfo().getCustomer()
+//    if (customerInfo.rules != nil && customerInfo.rules!.isEmpty) {
+//      if let customerResp = self.customerData {
+//        customerInfo = customerResp
+//      }
+//    }
+//    self.isSuccess = false
+//    self.setCustomerInfo(model: customerInfo)
+//      goToSuccess()
 
+  }
+  
+  private func refreshUI() {
+    var customerInfo =
+    Amani.sharedInstance.customerInfo().getCustomer()
+    
+    if let rules = customerInfo.rules,
+       rules.isEmpty,
+       let customerData {
+      customerInfo = customerData
+    }
+    
+    isSuccess = false
+    
+    setCustomerInfo(model: customerInfo)
+    goToSuccess()
   }
   
   // MARK: - Actions
@@ -267,34 +297,71 @@ extension HomeViewController {
 
 }
 extension HomeViewController {
-    private func setConstraints() {
-        DispatchQueue.main.async { [self] in
-            view.addSubview(descriptionLabel)
-            view.addSubview(kycStepTblView)
-            view.addSubview(amaniLogo)
-            
-//            self.view.addSubviews(self.kycStepTblView, self.descriptionLabel, amaniLogo)
-            
-            NSLayoutConstraint.activate([
-              descriptionLabel.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 40),
-              descriptionLabel.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
-              descriptionLabel.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
-              descriptionLabel.bottomAnchor.constraint(equalTo: kycStepTblView.topAnchor, constant: -40),
-              // kycStepTblView constraints
-              kycStepTblView.topAnchor.constraint(equalTo:  descriptionLabel.bottomAnchor, constant: 40),
-              kycStepTblView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
-              kycStepTblView.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
-              kycStepTblView.bottomAnchor.constraint(equalTo:  view.safeAreaLayoutGuide.bottomAnchor, constant: -40),
-
-              // amaniLogo constraints
-//              amaniLogo.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -30),
-//              amaniLogo.centerXAnchor.constraint(equalTo: view.safeAreaLayoutGuide.centerXAnchor)
-              amaniLogo.widthAnchor.constraint(equalToConstant: 114),
-              amaniLogo.heightAnchor.constraint(equalToConstant: 13),
-              amaniLogo.centerXAnchor.constraint(equalTo: self.view.centerXAnchor),
-              amaniLogo.bottomAnchor.constraint(equalTo: self.view.bottomAnchor, constant: -30)
-            ])
-        }
-     
-    }
+  private func setConstraints() {
+    
+    view.addSubview(descriptionLabel)
+    view.addSubview(kycStepTblView)
+    view.addSubview(amaniLogo)
+    
+    NSLayoutConstraint.activate([
+      
+      // MARK: Description
+      
+      descriptionLabel.topAnchor.constraint(
+        equalTo: view.safeAreaLayoutGuide.topAnchor,
+        constant: 32
+      ),
+      
+      descriptionLabel.leadingAnchor.constraint(
+        equalTo: view.safeAreaLayoutGuide.leadingAnchor,
+        constant: 20
+      ),
+      
+      descriptionLabel.trailingAnchor.constraint(
+        equalTo: view.safeAreaLayoutGuide.trailingAnchor,
+        constant: -20
+      ),
+      
+      // MARK: Logo
+      
+      amaniLogo.widthAnchor.constraint(
+        equalToConstant: 114
+      ),
+      
+      amaniLogo.heightAnchor.constraint(
+        equalToConstant: 13
+      ),
+      
+      amaniLogo.centerXAnchor.constraint(
+        equalTo: view.centerXAnchor
+      ),
+      
+      amaniLogo.bottomAnchor.constraint(
+        equalTo: view.safeAreaLayoutGuide.bottomAnchor,
+        constant: -16
+      ),
+      
+      // MARK: Table
+      
+      kycStepTblView.topAnchor.constraint(
+        equalTo: descriptionLabel.bottomAnchor,
+        constant: 24
+      ),
+      
+      kycStepTblView.leadingAnchor.constraint(
+        equalTo: view.safeAreaLayoutGuide.leadingAnchor,
+        constant: 20
+      ),
+      
+      kycStepTblView.trailingAnchor.constraint(
+        equalTo: view.safeAreaLayoutGuide.trailingAnchor,
+        constant: -20
+      ),
+      
+      kycStepTblView.bottomAnchor.constraint(
+        equalTo: amaniLogo.topAnchor,
+        constant: -24
+      )
+    ])
+  }
 }
