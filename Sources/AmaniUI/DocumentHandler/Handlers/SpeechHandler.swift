@@ -55,11 +55,16 @@ final class SpeechHandler: DocumentHandler {
     containerVC.setWillDisappearCallback {
       [weak self] in
       
-      guard let self else {
+      guard let verifier =
+              self?.speechVerifierModule
+      else {
         return
       }
       
-      self.speechVerifierModule?.stop()
+  
+      DispatchQueue.main.async {
+        verifier.stop()
+      }
     }
     
 
