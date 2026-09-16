@@ -66,6 +66,13 @@ public class AmaniUI {
   public var isEnabledClientSideMrz: Bool = false
   public var preparationVideoURL: URL? = nil
   
+  private var pendingSpeechVerifierResumeState: AmaniUIResumeState? {
+    AmaniUIResumeStore.shared.load()
+  }
+  public var hasPendingSpeechVerifierResume: Bool {
+    AmaniUIResumeStore.shared.hasPendingResume
+  }
+  
   /**
    This method used to get SDK bundle
    - returns: Bundle
@@ -351,30 +358,37 @@ public class AmaniUI {
     
   }
   
-  internal func updateConfig(config: AppConfigModel) {
-          guard let rules = self.customerRespData?.rules else {
-            return
-          }
-    DispatchQueue.main.async {
+ 
+  func markSpeechVerifierResumePending(stepID: String?) {
+    guard let stepID = stepID?.trimmingCharacters(in: .whitespacesAndNewlines), !stepID.isEmpty else { return }
+    AmaniUIResumeStore.shared.save(stepID: stepID)
+  }
+  public func clearPendingSpeechVerifierResume() {
+    AmaniUIResumeStore.shared.clear()
+  }
 
-      self.generateRulesKYC(rules: rules )
-          
-      self.setAppTheme(model: self.config?.generalconfigs! )
-    if self.apiVersion == .v2 {
-        // launch the steps before kyc flow
-        
-      self.nonKYCStepManager = NonKYCStepManager(for: config.stepConfig!, customer: self.customerRespData!, navigationController: self.sdkNavigationController, vc: self.parentVC!)
+  
+  internal func updateConfig(config: AppConfigModel) {
+    guard let rules = self.customerRespData?.rules else {
+      return
+    }
+    DispatchQueue.main.async {
+      self.generateRulesKYC(rules: rules)
+      self.setAppTheme(model: self.config?.generalconfigs!)
+      if self.apiVersion == .v2 {
+        self.nonKYCStepManager = NonKYCStepManager(for: config.stepConfig!, customer: self.customerRespData!, navigationController: self.sdkNavigationController, vc: self.parentVC!)
+        if self.hasPendingSpeechVerifierResume {
+          self.startKYCHome()
+          return
+        }
         self.nonKYCStepManager!.startFlow(forPreSteps: true) { [weak self] () in
-          guard let self = self else {return}
+          guard let self = self else { return }
           self.startKYCHome()
         }
-        
       } else {
-          // It doesn't matter for api v1
         self.startKYCHome()
       }
     }
-
   }
   
   private func startKYCHome() {
@@ -387,13 +401,34 @@ public class AmaniUI {
       }
       self.initialVC?.bind(customerData: self.customerRespData!, nonKYCManager: self.nonKYCStepManager)
       try? self.initialVC?.generateKYCStepViewModels(from: self.rulesKYC)
+      let stepModels = self.initialVC?.stepModels
       self.sdkNavigationController.setViewControllers(
-          [self.initialVC!],
-          animated: true
-        )
-      guard self.parentVC?.presentedViewController == nil else  { return }
+        [self.initialVC!],
+        animated: true
+      )
+      guard self.parentVC?.presentedViewController == nil else { return }
       guard !self.sdkNavigationController.isBeingPresented else { return }
-      self.parentVC?.present(self.sdkNavigationController, animated: true)
+      self.parentVC?.present(self.sdkNavigationController, animated: true) { [weak self] in
+        self?.resumePendingSpeechVerifierIfNeeded(stepModels: stepModels)
+      }
+    }
+  }
+  
+  private func resumePendingSpeechVerifierIfNeeded(stepModels: [KYCStepViewModel]?) {
+    guard let state = pendingSpeechVerifierResumeState else { return }
+    guard let stepModel = stepModels?.first(where: { $0.id == state.stepID }) else {
+      clearPendingSpeechVerifierResume()
+      return
+    }
+    stepModel.onStepPressed { [weak self] (result: Result<KYCStepViewModel, KYCStepError>) in
+      guard let self else { return }
+      switch result {
+      case .failure:
+        self.clearPendingSpeechVerifierResume()
+      case .success(let model):
+        self.markStepAsProcessing(id: model.id)
+        model.upload { (_: Bool?, _: [String: Any]?) in }
+      }
     }
   }
   

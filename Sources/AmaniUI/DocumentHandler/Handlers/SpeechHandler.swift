@@ -55,6 +55,9 @@ final class SpeechHandler: DocumentHandler {
     containerVC.setWillDisappearCallback {
       [weak self] in
       
+      AmaniUI.sharedInstance
+        .clearPendingSpeechVerifierResume()
+      
       guard let verifier =
               self?.speechVerifierModule
       else {
@@ -687,6 +690,9 @@ private extension SpeechHandler {
     
     didFinishFlow = true
     
+    AmaniUI.sharedInstance
+      .clearPendingSpeechVerifierResume()
+    
     debugPrint(
       "SpeechHandler: success received, starting upload."
     )
@@ -755,6 +761,11 @@ private extension SpeechHandler {
     case .cameraPermissionDenied,
         .microphonePermissionDenied,
         .speechRecognitionPermissionDenied:
+      
+      AmaniUI.sharedInstance
+        .markSpeechVerifierResumePending(
+          stepID: stepViewModel.id
+        )
      
       return
       
