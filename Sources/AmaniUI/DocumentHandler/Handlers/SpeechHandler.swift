@@ -782,10 +782,15 @@ private extension SpeechHandler {
   }
   
   func finishWithFailure(
-    completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
+    completion: @escaping (
+      Result<KYCStepViewModel, KYCStepError>
+    ) -> Void
   ) {
     guard !didFinishFlow else { return }
     didFinishFlow = true
+    
+    AmaniUI.sharedInstance
+      .clearPendingSpeechVerifierResume()
     
     DispatchQueue.main.async {
       self.stepView?.removeFromSuperview()

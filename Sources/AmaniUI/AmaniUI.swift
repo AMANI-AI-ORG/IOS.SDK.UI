@@ -8,6 +8,9 @@
 import AmaniSDK
 import UIKit
 import CoreLocation
+import AVFoundation
+import AVFAudio
+import Speech
 
 private class AmaniBundleLocator {}
 
@@ -66,11 +69,113 @@ public class AmaniUI {
   public var isEnabledClientSideMrz: Bool = false
   public var preparationVideoURL: URL? = nil
   
-  private var pendingSpeechVerifierResumeState: AmaniUIResumeState? {
-    AmaniUIResumeStore.shared.load()
-  }
   public var hasPendingSpeechVerifierResume: Bool {
     AmaniUIResumeStore.shared.hasPendingResume
+  }
+  
+  private var currentSpeechVerifierCustomerID: String? {
+    let customerID = sharedSDKInstance
+      .customerInfo()
+      .getCustomer()
+      .id?
+      .trimmingCharacters(
+        in: .whitespacesAndNewlines
+      )
+    
+    guard
+      let customerID,
+      !customerID.isEmpty
+    else {
+      return nil
+    }
+    
+    return customerID
+  }
+  
+  private func normalizedResumeServer(
+    _ value: String?
+  ) -> String? {
+    guard var value = value?
+      .trimmingCharacters(
+        in: .whitespacesAndNewlines
+      ),
+          !value.isEmpty
+    else {
+      return nil
+    }
+    
+    while value.hasSuffix("/") {
+      value.removeLast()
+    }
+    
+    return value.isEmpty ? nil : value
+  }
+  
+  private var speechVerifierPermissionsGranted: Bool {
+    let cameraGranted =
+    AVCaptureDevice.authorizationStatus(
+      for: .video
+    ) == .authorized
+    
+    let microphoneGranted: Bool
+    
+    if #available(iOS 17.0, *) {
+      microphoneGranted =
+      AVAudioApplication.shared.recordPermission
+      == .granted
+    } else {
+      microphoneGranted =
+      AVAudioSession.sharedInstance().recordPermission
+      == .granted
+    }
+    
+    let speechGranted =
+    SFSpeechRecognizer.authorizationStatus()
+    == .authorized
+    
+    return cameraGranted
+    && microphoneGranted
+    && speechGranted
+  }
+  
+  private func pendingSpeechVerifierResumeStateForCurrentSession()
+  -> AmaniUIResumeState? {
+    
+    guard
+      let state =
+        AmaniUIResumeStore.shared.load()
+    else {
+      return nil
+    }
+    
+    guard
+      let customerID =
+        currentSpeechVerifierCustomerID,
+      state.customerID == customerID
+    else {
+      clearPendingSpeechVerifierResume()
+      return nil
+    }
+    
+    guard
+      let currentServer =
+        normalizedResumeServer(server),
+      let storedServer =
+        normalizedResumeServer(
+          state.serverURL
+        ),
+      currentServer == storedServer
+    else {
+      clearPendingSpeechVerifierResume()
+      return nil
+    }
+    
+    guard speechVerifierPermissionsGranted else {
+      clearPendingSpeechVerifierResume()
+      return nil
+    }
+    
+    return state
   }
   
   /**
@@ -336,6 +441,7 @@ public class AmaniUI {
   }
   
   func closeAmaniSDK() {
+    clearPendingSpeechVerifierResume()
     config = nil
     rulesKYC = []
     sharedSDKInstance.removeDelegates()
@@ -359,10 +465,31 @@ public class AmaniUI {
   }
   
  
-  func markSpeechVerifierResumePending(stepID: String?) {
-    guard let stepID = stepID?.trimmingCharacters(in: .whitespacesAndNewlines), !stepID.isEmpty else { return }
-    AmaniUIResumeStore.shared.save(stepID: stepID)
+  func markSpeechVerifierResumePending(
+    stepID: String?
+  ) {
+    guard
+      let stepID = stepID?
+        .trimmingCharacters(
+          in: .whitespacesAndNewlines
+        ),
+      !stepID.isEmpty,
+      let customerID =
+        currentSpeechVerifierCustomerID,
+      let serverURL =
+        normalizedResumeServer(server)
+    else {
+      clearPendingSpeechVerifierResume()
+      return
+    }
+    
+    AmaniUIResumeStore.shared.save(
+      stepID: stepID,
+      customerID: customerID,
+      serverURL: serverURL
+    )
   }
+  
   public func clearPendingSpeechVerifierResume() {
     AmaniUIResumeStore.shared.clear()
   }
@@ -377,7 +504,10 @@ public class AmaniUI {
       self.setAppTheme(model: self.config?.generalconfigs!)
       if self.apiVersion == .v2 {
         self.nonKYCStepManager = NonKYCStepManager(for: config.stepConfig!, customer: self.customerRespData!, navigationController: self.sdkNavigationController, vc: self.parentVC!)
-        if self.hasPendingSpeechVerifierResume {
+        if self
+          .pendingSpeechVerifierResumeStateForCurrentSession()
+            != nil {
+          
           self.startKYCHome()
           return
         }
@@ -414,20 +544,76 @@ public class AmaniUI {
     }
   }
   
-  private func resumePendingSpeechVerifierIfNeeded(stepModels: [KYCStepViewModel]?) {
-    guard let state = pendingSpeechVerifierResumeState else { return }
-    guard let stepModel = stepModels?.first(where: { $0.id == state.stepID }) else {
+  private func resumePendingSpeechVerifierIfNeeded(
+    stepModels: [KYCStepViewModel]?
+  ) {
+    guard
+      let state =
+        pendingSpeechVerifierResumeStateForCurrentSession()
+    else {
+      return
+    }
+    
+    guard
+      let stepModel =
+        stepModels?.first(
+          where: {
+            $0.id == state.stepID
+          }
+        )
+    else {
       clearPendingSpeechVerifierResume()
       return
     }
-    stepModel.onStepPressed { [weak self] (result: Result<KYCStepViewModel, KYCStepError>) in
-      guard let self else { return }
+    
+    guard
+      stepModel.isEnabled(),
+      stepModel.status != .APPROVED,
+      stepModel.status != .PENDING_REVIEW,
+      stepModel.status != .PROCESSING
+    else {
+      clearPendingSpeechVerifierResume()
+      return
+    }
+    
+    /*
+     Resume marker is one-shot.
+     
+     Clear it BEFORE onStepPressed because that method
+     can return without invoking its completion.
+     */
+    clearPendingSpeechVerifierResume()
+    
+    stepModel.onStepPressed {
+      [weak self] (
+        result:
+          Result<
+        KYCStepViewModel,
+        KYCStepError
+        >
+      ) in
+      
+      guard let self else {
+        return
+      }
+      
       switch result {
+        
       case .failure:
-        self.clearPendingSpeechVerifierResume()
+        return
+        
       case .success(let model):
-        self.markStepAsProcessing(id: model.id)
-        model.upload { (_: Bool?, _: [String: Any]?) in }
+        self.markStepAsProcessing(
+          id: model.id
+        )
+        
+        model.updateStatus(
+          status: .PROCESSING
+        )
+        
+        model.upload {
+          (_: Bool?, _: [String: Any]?) in
+        }
       }
     }
   }
