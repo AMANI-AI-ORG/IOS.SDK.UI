@@ -71,17 +71,19 @@ class NFCV2ViewController: BaseViewController {
         "success": "Read complete",
     ]
 
-    /// Config-driven overrides for `defaultCaptions`, keyed the same way. Falls back to the
-    /// hardcoded default per-key when `documentVersion` has no override for that state.
+    /// Config-driven overrides for `defaultCaptions`, keyed the same way. `place`/`success` are
+    /// per-document (`documentVersion`); the 6 mid-states are shared across document types and
+    /// already live on `GeneralConfig`. Falls back to the hardcoded default when neither has a value.
     private lazy var captions: [String: String] = {
+        let gc = appConfig?.generalconfigs
         return [
             "place": documentVersion?.v2NfcCaptionPlace ?? Self.defaultCaptions["place"]!,
-            "detected": documentVersion?.v2NfcCaptionDetected ?? Self.defaultCaptions["detected"]!,
-            "hold": documentVersion?.v2NfcCaptionHold ?? Self.defaultCaptions["hold"]!,
-            "reading": documentVersion?.v2NfcCaptionReading ?? Self.defaultCaptions["reading"]!,
-            "dontMove": documentVersion?.v2NfcCaptionDontMove ?? Self.defaultCaptions["dontMove"]!,
-            "remove": documentVersion?.v2NfcCaptionRemove ?? Self.defaultCaptions["remove"]!,
-            "retry": documentVersion?.v2NfcCaptionRetry ?? Self.defaultCaptions["retry"]!,
+            "detected": gc?.v2NfcCaptionDetected ?? Self.defaultCaptions["detected"]!,
+            "hold": gc?.v2NfcCaptionHold ?? Self.defaultCaptions["hold"]!,
+            "reading": gc?.v2NfcCaptionReading ?? Self.defaultCaptions["reading"]!,
+            "dontMove": gc?.v2NfcCaptionDontMove ?? Self.defaultCaptions["dontMove"]!,
+            "remove": gc?.v2NfcCaptionRemove ?? Self.defaultCaptions["remove"]!,
+            "retry": gc?.v2NfcCaptionRetry ?? Self.defaultCaptions["retry"]!,
             "success": documentVersion?.v2NfcCaptionSuccess ?? Self.defaultCaptions["success"]!,
         ]
     }()
