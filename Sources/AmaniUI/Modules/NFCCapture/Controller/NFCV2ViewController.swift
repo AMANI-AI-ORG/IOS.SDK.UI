@@ -59,7 +59,7 @@ class NFCV2ViewController: BaseViewController {
 
     /// The Lottie file has no native text layers — these captions are the only on-screen copy
     /// describing each state, rendered as a native label kept in sync with the animation's frame.
-    /// Proposed future server config key: `nfcV2.animationStates`. Deferred, per spec — hardcoded until that config exists.
+    /// Hardcoded fallback values, overridden per-key by `GeneralConfig.v2NfcCaption*` — see `captions` below.
     private static let defaultCaptions: [String: String] = [
         "place": "Place the document behind your phone",
         "detected": "Chip located",
@@ -70,6 +70,21 @@ class NFCV2ViewController: BaseViewController {
         "retry": "Try again and reposition the phone",
         "success": "Read complete",
     ]
+
+    /// Config-driven overrides for `defaultCaptions`, keyed the same way. Falls back to the
+    /// hardcoded default per-key when `documentVersion` has no override for that state.
+    private lazy var captions: [String: String] = {
+        return [
+            "place": documentVersion?.v2NfcCaptionPlace ?? Self.defaultCaptions["place"]!,
+            "detected": documentVersion?.v2NfcCaptionDetected ?? Self.defaultCaptions["detected"]!,
+            "hold": documentVersion?.v2NfcCaptionHold ?? Self.defaultCaptions["hold"]!,
+            "reading": documentVersion?.v2NfcCaptionReading ?? Self.defaultCaptions["reading"]!,
+            "dontMove": documentVersion?.v2NfcCaptionDontMove ?? Self.defaultCaptions["dontMove"]!,
+            "remove": documentVersion?.v2NfcCaptionRemove ?? Self.defaultCaptions["remove"]!,
+            "retry": documentVersion?.v2NfcCaptionRetry ?? Self.defaultCaptions["retry"]!,
+            "success": documentVersion?.v2NfcCaptionSuccess ?? Self.defaultCaptions["success"]!,
+        ]
+    }()
 
     /// Recolor defaults for the semantic keypaths authored in nfc_animation_v2.json.
     /// Per spec these are NOT config-driven — override here if the palette ever needs to change.
@@ -170,7 +185,7 @@ class NFCV2ViewController: BaseViewController {
         // Caption — the animation has no native text layers, so this is the only on-screen copy
         // describing each state, kept in sync with the animation's frame timeline.
         captionLabel.translatesAutoresizingMaskIntoConstraints = false
-        captionLabel.text = Self.defaultCaptions[Self.animationStates[0].key]
+        captionLabel.text = captions[Self.animationStates[0].key]
         captionLabel.font = UIFont.systemFont(ofSize: 17, weight: .semibold)
         captionLabel.textColor = fontColor
         captionLabel.textAlignment = .center
@@ -357,7 +372,7 @@ class NFCV2ViewController: BaseViewController {
     private func updateCaption() {
         guard let frame = lottieAnimationView?.currentFrame,
               let state = Self.animationStates.last(where: { $0.frame <= frame }) else { return }
-        let caption = Self.defaultCaptions[state.key]
+        let caption = captions[state.key]
         if captionLabel.text != caption {
             captionLabel.text = caption
         }
@@ -442,9 +457,10 @@ class NFCV2ViewController: BaseViewController {
         if nfcNavTitle == nil {
             nfcNavTitle = navigationItem.title
         }
-        navigationItem.title = "Chip data"
+        navigationItem.title = documentVersion?.v2NfcFormNavTitle ?? "Chip data"
 
         nfcFormView = NFCConfigureV2View()
+        nfcFormView.documentVersion = documentVersion
         nfcFormView.appConfig = appConfig
         nfcFormView.setTextsFrom(nvi: nvi)
         nfcFormView.delegate = self

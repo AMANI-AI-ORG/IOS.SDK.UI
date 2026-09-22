@@ -17,6 +17,9 @@ class NFCConfigureV2View: UIView {
         return formatter
     }()
 
+    /// Set before `appConfig`, so its value is available once `appConfig`'s didSet triggers the build.
+    var documentVersion: DocumentVersion?
+
     var appConfig: AppConfigModel? {
         didSet {
             guard appConfig != nil else { return }
@@ -87,9 +90,9 @@ class NFCConfigureV2View: UIView {
 
     func triggerAlert() {
         delegate?.showAlert(
-            title: "Caution!",
-            message: "The dates are not valid. Please set correct dates format",
-            actions: [("Ok", .default)]
+            title: documentVersion?.v2NfcInvalidDateTitle ?? "Caution!",
+            message: documentVersion?.v2NfcInvalidDateMessage ?? "The dates are not valid. Please set correct dates format",
+            actions: [(appConfig?.generalconfigs?.okText ?? "OK", .default)]
         ) { _ in }
     }
 
@@ -251,12 +254,12 @@ class NFCConfigureV2View: UIView {
         backgroundColor = bgColor
 
         // Badge pill
-        let badgeWrapper = buildBadgePill(accentColor: accentColor)
+        let badgeWrapper = buildBadgePill(accentColor: accentColor, text: documentVersion?.v2NfcReadFromChipBadge ?? "READ FROM CHIP")
 
         // Headline
         let headlineLabel = UILabel()
         headlineLabel.translatesAutoresizingMaskIntoConstraints = false
-        headlineLabel.text = "Check your details"
+        headlineLabel.text = documentVersion?.v2NfcFormHeadline ?? "Check your details"
         headlineLabel.font = UIFont.systemFont(ofSize: 26, weight: .bold)
         headlineLabel.textColor = fontColor
         headlineLabel.numberOfLines = 0
@@ -264,21 +267,22 @@ class NFCConfigureV2View: UIView {
         // Description
         let descriptionLabel = UILabel()
         descriptionLabel.translatesAutoresizingMaskIntoConstraints = false
-        descriptionLabel.text = "This was read securely from your ID's chip. Confirm it matches your document."
+        descriptionLabel.text = documentVersion?.v2NfcFormDescription ?? "This was read securely from your ID's chip. Confirm it matches your document."
         descriptionLabel.font = UIFont.systemFont(ofSize: 15, weight: .regular)
         descriptionLabel.textColor = fontColor.withAlphaComponent(0.55)
         descriptionLabel.numberOfLines = 0
 
         // Detail rows
+        let dateFormatPlaceholder = documentVersion?.v2NfcDateFormatPlaceholder ?? "DD/MM/YYYY"
         documentNoField.keyboardType = .default
-        birthdateField.attributedPlaceholder = NSAttributedString(string: "DD/MM/YYYY", attributes: [.foregroundColor: fontColor.withAlphaComponent(0.3)])
-        expiryField.attributedPlaceholder = NSAttributedString(string: "DD/MM/YYYY", attributes: [.foregroundColor: fontColor.withAlphaComponent(0.3)])
+        birthdateField.attributedPlaceholder = NSAttributedString(string: dateFormatPlaceholder, attributes: [.foregroundColor: fontColor.withAlphaComponent(0.3)])
+        expiryField.attributedPlaceholder = NSAttributedString(string: dateFormatPlaceholder, attributes: [.foregroundColor: fontColor.withAlphaComponent(0.3)])
         setupDatePicker(for: birthdateField, picker: birthdatePicker, doneSelector: #selector(birthdateDoneTapped))
         setupDatePicker(for: expiryField, picker: expiryPicker, doneSelector: #selector(expiryDoneTapped))
 
-        let documentRow = makeDetailRow(icon: "creditcard.fill", label: "Document number", field: documentNoField, fontColor: fontColor, accentColor: accentColor)
-        let birthdateRow = makeDetailRow(icon: UIImage(systemName: "birthday.cake.fill") != nil ? "birthday.cake.fill" : "calendar", label: "Date of birth", field: birthdateField, fontColor: fontColor, accentColor: accentColor)
-        let expiryRow = makeDetailRow(icon: "calendar", label: "Date of expiry", field: expiryField, fontColor: fontColor, accentColor: accentColor)
+        let documentRow = makeDetailRow(icon: "creditcard.fill", label: documentVersion?.v2NfcDocumentNumberLabel ?? "Document number", field: documentNoField, fontColor: fontColor, accentColor: accentColor)
+        let birthdateRow = makeDetailRow(icon: UIImage(systemName: "birthday.cake.fill") != nil ? "birthday.cake.fill" : "calendar", label: documentVersion?.v2NfcDateOfBirthLabel ?? "Date of birth", field: birthdateField, fontColor: fontColor, accentColor: accentColor)
+        let expiryRow = makeDetailRow(icon: "calendar", label: documentVersion?.v2NfcDateOfExpiryLabel ?? "Date of expiry", field: expiryField, fontColor: fontColor, accentColor: accentColor)
 
         let rowsStack = UIStackView(arrangedSubviews: [documentRow, birthdateRow, expiryRow])
         rowsStack.axis = .vertical
@@ -286,7 +290,7 @@ class NFCConfigureV2View: UIView {
         rowsStack.translatesAutoresizingMaskIntoConstraints = false
 
         // Info banner
-        let infoBanner = buildInfoBanner(fontColor: fontColor)
+        let infoBanner = buildInfoBanner(fontColor: fontColor, text: documentVersion?.v2NfcFormInfoBannerText ?? "These values were read from your ID. Tap any field to correct it if something looks wrong.")
 
         // Content stack
         let contentStack = UIStackView(arrangedSubviews: [badgeWrapper, headlineLabel, descriptionLabel, rowsStack, infoBanner])
@@ -340,7 +344,7 @@ class NFCConfigureV2View: UIView {
 
     // MARK: - Badge pill
 
-    private func buildBadgePill(accentColor: UIColor) -> UIView {
+    private func buildBadgePill(accentColor: UIColor, text: String) -> UIView {
         let wrapper = UIView()
         wrapper.translatesAutoresizingMaskIntoConstraints = false
 
@@ -357,7 +361,7 @@ class NFCConfigureV2View: UIView {
 
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "READ FROM CHIP"
+        label.text = text
         label.font = UIFont.systemFont(ofSize: 12, weight: .bold)
         label.textColor = accentColor
 
@@ -478,7 +482,7 @@ class NFCConfigureV2View: UIView {
 
     // MARK: - Info banner
 
-    private func buildInfoBanner(fontColor: UIColor) -> UIView {
+    private func buildInfoBanner(fontColor: UIColor, text: String) -> UIView {
         let banner = UIView()
         banner.translatesAutoresizingMaskIntoConstraints = false
         banner.backgroundColor = fontColor.withAlphaComponent(0.06)
@@ -492,7 +496,7 @@ class NFCConfigureV2View: UIView {
 
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "These values were read from your ID. Tap any field to correct it if something looks wrong."
+        label.text = text
         label.font = UIFont.systemFont(ofSize: 13, weight: .regular)
         label.textColor = fontColor.withAlphaComponent(0.6)
         label.numberOfLines = 0
