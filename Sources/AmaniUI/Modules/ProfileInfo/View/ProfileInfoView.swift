@@ -376,7 +376,7 @@ class ProfileInfoView: UIView {
         self.surnameLegend.text = document.surnameTitle!
         self.surnameInput.updatePlaceHolder(text: document.surnameHint!)
         self.birthdateLabel.text = document.birthDateTitle!
-//        self.birthdateInput.updatePlaceHolder(text: document.birthDateHint!)
+        self.birthdateInput.updatePlaceHolder(text: document.birthDateHint!)
     }
   }
   

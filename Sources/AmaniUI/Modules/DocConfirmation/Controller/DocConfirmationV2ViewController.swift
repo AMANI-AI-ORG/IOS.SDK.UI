@@ -123,18 +123,21 @@ class DocConfirmationV2ViewController: BaseViewController {
         scrollView.showsVerticalScrollIndicator = false
         scrollView.addSubview(contentStack)
 
-        // Retake button (outlined)
+        // Retake button (outlined) — colors match V1's equivalent secondary button (secondaryButton*),
+        // rather than being derived from fontColor, so a client's secondary-button theme applies here too.
+        let secondaryTextColor = gc?.secondaryButtonTextColor.map { hextoUIColor(hexString: $0) } ?? fontColor
+        let secondaryBorderColor = gc?.secondaryButtonBorderColor.map { hextoUIColor(hexString: $0) } ?? fontColor.withAlphaComponent(0.25)
         retakeButton.translatesAutoresizingMaskIntoConstraints = false
         retakeButton.setTitle(gc?.tryAgainText ?? "Retake", for: .normal)
         retakeButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
-        retakeButton.setTitleColor(fontColor, for: .normal)
-        retakeButton.backgroundColor = .clear
+        retakeButton.setTitleColor(secondaryTextColor, for: .normal)
+        retakeButton.backgroundColor = gc?.secondaryButtonBackgroundColor.map { hextoUIColor(hexString: $0) } ?? .clear
         retakeButton.layer.cornerRadius = AmaniUI.sharedInstance.style.ctaButtonCornerRadius
         retakeButton.layer.borderWidth = 1.5
-        retakeButton.layer.borderColor = fontColor.withAlphaComponent(0.25).cgColor
+        retakeButton.layer.borderColor = secondaryBorderColor.cgColor
         let retakeIcon = UIImage(systemName: "arrow.counterclockwise")?.withRenderingMode(.alwaysTemplate)
         retakeButton.setImage(retakeIcon, for: .normal)
-        retakeButton.tintColor = fontColor
+        retakeButton.tintColor = secondaryTextColor
         retakeButton.semanticContentAttribute = .forceLeftToRight
         retakeButton.imageEdgeInsets = UIEdgeInsets(top: 0, left: 0, bottom: 0, right: 6)
         retakeButton.titleEdgeInsets = UIEdgeInsets(top: 0, left: 6, bottom: 0, right: 0)

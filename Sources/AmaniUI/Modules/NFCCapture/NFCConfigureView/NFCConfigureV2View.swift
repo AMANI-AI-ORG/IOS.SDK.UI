@@ -256,18 +256,20 @@ class NFCConfigureV2View: UIView {
         // Badge pill
         let badgeWrapper = buildBadgePill(accentColor: accentColor, text: documentVersion?.v2NfcReadFromChipBadge ?? "READ FROM CHIP")
 
-        // Headline
+        // Headline — reuses the existing `nfcConfigureTitle` field (shared with the nav title;
+        // Android shows the same value in both places) rather than a dedicated v2-only key.
         let headlineLabel = UILabel()
         headlineLabel.translatesAutoresizingMaskIntoConstraints = false
-        headlineLabel.text = documentVersion?.v2NfcFormHeadline ?? "Check your details"
+        headlineLabel.text = documentVersion?.nfcConfigureTitle ?? "Check your details"
         headlineLabel.font = UIFont.systemFont(ofSize: 26, weight: .bold)
         headlineLabel.textColor = fontColor
         headlineLabel.numberOfLines = 0
 
-        // Description
+        // Description — reuses the existing `nfcFailedDescription` field (matches Android; unused
+        // by any other iOS screen, so no legacy-content conflict from repurposing it here).
         let descriptionLabel = UILabel()
         descriptionLabel.translatesAutoresizingMaskIntoConstraints = false
-        descriptionLabel.text = documentVersion?.v2NfcFormDescription ?? "This was read securely from your ID's chip. Confirm it matches your document."
+        descriptionLabel.text = documentVersion?.nfcFailedDescription ?? "This was read securely from your ID's chip. Confirm it matches your document."
         descriptionLabel.font = UIFont.systemFont(ofSize: 15, weight: .regular)
         descriptionLabel.textColor = fontColor.withAlphaComponent(0.55)
         descriptionLabel.numberOfLines = 0
@@ -280,9 +282,11 @@ class NFCConfigureV2View: UIView {
         setupDatePicker(for: birthdateField, picker: birthdatePicker, doneSelector: #selector(birthdateDoneTapped))
         setupDatePicker(for: expiryField, picker: expiryPicker, doneSelector: #selector(expiryDoneTapped))
 
-        let documentRow = makeDetailRow(icon: "creditcard.fill", label: documentVersion?.v2NfcDocumentNumberLabel ?? "Document number", field: documentNoField, fontColor: fontColor, accentColor: accentColor)
-        let birthdateRow = makeDetailRow(icon: UIImage(systemName: "birthday.cake.fill") != nil ? "birthday.cake.fill" : "calendar", label: documentVersion?.v2NfcDateOfBirthLabel ?? "Date of birth", field: birthdateField, fontColor: fontColor, accentColor: accentColor)
-        let expiryRow = makeDetailRow(icon: "calendar", label: documentVersion?.v2NfcDateOfExpiryLabel ?? "Date of expiry", field: expiryField, fontColor: fontColor, accentColor: accentColor)
+        // Field labels reuse the existing documentNoTitle/documentDateOfBirth/documentDateOfExpiry
+        // fields — V1's NFCConfigureView already uses these exact fields for these exact labels.
+        let documentRow = makeDetailRow(icon: "creditcard.fill", label: documentVersion?.documentNoTitle ?? "Document number", field: documentNoField, fontColor: fontColor, accentColor: accentColor)
+        let birthdateRow = makeDetailRow(icon: UIImage(systemName: "birthday.cake.fill") != nil ? "birthday.cake.fill" : "calendar", label: documentVersion?.documentDateOfBirth ?? "Date of birth", field: birthdateField, fontColor: fontColor, accentColor: accentColor)
+        let expiryRow = makeDetailRow(icon: "calendar", label: documentVersion?.documentDateOfExpiry ?? "Date of expiry", field: expiryField, fontColor: fontColor, accentColor: accentColor)
 
         let rowsStack = UIStackView(arrangedSubviews: [documentRow, birthdateRow, expiryRow])
         rowsStack.axis = .vertical

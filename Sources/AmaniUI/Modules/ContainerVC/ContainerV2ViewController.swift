@@ -232,10 +232,15 @@ class ContainerV2ViewController: BaseViewController {
         let hasEyebrow = !(currentContent.eyebrowLabel?.isEmpty ?? true)
         if hasEyebrow {
             eyebrowLabel.translatesAutoresizingMaskIntoConstraints = false
-            let stepPrefixTemplate = documentVersion?.v2GuideStepPrefix ?? "STEP {step} OF {total} · "
-            let stepPrefix = stepPrefixTemplate
-                .replacingOccurrences(of: "{step}", with: "\(step.rawValue + 1)")
-                .replacingOccurrences(of: "{total}", with: "\(totalSteps)")
+            // Step prefix ("STEP X OF Y ·") only makes sense for a two-sided document — matches
+            // Android, which only shows it for double-sided documents.
+            var stepPrefix = ""
+            if totalSteps > 1 {
+                let stepPrefixTemplate = documentVersion?.v2GuideStepPrefix ?? "STEP {current} OF {total} · "
+                stepPrefix = stepPrefixTemplate
+                    .replacingOccurrences(of: "{current}", with: "\(step.rawValue + 1)")
+                    .replacingOccurrences(of: "{total}", with: "\(totalSteps)")
+            }
             let eyebrowText = "\(stepPrefix)\(currentContent.eyebrowLabel!.uppercased())"
             eyebrowLabel.attributedText = NSAttributedString(string: eyebrowText, attributes: [.kern: 0.5])
             eyebrowLabel.font = UIFont.systemFont(ofSize: 12, weight: .semibold)

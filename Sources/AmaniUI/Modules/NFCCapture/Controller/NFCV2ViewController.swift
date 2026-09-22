@@ -172,9 +172,16 @@ class NFCV2ViewController: BaseViewController {
         navigationItem.leftBarButtonItem = backBarItem
         let fontColor = hextoUIColor(hexString: gc?.appFontColor ?? "1A1A2E")
 
-        // Top description — a single instructional line explaining the animation below.
+        // Top description — the primary instructional line, plus any additional nfcDescription2/3
+        // lines the document version configures (V1's NFC screen already shows all three; V2 only
+        // showed the first until now).
         topDescriptionLabel.translatesAutoresizingMaskIntoConstraints = false
-        topDescriptionLabel.text = docVer.nfcDescription1 ?? "Follow the instructions in the animation below"
+        let descriptionLines = [
+            docVer.v2NfcAnimationHint ?? docVer.nfcDescription1 ?? "Follow the instructions in the animation below",
+            docVer.nfcDescription2,
+            docVer.nfcDescription3,
+        ].compactMap { $0 }.filter { !$0.isEmpty }
+        topDescriptionLabel.text = descriptionLines.joined(separator: "\n")
         topDescriptionLabel.font = UIFont.systemFont(ofSize: 18, weight: .medium)
         topDescriptionLabel.textColor = fontColor
         topDescriptionLabel.textAlignment = .center
@@ -459,7 +466,7 @@ class NFCV2ViewController: BaseViewController {
         if nfcNavTitle == nil {
             nfcNavTitle = navigationItem.title
         }
-        navigationItem.title = documentVersion?.v2NfcFormNavTitle ?? "Chip data"
+        navigationItem.title = documentVersion?.nfcConfigureTitle ?? "Chip data"
 
         nfcFormView = NFCConfigureV2View()
         nfcFormView.documentVersion = documentVersion

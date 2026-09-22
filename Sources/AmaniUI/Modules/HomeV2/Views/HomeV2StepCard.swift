@@ -296,6 +296,8 @@ final class HomeV2StepCard: UIView {
             let isProfileInfoStep = step.documents.contains { $0.id == "IB" }
             if isProfileInfoStep, let rejectedText = gc?.v2StepRejectedText {
                 subtitleLabel.text = rejectedText
+            } else if step.status == .AUTOMATICALLY_REJECTED {
+                subtitleLabel.text = step.stepConfig.buttonText?.autoRejected ?? "Rejected · Action needed"
             } else {
                 subtitleLabel.text = step.stepConfig.buttonText?.rejected ?? "Rejected · Action needed"
             }
@@ -345,7 +347,7 @@ final class HomeV2StepCard: UIView {
             errorTitleLabel.text = firstVersion?.v2StepRejectionTitle ?? gc?.v2StepRejectionTitle ?? gc?.v2StepRejectionFallbackTitle ?? "Verification could not be completed"
             errorTitleLabel.textColor = fontColor
 
-            errorMessageLabel.text = firstVersion?.v2StepRejectionDescription ?? gc?.v2StepRejectionDescription ?? gc?.v2StepRejectionFallbackDescription ?? "Your submission could not be accepted. Please try again to continue."
+            errorMessageLabel.text = step.backendErrorMessage ?? firstVersion?.v2StepRejectionDescription ?? gc?.v2StepRejectionDescription ?? gc?.v2StepRejectionFallbackDescription ?? "Your submission could not be accepted. Please try again to continue."
             errorMessageLabel.textColor = fontColor.withAlphaComponent(0.6)
         } else {
             errorCard.isHidden = true

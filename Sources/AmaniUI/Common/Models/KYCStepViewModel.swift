@@ -152,6 +152,12 @@ class KYCStepViewModel {
   func getRuleModel() -> KYCRuleModel {
     return rule
   }
+
+  /// The backend-provided rejection reason for this step, if any — takes priority over the
+  /// generic config-driven rejection message (matches Android's rule.errors[].errorMessage-first behavior).
+  var backendErrorMessage: String? {
+    rule?.errors?.first?.error_message
+  }
   
   /// Get the status of current configuration
   func getStatus() -> String? {
