@@ -297,6 +297,10 @@ class ContainerV2ViewController: BaseViewController {
         continueButton.setTitleColor(hextoUIColor(hexString: gc?.primaryButtonTextColor ?? "FFFFFF"), for: .normal)
         continueButton.backgroundColor = accentColor
         continueButton.layer.cornerRadius = AmaniUI.sharedInstance.style.ctaButtonCornerRadius
+        if let borderColorHex = gc?.primaryButtonBorderColor {
+            continueButton.layer.borderWidth = 1.5
+            continueButton.layer.borderColor = hextoUIColor(hexString: borderColorHex).cgColor
+        }
         let cameraIcon = UIImage(systemName: "camera.fill")?.withRenderingMode(.alwaysTemplate)
         continueButton.setImage(cameraIcon, for: .normal)
         continueButton.tintColor = hextoUIColor(hexString: gc?.primaryButtonTextColor ?? "FFFFFF")

@@ -34,10 +34,10 @@ class KYCStepViewModel {
   init(from stepConfig: StepConfig, initialRule: KYCRuleModel, topController onVC: UIViewController?) {
     self.stepConfig = stepConfig
     id = initialRule.id ?? ""
-    title = stepConfig.buttonText?.notUploaded ?? stepConfig.title ?? ""
-      
+    title = stepConfig.buttonText?.notUploaded ?? initialRule.title ?? ""
+
     if (stepConfig.documents?.count ?? 0) > 1 {
-          title = stepConfig.buttonText?.notUploaded ?? stepConfig.title ?? ""
+          title = stepConfig.buttonText?.notUploaded ?? initialRule.title ?? ""
     }
       
     mandatoryStepIDs = stepConfig.mandatoryStepIDs ?? []

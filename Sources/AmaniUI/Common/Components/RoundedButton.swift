@@ -30,7 +30,8 @@ class RoundedButton: UIButton {
     // Create and configure the activity indicator
     activityIndicator = UIActivityIndicatorView(style: .medium)
     activityIndicator?.hidesWhenStopped = true
-    activityIndicator?.color = .white
+    let gc = AmaniUI.sharedInstance.config?.generalconfigs
+    activityIndicator?.color = hextoUIColor(hexString: gc?.loaderColor ?? gc?.primaryButtonBackgroundColor ?? "FFFFFF")
     
     // Add the activity indicator as a subview
     if let indicator = activityIndicator {

@@ -181,14 +181,14 @@ class BaseViewController: UIViewController {
         navBarFontColor = config?.generalconfigs?.topBarFontColor ?? "000000"
         let appearance = UINavigationBarAppearance()
         appearance.configureWithOpaqueBackground()
-        appearance.backgroundColor = hextoUIColor(hexString: config?.generalconfigs?.topBarBackground ?? "0F2435")
+        appearance.backgroundColor = hextoUIColor(hexString: config?.generalconfigs?.topBarBackground ?? config?.generalconfigs?.appBackground ?? "0F2435")
         appearance.titleTextAttributes = [NSAttributedString.Key.foregroundColor: hextoUIColor(hexString: navBarFontColor)]
         appearance.shadowColor = .clear
         self.navigationController?.navigationBar.standardAppearance = appearance
         self.navigationController?.navigationBar.scrollEdgeAppearance = appearance
         self.navigationController?.navigationBar.isTranslucent = true
         self.view.backgroundColor = hextoUIColor(hexString: config?.generalconfigs?.appBackground ?? "253C59")
-        self.navigationController?.navigationBar.backgroundColor = hextoUIColor(hexString: config?.generalconfigs?.topBarBackground ?? "0F2435")
+        self.navigationController?.navigationBar.backgroundColor = hextoUIColor(hexString: config?.generalconfigs?.topBarBackground ?? config?.generalconfigs?.appBackground ?? "0F2435")
         
         // Setup bottom line
         

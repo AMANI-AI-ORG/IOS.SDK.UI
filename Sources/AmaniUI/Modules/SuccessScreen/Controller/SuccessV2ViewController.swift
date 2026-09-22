@@ -123,6 +123,10 @@ class SuccessV2ViewController: BaseViewController {
         continueButton.setTitleColor(hextoUIColor(hexString: gc?.primaryButtonTextColor ?? "FFFFFF"), for: .normal)
         continueButton.backgroundColor = accentColor
         continueButton.layer.cornerRadius = AmaniUI.sharedInstance.style.ctaButtonCornerRadius
+        if let borderColorHex = gc?.primaryButtonBorderColor {
+            continueButton.layer.borderWidth = 1.5
+            continueButton.layer.borderColor = hextoUIColor(hexString: borderColorHex).cgColor
+        }
         continueButton.addTarget(self, action: #selector(continueBtnAction(_:)), for: .touchUpInside)
 
         view.addSubview(progressView)

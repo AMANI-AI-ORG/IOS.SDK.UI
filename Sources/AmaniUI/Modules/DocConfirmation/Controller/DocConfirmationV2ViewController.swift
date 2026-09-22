@@ -11,6 +11,7 @@ class DocConfirmationV2ViewController: BaseViewController {
     private var documentID: DocumentID?
     private var documentVersion: DocumentVersion?
     private var documentStep: DocumentStepModel?
+    private var stepConfirmText: String?
     private var mrzDocumentId: String?
     private var confirmClicked: Bool = false
     private var stepid: Int = 0
@@ -48,12 +49,13 @@ class DocConfirmationV2ViewController: BaseViewController {
 
     // MARK: - Bind
 
-    func bind(image: UIImage, documentID: DocumentID, docVer: DocumentVersion, docStep: DocumentStepModel, stepid: Int, retake: (() -> Void)? = nil, callback: @escaping () -> Void) {
+    func bind(image: UIImage, documentID: DocumentID, docVer: DocumentVersion, docStep: DocumentStepModel, stepid: Int, stepConfirmText: String? = nil, retake: (() -> Void)? = nil, callback: @escaping () -> Void) {
         self.image = image
         self.documentID = documentID
         self.documentVersion = docVer
         self.documentStep = docStep
         self.stepid = stepid
+        self.stepConfirmText = stepConfirmText
         self.retakeCallback = retake
         self.confirmCallback = callback
         self.confirmClicked = false
@@ -70,7 +72,7 @@ class DocConfirmationV2ViewController: BaseViewController {
         view.backgroundColor = bgColor
 
         // Navigation bar
-        setNavigationBarWith(title: documentVersion?.v2DocumentConfirmationNavTitle ?? gc?.v2DocumentConfirmationNavTitle ?? "Review capture")
+        setNavigationBarWith(title: documentVersion?.v2DocumentConfirmationNavTitle ?? documentStep?.confirmationTitle ?? "Review capture")
         let backButton = makeNavButton(
             icon: UIImage(systemName: "arrow.left"),
             tintColor: hextoUIColor(hexString: gc?.topBarFontColor ?? "1A1A2E")
@@ -93,7 +95,7 @@ class DocConfirmationV2ViewController: BaseViewController {
 
         // Subtitle
         subtitleLabel.translatesAutoresizingMaskIntoConstraints = false
-        subtitleLabel.text = documentVersion?.v2DocumentConfirmationSubtitle ?? gc?.v2DocumentConfirmationSubtitle ?? "Make sure the document is sharp and fully visible."
+        subtitleLabel.text = documentVersion?.v2DocumentConfirmationSubtitle ?? documentStep?.confirmationDescription ?? "Make sure the document is sharp and fully visible."
         subtitleLabel.font = UIFont.systemFont(ofSize: 15, weight: .regular)
         subtitleLabel.textColor = fontColor.withAlphaComponent(0.55)
         subtitleLabel.numberOfLines = 0
@@ -145,11 +147,15 @@ class DocConfirmationV2ViewController: BaseViewController {
 
         // Confirm button (filled)
         confirmButton.translatesAutoresizingMaskIntoConstraints = false
-        confirmButton.setTitle(gc?.confirmText ?? "Use this photo", for: .normal)
+        confirmButton.setTitle(stepConfirmText ?? gc?.confirmText ?? "Use this photo", for: .normal)
         confirmButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
         confirmButton.setTitleColor(hextoUIColor(hexString: gc?.primaryButtonTextColor ?? "FFFFFF"), for: .normal)
         confirmButton.backgroundColor = accentColor
         confirmButton.layer.cornerRadius = AmaniUI.sharedInstance.style.ctaButtonCornerRadius
+        if let borderColorHex = gc?.primaryButtonBorderColor {
+            confirmButton.layer.borderWidth = 1.5
+            confirmButton.layer.borderColor = hextoUIColor(hexString: borderColorHex).cgColor
+        }
         confirmButton.addTarget(self, action: #selector(confirmAction(_:)), for: .touchUpInside)
 
         view.addSubview(scrollView)

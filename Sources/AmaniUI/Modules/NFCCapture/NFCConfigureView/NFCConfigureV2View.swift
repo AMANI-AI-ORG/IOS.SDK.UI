@@ -19,6 +19,7 @@ class NFCConfigureV2View: UIView {
 
     /// Set before `appConfig`, so its value is available once `appConfig`'s didSet triggers the build.
     var documentVersion: DocumentVersion?
+    var stepConfirmText: String?
 
     var appConfig: AppConfigModel? {
         didSet {
@@ -313,11 +314,15 @@ class NFCConfigureV2View: UIView {
 
         // Submit button
         submitButton.translatesAutoresizingMaskIntoConstraints = false
-        submitButton.setTitle(gc?.confirmText ?? "Looks correct", for: .normal)
+        submitButton.setTitle(stepConfirmText ?? gc?.confirmText ?? "Looks correct", for: .normal)
         submitButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
         submitButton.setTitleColor(hextoUIColor(hexString: gc?.primaryButtonTextColor ?? "FFFFFF"), for: .normal)
         submitButton.backgroundColor = accentColor
         submitButton.layer.cornerRadius = AmaniUI.sharedInstance.style.ctaButtonCornerRadius
+        if let borderColorHex = gc?.primaryButtonBorderColor {
+            submitButton.layer.borderWidth = 1.5
+            submitButton.layer.borderColor = hextoUIColor(hexString: borderColorHex).cgColor
+        }
         submitButton.addTarget(self, action: #selector(tapSubmitButton(_:)), for: .touchUpInside)
 
         addSubview(scrollView)
