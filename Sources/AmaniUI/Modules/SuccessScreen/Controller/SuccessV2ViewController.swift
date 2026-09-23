@@ -15,6 +15,7 @@ class SuccessV2ViewController: BaseViewController {
     private let iconImageView = UIImageView()
     private let titleLabel = UILabel()
     private let subtitleLabel = UILabel()
+    private let approvedCardView = UIView()
     private let continueButton = UIButton(type: .custom)
 
     private var pulseLayers: [CAShapeLayer] = []
@@ -53,11 +54,14 @@ class SuccessV2ViewController: BaseViewController {
         let gc = try? Amani.sharedInstance.appConfig().getApplicationConfig().generalconfigs
         let fontColor = hextoUIColor(hexString: gc?.appFontColor ?? "FFFFFF")
         let accentColor = hextoUIColor(hexString: gc?.primaryButtonBackgroundColor ?? "#C0395A")
+        // The checkmark icon/circle/pulse rings use the dedicated success color, not the general
+        // button accent — matches Android, which reads successIconColor for this element.
+        let successColor = hextoUIColor(hexString: gc?.successIconColor ?? gc?.primaryButtonBackgroundColor ?? "#C0395A")
         let bgColor = hextoUIColor(hexString: gc?.appBackground ?? "FFFFFF")
         view.backgroundColor = bgColor
 
         // Nav bar — no back button on success, but keep close action consistent
-        setNavigationBarWith(title: "")
+        setNavigationBarWith(title: gc?.successTitle ?? "")
         navigationItem.leftBarButtonItem = nil
         navigationItem.hidesBackButton = true
 
@@ -74,7 +78,7 @@ class SuccessV2ViewController: BaseViewController {
         // Checkmark circle
         let circleSize: CGFloat = 130
         iconCircle.translatesAutoresizingMaskIntoConstraints = false
-        iconCircle.backgroundColor = accentColor
+        iconCircle.backgroundColor = successColor
         iconCircle.layer.cornerRadius = circleSize / 2
         iconCircle.clipsToBounds = true
 
@@ -86,13 +90,11 @@ class SuccessV2ViewController: BaseViewController {
         iconCircle.addSubview(iconImageView)
         iconWrapperView.addSubview(iconCircle)
 
-        // Title — when every step was approved outright (nothing pending manual review),
-        // prefer the more confident v2ApprovedCardTitle copy over the generic success header.
+        // Title — always the generic success header (matches Android, which never branches this
+        // on approval state; v2ApprovedCardTitle belongs to the separate approved-card below).
         let allStepsApproved = stepModels?.isEmpty == false && stepModels?.allSatisfy { $0.status == .APPROVED } == true
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        titleLabel.text = allStepsApproved
-            ? (gc?.v2ApprovedCardTitle ?? gc?.successHeaderText ?? "All checks passed")
-            : (gc?.successHeaderText ?? "You're all done!")
+        titleLabel.text = gc?.successHeaderText ?? "You're all done!"
         titleLabel.font = UIFont.systemFont(ofSize: 26, weight: .bold)
         titleLabel.textColor = fontColor
         titleLabel.textAlignment = .center
@@ -106,6 +108,14 @@ class SuccessV2ViewController: BaseViewController {
         subtitleLabel.textAlignment = .center
         subtitleLabel.numberOfLines = 0
 
+        // Approved card — a distinct card element Android shows (badge + card title + card
+        // subtitle) that iOS's success screen previously lacked entirely. Only shown when every
+        // step was approved outright, matching what the "approved" copy in these fields implies.
+        let showApprovedCard = allStepsApproved && (gc?.v2ApprovedCardTitle != nil || gc?.successInfo2Text != nil)
+        if showApprovedCard {
+            buildApprovedCard(fontColor: fontColor, accentColor: accentColor, gc: gc)
+        }
+
         // Continue button
         continueButton.translatesAutoresizingMaskIntoConstraints = false
         continueButton.setTitle(gc?.continueText ?? "Continue", for: .normal)
@@ -113,12 +123,19 @@ class SuccessV2ViewController: BaseViewController {
         continueButton.setTitleColor(hextoUIColor(hexString: gc?.primaryButtonTextColor ?? "FFFFFF"), for: .normal)
         continueButton.backgroundColor = accentColor
         continueButton.layer.cornerRadius = AmaniUI.sharedInstance.style.ctaButtonCornerRadius
+        if let borderColorHex = gc?.primaryButtonBorderColor {
+            continueButton.layer.borderWidth = 1.5
+            continueButton.layer.borderColor = hextoUIColor(hexString: borderColorHex).cgColor
+        }
         continueButton.addTarget(self, action: #selector(continueBtnAction(_:)), for: .touchUpInside)
 
         view.addSubview(progressView)
         view.addSubview(iconWrapperView)
         view.addSubview(titleLabel)
         view.addSubview(subtitleLabel)
+        if showApprovedCard {
+            view.addSubview(approvedCardView)
+        }
         view.addSubview(continueButton)
 
         let ctaHeight = AmaniUI.sharedInstance.style.ctaButtonHeight
@@ -167,9 +184,93 @@ class SuccessV2ViewController: BaseViewController {
             continueButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
             continueButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
             continueButton.heightAnchor.constraint(equalToConstant: ctaHeight),
-        ])
+        ] + (showApprovedCard ? [
+            // Approved card below the subtitle
+            approvedCardView.topAnchor.constraint(equalTo: subtitleLabel.bottomAnchor, constant: 24),
+            approvedCardView.leadingAnchor.constraint(equalTo: view.leadingAnchor, constant: 20),
+            approvedCardView.trailingAnchor.constraint(equalTo: view.trailingAnchor, constant: -20),
+        ] : []))
 
-        buildPulseLayers(accentColor: accentColor, circleSize: circleSize, wrapperSize: wrapperSize)
+        buildPulseLayers(accentColor: successColor, circleSize: circleSize, wrapperSize: wrapperSize)
+    }
+
+    // MARK: - Approved card
+
+    private func buildApprovedCard(fontColor: UIColor, accentColor: UIColor, gc: GeneralConfig?) {
+        approvedCardView.translatesAutoresizingMaskIntoConstraints = false
+        approvedCardView.backgroundColor = fontColor.withAlphaComponent(0.05)
+        approvedCardView.layer.cornerRadius = AmaniUI.sharedInstance.style.cardCornerRadius
+        approvedCardView.layer.borderWidth = 1
+        approvedCardView.layer.borderColor = fontColor.withAlphaComponent(0.1).cgColor
+
+        var arrangedSubviews: [UIView] = []
+
+        if let badgeText = gc?.v2ApprovedBadgeText, !badgeText.isEmpty {
+            let badge = UIView()
+            badge.translatesAutoresizingMaskIntoConstraints = false
+            badge.backgroundColor = accentColor.withAlphaComponent(0.12)
+            badge.layer.cornerRadius = 12
+
+            let badgeLabel = UILabel()
+            badgeLabel.translatesAutoresizingMaskIntoConstraints = false
+            badgeLabel.text = badgeText.uppercased()
+            badgeLabel.font = UIFont.systemFont(ofSize: 11, weight: .bold)
+            badgeLabel.textColor = accentColor
+
+            badge.addSubview(badgeLabel)
+            NSLayoutConstraint.activate([
+                badgeLabel.topAnchor.constraint(equalTo: badge.topAnchor, constant: 6),
+                badgeLabel.bottomAnchor.constraint(equalTo: badge.bottomAnchor, constant: -6),
+                badgeLabel.leadingAnchor.constraint(equalTo: badge.leadingAnchor, constant: 10),
+                badgeLabel.trailingAnchor.constraint(equalTo: badge.trailingAnchor, constant: -10),
+            ])
+
+            let badgeRow = UIView()
+            badgeRow.translatesAutoresizingMaskIntoConstraints = false
+            badgeRow.addSubview(badge)
+            NSLayoutConstraint.activate([
+                badge.topAnchor.constraint(equalTo: badgeRow.topAnchor),
+                badge.bottomAnchor.constraint(equalTo: badgeRow.bottomAnchor),
+                badge.leadingAnchor.constraint(equalTo: badgeRow.leadingAnchor),
+                badgeRow.trailingAnchor.constraint(greaterThanOrEqualTo: badge.trailingAnchor),
+            ])
+            arrangedSubviews.append(badgeRow)
+        }
+
+        if let cardTitle = gc?.v2ApprovedCardTitle, !cardTitle.isEmpty {
+            let cardTitleLabel = UILabel()
+            cardTitleLabel.translatesAutoresizingMaskIntoConstraints = false
+            cardTitleLabel.text = cardTitle
+            cardTitleLabel.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
+            cardTitleLabel.textColor = fontColor
+            cardTitleLabel.numberOfLines = 0
+            arrangedSubviews.append(cardTitleLabel)
+        }
+
+        if let cardSubtitle = gc?.successInfo2Text, !cardSubtitle.isEmpty {
+            let cardSubtitleLabel = UILabel()
+            cardSubtitleLabel.translatesAutoresizingMaskIntoConstraints = false
+            cardSubtitleLabel.text = cardSubtitle
+            cardSubtitleLabel.font = UIFont.systemFont(ofSize: 14, weight: .regular)
+            cardSubtitleLabel.textColor = fontColor.withAlphaComponent(0.6)
+            cardSubtitleLabel.numberOfLines = 0
+            arrangedSubviews.append(cardSubtitleLabel)
+        }
+
+        guard !arrangedSubviews.isEmpty else { return }
+
+        let contentStack = UIStackView(arrangedSubviews: arrangedSubviews)
+        contentStack.axis = .vertical
+        contentStack.spacing = 8
+        contentStack.translatesAutoresizingMaskIntoConstraints = false
+        approvedCardView.addSubview(contentStack)
+
+        NSLayoutConstraint.activate([
+            contentStack.topAnchor.constraint(equalTo: approvedCardView.topAnchor, constant: 16),
+            contentStack.leadingAnchor.constraint(equalTo: approvedCardView.leadingAnchor, constant: 16),
+            contentStack.trailingAnchor.constraint(equalTo: approvedCardView.trailingAnchor, constant: -16),
+            contentStack.bottomAnchor.constraint(equalTo: approvedCardView.bottomAnchor, constant: -16),
+        ])
     }
 
     // MARK: - Pulse rings (same logic as NFCV2ViewController)

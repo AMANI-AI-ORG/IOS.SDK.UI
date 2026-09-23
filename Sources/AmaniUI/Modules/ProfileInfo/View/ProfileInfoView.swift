@@ -16,6 +16,8 @@ class ProfileInfoView: UIView {
   private var completionHandler: (() -> Void)?
   private let nameValidationString: String = "Name should not exceed 64 characters"
   private let surnameValidationString: String = "Surname should not exceed 32 characters"
+  /// Set before `appConfig`, so its value is available when `appConfig`'s didSet builds the UI.
+  var isStepRejected: Bool = false
   var appConfig: AppConfigModel? {
         didSet {
             guard let config = appConfig else { return }
@@ -31,6 +33,7 @@ class ProfileInfoView: UIView {
   private var surnameInput = RoundedTextInput()
   private var birthdateLabel = UILabel()
   private var birthdateInput = RoundedTextInput()
+  private var rejectedErrorLabel = UILabel()
   private var submitButton = RoundedButton()
   private var formView = UIStackView()
   private var mainStackView = UIStackView()
@@ -116,7 +119,16 @@ class ProfileInfoView: UIView {
         withColor: hextoUIColor(hexString: appConfig?.generalconfigs?.primaryButtonBackgroundColor ?? "#EA3365")
       )
       
+      // Inline rejection error — shown when this profile-info step was previously rejected
+      // (matches Android, which surfaces v2StepRejectedText here rather than on the Home step card).
+      self.rejectedErrorLabel.text = appConfig?.generalconfigs?.v2StepRejectedText ?? "This information could not be verified. Please check and try again."
+      self.rejectedErrorLabel.textColor = hextoUIColor(hexString: "#D64545")
+      self.rejectedErrorLabel.font = UIFont.systemFont(ofSize: 13.0, weight: .medium)
+      self.rejectedErrorLabel.numberOfLines = 0
+      self.rejectedErrorLabel.isHidden = !isStepRejected
+
       self.formView = UIStackView(arrangedSubviews: [
+        rejectedErrorLabel,
         nameLegend, nameInput,
         surnameLegend, surnameInput,
         birthdateLabel, birthdateInput,
@@ -376,7 +388,7 @@ class ProfileInfoView: UIView {
         self.surnameLegend.text = document.surnameTitle!
         self.surnameInput.updatePlaceHolder(text: document.surnameHint!)
         self.birthdateLabel.text = document.birthDateTitle!
-//        self.birthdateInput.updatePlaceHolder(text: document.birthDateHint!)
+        self.birthdateInput.updatePlaceHolder(text: document.birthDateHint!)
     }
   }
   

@@ -34,10 +34,10 @@ class KYCStepViewModel {
   init(from stepConfig: StepConfig, initialRule: KYCRuleModel, topController onVC: UIViewController?) {
     self.stepConfig = stepConfig
     id = initialRule.id ?? ""
-    title = stepConfig.buttonText?.notUploaded ?? stepConfig.title ?? ""
-      
+    title = stepConfig.buttonText?.notUploaded ?? initialRule.title ?? ""
+
     if (stepConfig.documents?.count ?? 0) > 1 {
-          title = stepConfig.buttonText?.notUploaded ?? stepConfig.title ?? ""
+          title = stepConfig.buttonText?.notUploaded ?? initialRule.title ?? ""
     }
       
     mandatoryStepIDs = stepConfig.mandatoryStepIDs ?? []
@@ -151,6 +151,12 @@ class KYCStepViewModel {
   
   func getRuleModel() -> KYCRuleModel {
     return rule
+  }
+
+  /// The backend-provided rejection reason for this step, if any — takes priority over the
+  /// generic config-driven rejection message (matches Android's rule.errors[].errorMessage-first behavior).
+  var backendErrorMessage: String? {
+    rule?.errors?.first?.error_message
   }
   
   /// Get the status of current configuration

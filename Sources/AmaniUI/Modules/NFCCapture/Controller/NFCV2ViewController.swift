@@ -10,6 +10,7 @@ class NFCV2ViewController: BaseViewController {
     var nfcFormView: NFCConfigureV2View!
     var docID: String?
     private var documentVersion: DocumentVersion?
+    private var stepConfirmText: String?
     private var onFinishCallback: (() -> Void)?
     private var appConfig: AppConfigModel?
     private var nfcNavTitle: String?
@@ -59,7 +60,7 @@ class NFCV2ViewController: BaseViewController {
 
     /// The Lottie file has no native text layers — these captions are the only on-screen copy
     /// describing each state, rendered as a native label kept in sync with the animation's frame.
-    /// Proposed future server config key: `nfcV2.animationStates`. Deferred, per spec — hardcoded until that config exists.
+    /// Hardcoded fallback values, overridden per-key by `documentVersion.nfcV2.animationStates` — see `captions` below.
     private static let defaultCaptions: [String: String] = [
         "place": "Place the document behind your phone",
         "detected": "Chip located",
@@ -70,6 +71,23 @@ class NFCV2ViewController: BaseViewController {
         "retry": "Try again and reposition the phone",
         "success": "Read complete",
     ]
+
+    /// Config-driven overrides for `defaultCaptions`, keyed the same way, sourced from the nested
+    /// `nfcV2.animationStates` object (matches the original spec's JSON shape). Falls back to the
+    /// hardcoded default per-key when unset.
+    private lazy var captions: [String: String] = {
+        let states = documentVersion?.nfcV2?.animationStates
+        return [
+            "place": states?.place ?? Self.defaultCaptions["place"]!,
+            "detected": states?.detected ?? Self.defaultCaptions["detected"]!,
+            "hold": states?.hold ?? Self.defaultCaptions["hold"]!,
+            "reading": states?.reading ?? Self.defaultCaptions["reading"]!,
+            "dontMove": states?.dontMove ?? Self.defaultCaptions["dontMove"]!,
+            "remove": states?.remove ?? Self.defaultCaptions["remove"]!,
+            "retry": states?.retry ?? Self.defaultCaptions["retry"]!,
+            "success": states?.success ?? Self.defaultCaptions["success"]!,
+        ]
+    }()
 
     /// Recolor defaults for the semantic keypaths authored in nfc_animation_v2.json.
     /// Per spec these are NOT config-driven — override here if the palette ever needs to change.
@@ -125,8 +143,9 @@ class NFCV2ViewController: BaseViewController {
 
     // MARK: - Bind
 
-    func bind(documentVersion: DocumentVersion, callback: @escaping () -> Void) {
+    func bind(documentVersion: DocumentVersion, stepConfirmText: String? = nil, callback: @escaping () -> Void) {
         self.documentVersion = documentVersion
+        self.stepConfirmText = stepConfirmText
         self.onFinishCallback = callback
     }
 
@@ -155,9 +174,16 @@ class NFCV2ViewController: BaseViewController {
         navigationItem.leftBarButtonItem = backBarItem
         let fontColor = hextoUIColor(hexString: gc?.appFontColor ?? "1A1A2E")
 
-        // Top description — a single instructional line explaining the animation below.
+        // Top description — the primary instructional line, plus any additional nfcDescription2/3
+        // lines the document version configures (V1's NFC screen already shows all three; V2 only
+        // showed the first until now).
         topDescriptionLabel.translatesAutoresizingMaskIntoConstraints = false
-        topDescriptionLabel.text = docVer.nfcDescription1 ?? "Follow the instructions in the animation below"
+        let descriptionLines = [
+            docVer.nfcV2?.animationHint ?? docVer.nfcDescription1 ?? "Follow the instructions in the animation below",
+            docVer.nfcDescription2,
+            docVer.nfcDescription3,
+        ].compactMap { $0 }.filter { !$0.isEmpty }
+        topDescriptionLabel.text = descriptionLines.joined(separator: "\n")
         topDescriptionLabel.font = UIFont.systemFont(ofSize: 18, weight: .medium)
         topDescriptionLabel.textColor = fontColor
         topDescriptionLabel.textAlignment = .center
@@ -170,7 +196,7 @@ class NFCV2ViewController: BaseViewController {
         // Caption — the animation has no native text layers, so this is the only on-screen copy
         // describing each state, kept in sync with the animation's frame timeline.
         captionLabel.translatesAutoresizingMaskIntoConstraints = false
-        captionLabel.text = Self.defaultCaptions[Self.animationStates[0].key]
+        captionLabel.text = captions[Self.animationStates[0].key]
         captionLabel.font = UIFont.systemFont(ofSize: 17, weight: .semibold)
         captionLabel.textColor = fontColor
         captionLabel.textAlignment = .center
@@ -184,6 +210,10 @@ class NFCV2ViewController: BaseViewController {
         continueButton.setTitleColor(hextoUIColor(hexString: gc?.primaryButtonTextColor ?? "FFFFFF").withAlphaComponent(0.5), for: .disabled)
         continueButton.backgroundColor = accentColor
         continueButton.layer.cornerRadius = AmaniUI.sharedInstance.style.ctaButtonCornerRadius
+        if let borderColorHex = gc?.primaryButtonBorderColor {
+            continueButton.layer.borderWidth = 1.5
+            continueButton.layer.borderColor = hextoUIColor(hexString: borderColorHex).cgColor
+        }
         continueButton.addTarget(self, action: #selector(continueButtonPressed(_:)), for: .touchUpInside)
         // Stays disabled until the idle animation has played through once in full.
         continueButton.isEnabled = false
@@ -269,12 +299,15 @@ class NFCV2ViewController: BaseViewController {
 
     /// Recolors the animation's semantic keypaths (see nfc_animation_v2.json's `amani.colorTokens`),
     /// using a `**` wildcard head so one value recolors every shape sharing that name.
-    /// Per spec: colors stay code-level defaults (not server-config-driven); only `background` is forced transparent
-    /// so the phone-screen cutout shows this screen's real background through it.
+    /// `accent`/`accentStroke` (the highlight/progress color) read `documentVersion.nfcAnimationColor`
+    /// when set — matches Android's single-color model. Device/document/on-color stay fixed
+    /// illustrative colors; only `background` is forced transparent so the phone-screen cutout
+    /// shows this screen's real background through it.
     private func applyDynamicColors(to lottieView: LottieAnimationView) {
+        let accentColor = documentVersion?.nfcAnimationColor.map { hextoUIColor(hexString: $0) } ?? AnimationColor.accent
         let overrides: [(name: String, color: UIColor)] = [
-            ("accent", AnimationColor.accent),
-            ("accentStroke", AnimationColor.accentStroke),
+            ("accent", accentColor),
+            ("accentStroke", accentColor),
             ("onColor", AnimationColor.onColor),
             ("device", AnimationColor.device),
             ("deviceStroke", AnimationColor.deviceStroke),
@@ -357,7 +390,7 @@ class NFCV2ViewController: BaseViewController {
     private func updateCaption() {
         guard let frame = lottieAnimationView?.currentFrame,
               let state = Self.animationStates.last(where: { $0.frame <= frame }) else { return }
-        let caption = Self.defaultCaptions[state.key]
+        let caption = captions[state.key]
         if captionLabel.text != caption {
             captionLabel.text = caption
         }
@@ -442,9 +475,11 @@ class NFCV2ViewController: BaseViewController {
         if nfcNavTitle == nil {
             nfcNavTitle = navigationItem.title
         }
-        navigationItem.title = "Chip data"
+        navigationItem.title = documentVersion?.nfcConfigureTitle ?? "Chip data"
 
         nfcFormView = NFCConfigureV2View()
+        nfcFormView.documentVersion = documentVersion
+        nfcFormView.stepConfirmText = stepConfirmText
         nfcFormView.appConfig = appConfig
         nfcFormView.setTextsFrom(nvi: nvi)
         nfcFormView.delegate = self
