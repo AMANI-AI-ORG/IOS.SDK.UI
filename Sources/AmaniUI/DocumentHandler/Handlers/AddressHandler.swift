@@ -42,8 +42,15 @@ class AddressHandler: NSObject, DocumentHandler {
   
   func upload(completion: @escaping ((Bool?, [String : Any]?) -> Void)) {
     if !(files.isEmpty){
-      ibModule.upload(location:  AmaniUI.sharedInstance.location, files: files){[weak self] result,arg    in
-        completion(result,nil)
+      ibModule.upload(
+        location: AmaniUI.sharedInstance.location,
+        files: files
+      ) { (
+        result: Bool?,
+        arg: [String: Any]?
+      ) in
+        
+        completion(result, arg)
       }
     }
 

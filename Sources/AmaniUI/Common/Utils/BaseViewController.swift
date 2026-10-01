@@ -44,15 +44,16 @@ class BaseViewController: UIViewController {
     /// The configuration of the SDK.
     
     // MARK: - Life cycle methods
-    override func viewDidLoad() {
-        
-        //    rotateScreen(orientation: orientation)
-        self.navigationController?.delegate = self
-        
-        super.viewDidLoad()
-        //    self.locationManager.delegate = self
-       
+  override func viewDidLoad() {
+    navigationController?.delegate = self
+    super.viewDidLoad()
+    
+    navigationItem.backButtonTitle = ""
+    
+    if #available(iOS 14.0, *) {
+      navigationItem.backButtonDisplayMode = .minimal
     }
+  }
     
     
     override func viewWillAppear(_ animated: Bool) {
@@ -64,13 +65,34 @@ class BaseViewController: UIViewController {
     /**
      This method set up all the commmon initial feature of a controller
      */
-    private func baseSetup() {
-        self.setThemeColor()
-        self.navigationController?.navigationBar.isHidden = false
-        if #available(iOS 13.0, *) {
-            overrideUserInterfaceStyle = .light
-        }
+  private func baseSetup() {
+    setThemeColor()
+    
+    navigationController?.navigationBar.isHidden = false
+    
+    if #available(iOS 13.0, *) {
+      overrideUserInterfaceStyle = .light
     }
+    
+    configureBackButtonIfNeeded()
+  }
+  
+  private func configureBackButtonIfNeeded() {
+    guard let navigationController else {
+      return
+    }
+    
+    guard navigationController.viewControllers.count > 1 else {
+      return
+    }
+    
+     
+    guard navigationItem.leftBarButtonItem == nil else {
+      return
+    }
+    
+    setNavigationLeftButton(TintColor: navBarFontColor)
+  }
     
     func setNavigationRightButtonPDF(text: String?, tintColor: String?) {
         let leftButton: UIButton = UIButton(type: .custom)

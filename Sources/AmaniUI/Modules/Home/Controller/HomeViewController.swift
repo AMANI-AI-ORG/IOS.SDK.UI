@@ -266,28 +266,107 @@ class HomeViewController: BaseViewController {
 extension HomeViewController {
 
   func goToSuccess() {
+    
     guard let stepModels = self.stepModels else {
       print("no model info passed 209")
       return
     }
-    var stepResults:[Bool] = stepModels.compactMap({return ($0.identifier == "kyc" || $0.identifier == nil) && ($0.status == .APPROVED || $0.status == .PENDING_REVIEW)})
-    if !isSuccess && stepResults.count > 0 && !(stepResults.contains(false)) {
-      isSuccess = true
-      if let nonKYCManager = self.nonKYCStepManager, nonKYCManager.hasPostSteps() {
-        nonKYCManager.startFlow(forPreSteps: false) {[weak self] () in
-          DispatchQueue.main.async {
-            let successVC = self?.makeSuccessViewController()
-            if let vc = successVC { self?.navigationController?.pushViewController(vc, animated: true) }
-          }
-        }
-      } else {
+    
+    let stepResults: [Bool] = stepModels.compactMap {
+      
+      return
+      ($0.identifier == "kyc" || $0.identifier == nil)
+      &&
+      (
+        $0.status == .APPROVED
+        || $0.status == .PENDING_REVIEW
+      )
+    }
+    
+    guard
+      !isSuccess,
+      stepResults.count > 0,
+      !stepResults.contains(false)
+    else {
+      return
+    }
+    
+    isSuccess = true
+    
+    /*
+     KYC tamamlandı.
+     
+     Eğer POST-KYC step varsa önce onları çalıştır.
+     */
+    if let nonKYCManager = nonKYCStepManager,
+       nonKYCManager.hasPostSteps() {
+      
+      print("[Home] Starting post-KYC flow")
+      
+      nonKYCManager.startFlow(
+        forPreSteps: false
+      ) { [weak self] in
+        
         DispatchQueue.main.async {
-          let successVC = self.makeSuccessViewController()
-          self.navigationController?.pushViewController(successVC, animated: false)
+          
+          guard let self else {
+            return
+          }
+          
+          print(
+            "[Home] Post-KYC flow completed - showing success"
+          )
+          
+          let successVC =
+          self.makeSuccessViewController()
+          
+          guard let navigationController =
+                  self.navigationController
+          else {
+            print(
+              "[Home] navigationController nil"
+            )
+            return
+          }
+          
+          /*
+           
+           Final stack:
+           Home -> Success
+           */
+          navigationController.setViewControllers(
+            [
+              self,
+              successVC
+            ],
+            animated: true
+          )
         }
       }
+      
+      return
     }
-
+    
+    
+    DispatchQueue.main.async { [weak self] in
+      
+      guard let self else {
+        return
+      }
+      
+      print(
+        "[Home] No post-KYC steps - showing success"
+      )
+      
+      let successVC =
+      self.makeSuccessViewController()
+      
+      self.navigationController?
+        .pushViewController(
+          successVC,
+          animated: true
+        )
+    }
   }
   
   func makeSuccessViewController() -> UIViewController {

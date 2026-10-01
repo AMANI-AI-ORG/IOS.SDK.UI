@@ -14,6 +14,20 @@ import Speech
 
 private class AmaniBundleLocator {}
 
+private enum SDKFinishResult {
+  
+  case success(
+    customerID: String
+  )
+  
+  case failed(
+    customerID: String,
+    rules: [[String: String]]?
+  )
+  
+  case cancelled
+}
+
 public class AmaniUI {
   public static let sharedInstance = AmaniUI()
     /// General Application Config
@@ -441,27 +455,196 @@ public class AmaniUI {
   }
   
   func closeAmaniSDK() {
-    clearPendingSpeechVerifierResume()
-    config = nil
-    rulesKYC = []
-    sharedSDKInstance.removeDelegates()
-    sharedSDKInstance.disconnectFromSSE()
     
+      // MARK: - Resume State
+    
+    clearPendingSpeechVerifierResume()
+    
+      // MARK: - Core SDK Session
+    
+    /*
+     CoreSDK is the actual owner of:
+     - sdkToken
+     - companyID
+     - customer
+     - NVI/MRZ
+     - SSE
+     - AmaniService
+     - logger
+     - session Keychain records
+     
+     endSession() clears all customer/session-specific
+     CoreSDK state.
+     */
+//    sharedSDKInstance.endSession()
+    
+    /*
+     AmaniUI registers itself again in showSDK(),
+     therefore Core delegates can safely be removed here.
+     */
+    sharedSDKInstance.removeDelegates()
+    
+      // MARK: - AmaniUI Sensitive Runtime State
+    
+    customerRespData = nil
+    token = nil
+    userName = nil
+    password = nil
+    sharedSecret = nil
+    customer = nil
+    nviData = nil
+    location = nil
+    
+      // MARK: - UI Flow State
+    
+    config = nil
+    missingRules = nil
+    rulesKYC.removeAll()
+    nonKYCStepManager = nil
+    initialVC = nil
+    parentVC = nil
+    server = nil
+    country = nil
+    
+    /*
+     Stop any currently playing voice.
+     */
+//    do {
+//      try await voiceAssistant?.stop()
+//    } catch {
+//      print("VoiceAssistant can't stop play")
+//    }
+//    
+    voiceAssistant = nil
+  }
+  
+  private func finishSDK(
+    result: SDKFinishResult
+  ) {
+    
+    /*
+     IMPORTANT:
+     
+     Result için gereken değerlerin tamamı bu fonksiyona
+     gelmeden önce capture edilmiş olmalı.
+     
+     closeAmaniSDK() customer/session bilgisini temizler.
+     */
+    
+    closeAmaniSDK()
+    
+    let notifyHost: () -> Void = {
+      [weak self] in
+      
+      guard let self else {
+        return
+      }
+      
+      switch result {
+        
+      case .success(
+        let customerID
+      ):
+        
+        self.delegate?
+          .onKYCSuccess(
+            CustomerId: customerID
+          )
+        
+      case .failed(
+        let customerID,
+        let rules
+      ):
+        
+        self.delegate?
+          .onKYCFailed(
+            CustomerId: customerID,
+            Rules: rules
+          )
+        
+      case .cancelled:
+        
+        /*
+         Existing API'nizde explicit
+         onKYCCancelled olmadığı için
+         şu anda callback göndermiyoruz.
+         
+         İleride eklenebilir.
+         */
+        break
+      }
+    }
+    
+    DispatchQueue.main.async {
+      
+      /*
+       SDK currently presented.
+       */
+      if self.sdkNavigationController
+        .presentingViewController != nil {
+        
+        self.sdkNavigationController.dismiss(
+          animated: true,
+          completion: notifyHost
+        )
+        
+      } else {
+        
+        /*
+         UI already disappeared for some reason.
+         Still deliver the terminal result.
+         */
+        notifyHost()
+      }
+    }
   }
   
   @objc
   public func popViewController() {
-    let customer = sharedSDKInstance.customerInfo().getCustomer()
-    guard let customerId:String = customer.id else {return}
     
-    if let missingRules = missingRules {
-      self.delegate?.onKYCFailed(CustomerId: customerId, Rules: missingRules)
-    }
-    closeAmaniSDK()
-    DispatchQueue.main.async {
-      self.sdkNavigationController.dismiss(animated: true)
+    let customerID =
+    customerRespData?.id
+    
+    let failedRules =
+    missingRules
+    
+    guard let customerID,
+          !customerID.isEmpty
+    else {
+      
+      finishSDK(
+        result: .cancelled
+      )
+      
+      return
     }
     
+    if let failedRules {
+      
+      finishSDK(
+        result: .failed(
+          customerID: customerID,
+          rules: failedRules
+        )
+      )
+      
+    } else {
+      
+      finishSDK(
+        result: .cancelled
+      )
+    }
+  }
+  
+  func completeKYC(
+    customerID: String
+  ) {
+    
+    finishSDK(
+      result: .success(
+        customerID: customerID
+      )
+    )
   }
   
  

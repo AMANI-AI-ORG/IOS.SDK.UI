@@ -10,229 +10,753 @@ import Foundation
 import UIKit
 
 class NonKYCStepManager {
+  
   var preSteps: [KYCStepViewModel] = []
   var postSteps: [KYCStepViewModel] = []
+  
   weak var customerVC: UIViewController?
   weak var navigationController: UINavigationController?
-  private var completionHandler: (() -> Void)!
-  private let customer: CustomerResponseModel
-  private var steps: [KYCStepViewModel] = []
-  private var currentStep: KYCStepViewModel!
-  private var currentStepViewController: UIViewController?
   
-  init(for steps: [AmaniSDK.StepConfig], customer: CustomerResponseModel,navigationController: UINavigationController?, vc: UIViewController) {
+  private var completionHandler: (() -> Void)?
+  
+  private let customer: CustomerResponseModel
+  
+  private var steps: [KYCStepViewModel] = []
+  private var currentStep: KYCStepViewModel?
+  
+  private var currentStepViewController: UIViewController?
+  private var flowBaseViewControllers: [UIViewController] = []
+  
+    // MARK: - Flow protection
+  
+
+  private var activeStepToken: UUID?
+  private var isFlowRunning = false
+  private var isFinishingFlow = false
+  private var locallyCompletedStepIDs = Set<String>()
+  
+  init(
+    for steps: [AmaniSDK.StepConfig],
+    customer: CustomerResponseModel,
+    navigationController: UINavigationController?,
+    vc: UIViewController
+  ) {
     self.customer = customer
     self.navigationController = navigationController
-    customerVC = vc
-    generate(for: steps, rules: customer.rules!)
+    self.customerVC = vc
+    
+    generate(
+      for: steps,
+      rules: customer.rules ?? []
+    )
   }
   
-    /// If nil is returned from the completion callback it means there are no
-    /// steps to start
-  func startFlow(forPreSteps: Bool = true, completionCallback: @escaping () -> Void) {
-    if forPreSteps {
-      steps = preSteps
-    } else {
-      steps = postSteps
+    // MARK: - Start
+  
+    /// If completion callback is called, current Non-KYC section is finished.
+    ///
+    /// IMPORTANT:
+    /// Final step can be ANY step type.
+    /// We never assume EmailOTP is the final step.
+  func startFlow(
+    forPreSteps: Bool = true,
+    completionCallback: @escaping () -> Void
+  ) {
+    DispatchQueue.main.async { [weak self] in
+      guard let self else { return }
+      
+      guard !self.isFlowRunning else {
+        print(
+          "[NonKYC] Duplicate startFlow ignored",
+          "manager:",
+          ObjectIdentifier(self)
+        )
+        return
+      }
+      
+      guard !self.isFinishingFlow else {
+        print("[NonKYC] startFlow ignored - flow is finishing")
+        return
+      }
+      
+      self.completionHandler = completionCallback
+      self.isFlowRunning = true
+      
+      self.flowBaseViewControllers =
+      self.navigationController?.viewControllers ?? []
+      
+      let sourceSteps = forPreSteps
+      ? self.preSteps
+      : self.postSteps
+      
+      self.steps = sourceSteps.filter {
+        !self.isStepCompleted($0)
+      }
+      
+      self.currentStep = nil
+      self.currentStepViewController = nil
+      self.activeStepToken = nil
+      
+      print(
+        "[NonKYC] Flow started",
+        "preFlow:",
+        forPreSteps,
+        "pending:",
+        self.steps.map { $0.identifier ?? "nil" }
+      )
+      
+      guard !self.steps.isEmpty else {
+        self.finishFlow()
+        return
+      }
+      
+      self.executeStep()
+    }
+  }
+  
+    // MARK: - Execute
+  
+  private func executeStep() {
+    
+    guard isFlowRunning else {
+      return
+    }
+    
+    guard !isFinishingFlow else {
+      return
+    }
+
+    while let first = steps.first,
+          isStepCompleted(first) {
+      
+      print(
+        "[NonKYC] Skipping completed step:",
+        first.identifier ?? "nil"
+      )
+      
+      steps.removeFirst()
     }
     
     guard !steps.isEmpty else {
-      completionCallback()
+      finishFlow()
       return
     }
     
-    completionHandler = completionCallback
-    executeStep()
-  }
-  
-  func stepNotExpected() {
-    if steps.isEmpty {
-      completionHandler?()
+    let step = steps.removeFirst()
+    
+    currentStep = step
+    
+    let token = UUID()
+    activeStepToken = token
+    
+    guard let identifier = step.identifier else {
+      print("[NonKYC] Step identifier is nil")
+      skipStep(token: token)
       return
     }
-    executeStep()
-  }
-  
-  private func executeStep() {
-    currentStep = steps.removeFirst()
-    guard let identifier = currentStep.identifier else {
-      stepNotExpected()
+    
+    guard let nonKYCStep =
+            AppConstants.StepsBeforeKYC(rawValue: identifier)
+    else {
+      print(
+        "[NonKYC] Unsupported step:",
+        identifier
+      )
+      
+      skipStep(token: token)
       return
     }
-    guard let nonKYCStep = AppConstants.StepsBeforeKYC(rawValue: identifier) else {
-      stepNotExpected()
-      return
-    }
+    
+    print(
+      "[NonKYC] Executing:",
+      identifier,
+      "token:",
+      token
+    )
     
     switch nonKYCStep {
+      
     case .phoneOTP:
-      startPhoneOTP()
+      startPhoneOTP(
+        step: step,
+        token: token
+      )
+      
     case .emailOTP:
-      startEmailOTP()
+      startEmailOTP(
+        step: step,
+        token: token
+      )
+      
     case .profileInfo:
-      startProfileInfo()
+      startProfileInfo(
+        step: step,
+        token: token
+      )
+      
     case .questionnaire:
-      startQuestionnaire()
+      startQuestionnaire(
+        step: step,
+        token: token
+      )
+      
     case .termsAndConditions:
-      startTermsAndConditions()
+      startTermsAndConditions(
+        step: step,
+        token: token
+      )
     }
+  }
+  
+    // MARK: - Email OTP
+  
+  private func startEmailOTP(
+    step: KYCStepViewModel,
+    token: UUID
+  ) {
+    
+    let emailOTPVC = EmailOTPScreenViewController()
+    
+    emailOTPVC.bind(
+      stepVM: step
+    )
+    
+    emailOTPVC.setCompletionHandler { [weak self] in
+      
+      print(
+        "[NonKYC] Email OTP callback",
+        "token:",
+        token
+      )
+      
+      self?.completeStep(
+        token: token
+      )
+    }
+    
+    navigate(
+      to: emailOTPVC,
+      token: token
+    )
+  }
+  
+    // MARK: - Phone OTP
+  
+  private func startPhoneOTP(
+    step: KYCStepViewModel,
+    token: UUID
+  ) {
+    
+    let phoneOTPVC = PhoneOTPScreenViewController()
+    
+    phoneOTPVC.bind(
+      stepVM: step
+    )
+    
+    phoneOTPVC.setCompletionHandler { [weak self] in
+      
+      print(
+        "[NonKYC] Phone OTP callback",
+        "token:",
+        token
+      )
+      
+      self?.completeStep(
+        token: token
+      )
+    }
+    
+    navigate(
+      to: phoneOTPVC,
+      token: token
+    )
+  }
+  
+    // MARK: - Profile Info
+  
+  private func startProfileInfo(
+    step: KYCStepViewModel,
+    token: UUID
+  ) {
+    
+    let profileInfoVC = ProfileInfoViewController()
+    
+    profileInfoVC.bind(
+      with: step
+    )
+    
+    profileInfoVC.setCompletionHandler { [weak self] in
+      
+      print(
+        "[NonKYC] Profile callback",
+        "token:",
+        token
+      )
+      
+      self?.completeStep(
+        token: token
+      )
+    }
+    
+    navigate(
+      to: profileInfoVC,
+      token: token
+    )
+  }
+  
+    // MARK: - Questionnaire
+  
+  private func startQuestionnaire(
+    step: KYCStepViewModel,
+    token: UUID
+  ) {
+    
+    let questionnaireVC = QuestionnaireViewController()
+    
+    questionnaireVC.bind(
+      with: step
+    )
+    
+    questionnaireVC.setCompletionHandler { [weak self] in
+      
+      print(
+        "[NonKYC] Questionnaire callback",
+        "token:",
+        token
+      )
+      
+      self?.completeStep(
+        token: token
+      )
+    }
+    
+    navigate(
+      to: questionnaireVC,
+      token: token
+    )
+  }
+  
+    // MARK: - Terms
+  
+  private func startTermsAndConditions(
+    step: KYCStepViewModel,
+    token: UUID
+  ) {
+    
+    let tcVC = TermsAndConditionsViewController()
+    
+    tcVC.bind(
+      stepVM: step
+    )
+    
+    tcVC.setCompletionHandler { [weak self] in
+      
+      print(
+        "[NonKYC] Terms callback",
+        "token:",
+        token
+      )
+      
+      self?.completeStep(
+        token: token
+      )
+    }
+    
+    navigate(
+      to: tcVC,
+      token: token
+    )
+  }
+  
+    // MARK: - Step completion
+  
+  private func completeStep(
+    token: UUID
+  ) {
+    DispatchQueue.main.async { [weak self] in
+      guard let self else { return }
+      
+      guard self.activeStepToken == token else {
+        
+        print(
+          "[NonKYC] STALE / DUPLICATE callback ignored",
+          "callback token:",
+          token,
+          "active token:",
+          String(describing: self.activeStepToken)
+        )
+        
+        return
+      }
+      
+      guard let completedStep = self.currentStep else {
+        print("[NonKYC] currentStep nil")
+        return
+      }
 
+      self.activeStepToken = nil
+      
+      self.locallyCompletedStepIDs.insert(
+        completedStep.id
+      )
+      
+      print(
+        "[NonKYC] Step completed:",
+        completedStep.identifier ?? "nil",
+        "remaining:",
+        self.steps.map {
+          $0.identifier ?? "nil"
+        }
+      )
+      
+      self.currentStep = nil
+      self.currentStepViewController = nil
+
+      self.steps.removeAll {
+        self.isStepCompleted($0)
+      }
+      
+
+      if self.steps.isEmpty {
+        self.finishFlow()
+      } else {
+        self.executeStep()
+      }
+    }
   }
   
-  private func startEmailOTP() {
-    if currentStep.status == DocumentStatus.APPROVED {
-      stepCompleted()
+    // MARK: - Skip invalid config
+  
+  private func skipStep(
+    token: UUID
+  ) {
+    DispatchQueue.main.async { [weak self] in
+      guard let self else { return }
+      
+      guard self.activeStepToken == token else {
+        return
+      }
+      
+      self.activeStepToken = nil
+      self.currentStep = nil
+      self.currentStepViewController = nil
+      
+      if self.steps.isEmpty {
+        self.finishFlow()
+      } else {
+        self.executeStep()
+      }
+    }
+  }
+  
+    // MARK: - Navigation
+  
+  private func navigate(
+    to viewController: UIViewController,
+    token: UUID
+  ) {
+    DispatchQueue.main.async { [weak self] in
+      guard let self else { return }
+      
+      guard self.activeStepToken == token else {
+        print("[NonKYC] Navigation ignored - stale token")
+        return
+      }
+      
+      guard let navigationController =
+              self.navigationController
+      else {
+        print("[NonKYC] navigationController nil")
+        return
+      }
+      
+      self.currentStepViewController = viewController
+      
+      let isNavigationVisible =
+      navigationController.presentingViewController != nil
+      || navigationController.viewIfLoaded?.window != nil
+      || self.customerVC?.presentedViewController
+      === navigationController
+      
+      if isNavigationVisible {
+ 
+        var controllers = self.flowBaseViewControllers
+   
+        if controllers.isEmpty {
+          controllers =
+          navigationController.viewControllers
+        }
+        
+        controllers.append(viewController)
+        
+        print(
+          "[NonKYC] Showing step in existing SDK navigation:",
+          String(describing: type(of: viewController))
+        )
+        
+        navigationController.setViewControllers(
+          controllers,
+          animated: true
+        )
+        
+        return
+      }
+      
+      print(
+        "[NonKYC] Presenting SDK navigation with first pre-step:",
+        String(describing: type(of: viewController))
+      )
+      
+      navigationController.setViewControllers(
+        [viewController],
+        animated: false
+      )
+      
+      guard let customerVC = self.customerVC else {
+        print("[NonKYC] customerVC nil")
+        return
+      }
+      
+      guard customerVC.presentedViewController == nil else {
+        
+        print(
+          "[NonKYC] customerVC already presenting:",
+          String(
+            describing:
+              customerVC.presentedViewController
+          )
+        )
+        
+        return
+      }
+      
+      customerVC.present(
+        navigationController,
+        animated: true
+      )
+    }
+  }
+  
+    // MARK: - Finish
+  
+  private func finishFlow() {
+    
+    guard isFlowRunning else {
       return
     }
     
-    DispatchQueue.main.async {
-      
-      let emailOTPVC = EmailOTPScreenViewController()
-      emailOTPVC.bind(stepVM: self.currentStep)
-      emailOTPVC.setCompletionHandler { [weak self] in
-        self?.stepCompleted()
-      }
-      
-      self.currentStepViewController = emailOTPVC
-      self.navigate(to: self.currentStepViewController!)
-    }
-  }
-  
-  private func startPhoneOTP() {
-    if currentStep.status == DocumentStatus.APPROVED {
-      stepCompleted()
+    guard !isFinishingFlow else {
+      print("[NonKYC] Duplicate finishFlow ignored")
       return
     }
     
+    isFinishingFlow = true
+    activeStepToken = nil
+    
+    print("[NonKYC] Current Non-KYC flow completed")
+    
+    let completion = completionHandler
+    completionHandler = nil
+
+    currentStep = nil
+    currentStepViewController = nil
+    
+    isFlowRunning = false
+    isFinishingFlow = false
+    
     DispatchQueue.main.async {
-      let phoneOTPVC = PhoneOTPScreenViewController()
+      print("[NonKYC] Calling flow completion")
+      completion?()
+    }
+  }
+  
+    // MARK: - Helpers
+  
+  private func isStepCompleted(
+    _ step: KYCStepViewModel
+  ) -> Bool {
+    
+    if locallyCompletedStepIDs.contains(step.id) {
+      return true
+    }
+    
+    switch step.status {
       
-      phoneOTPVC.bind(stepVM: self.currentStep)
-      phoneOTPVC.setCompletionHandler {[weak self] in
-        self?.stepCompleted()
-      }
-      self.currentStepViewController = phoneOTPVC
-      self.navigate(to: self.currentStepViewController!)
-    }
-  }
-  
-  private func  startProfileInfo() {
-    if currentStep.status == DocumentStatus.APPROVED {
-      stepCompleted()
-      return
-    }
-    
-    DispatchQueue.main.async {
+    case .APPROVED,
+        .PENDING_REVIEW:
+      return true
       
-      let profileInfoVC = ProfileInfoViewController()
-      profileInfoVC.bind(with: self.currentStep)
-      profileInfoVC.setCompletionHandler {[weak self] in
-        self?.stepCompleted()
-      }
-      self.currentStepViewController = profileInfoVC
-      self.navigate(to: self.currentStepViewController!)
+    default:
+      return false
     }
   }
   
-  private func startQuestionnaire() {
-    if currentStep.status == DocumentStatus.APPROVED {
-      stepCompleted()
-      return
-    }
+    // MARK: - Generate
+  
+  private func generate(
+    for steps: [AmaniSDK.StepConfig],
+    rules: [AmaniSDK.KYCRuleModel]
+  ) {
     
-    DispatchQueue.main.async {
-      let questionnaireVC = QuestionnaireViewController()
-      questionnaireVC.bind(with: self.currentStep)
-      questionnaireVC.setCompletionHandler {[weak self] in
-        self?.stepCompleted()
+    let allStepModels: [KYCStepViewModel] =
+    rules.compactMap { ruleModel in
+      
+      guard let stepModel = steps.first(
+        where: {
+          $0.id == ruleModel.id
+        }
+      ) else {
+        return nil
       }
-      self.currentStepViewController = questionnaireVC
-      self.navigate(to: self.currentStepViewController!)
+      
+      return KYCStepViewModel(
+        from: stepModel,
+        initialRule: ruleModel,
+        topController: customerVC
+      )
     }
-  }
-  
-  private func startTermsAndConditions() {
-    DispatchQueue.main.async {
-      let tcVC = TermsAndConditionsViewController()
-      tcVC.bind(stepVM: self.currentStep)
-      tcVC.setCompletionHandler { [weak self] in
-        self?.stepCompleted()
-      }
-      self.currentStepViewController = tcVC
-      self.navigate(to: self.currentStepViewController!)
-    }
-  }
-  
-  private func stepCompleted() {
-    if steps.isEmpty {
-      completionHandler()
-    } else {
-      executeStep()
-    }
-  }
-  
-  private func navigate(to viewController: UIViewController) {
-    guard let navigationController = self.navigationController else { return }
-    navigationController.setViewControllers([viewController], animated: true)
-    customerVC?.present(navigationController, animated: true)
-  }
-  
-  private func generate(for steps: [AmaniSDK.StepConfig], rules: [AmaniSDK.KYCRuleModel]) {
-    let allStepModels: [KYCStepViewModel] = rules.compactMap { ruleModel in
-      if let stepModel = steps.first(where: { $0.id == ruleModel.id }) {
-        return KYCStepViewModel(from: stepModel, initialRule: ruleModel, topController: customerVC)
-      }
-      return nil
-    }
-    
     
     if allStepModels.isEmpty {
-      self.preSteps = []
-      self.postSteps = []
+      preSteps = []
+      postSteps = []
       return
     }
     
-    var sorted = allStepModels.sorted { $0.sortOrder < $1.sortOrder }
-    
-    // Inject T&C if active, not already accepted, and a URL is actually configured to show.
-    // showTermsAndConditions and termsConditionsURL are independent backend config fields, so a
-    // company can enable the flag without setting a URL (an admin-panel oversight). Injecting the
-    // step in that case pushes a screen with nothing to load, which auto-completes immediately
-    // (see TermsAndConditionsView.loadTermsAndConditionsURL's guard-fail branch) and flashes a
-    // blank screen before the next step replaces it.
-    let appConfig = try? Amani.sharedInstance.appConfig().getApplicationConfig()
-    let hasValidTermsURL = (appConfig?.generalconfigs?.termsConditionsURL).flatMap { URL(string: $0) } != nil
-    if appConfig?.generalconfigs?.showTermsAndConditions == true && customer.termsAcceptedAt == nil && hasValidTermsURL {
-        // Create a dummy config/rule for T&C if it doesn't exist in rules
-        if !sorted.contains(where: { $0.identifier == AppConstants.StepsBeforeKYC.termsAndConditions.rawValue }) {
-            var tcStepConfig = StepConfig(id: "TC", sortOrder: -1, identifier: AppConstants.StepsBeforeKYC.termsAndConditions.rawValue)
-            tcStepConfig.title = "Terms and Conditions"
-            tcStepConfig.documents = []
-            let tcRule = KYCRuleModel(id: "TC", sortOrder: -1, status: DocumentStatus.NOT_UPLOADED.rawValue)
-            let tcStepVM = KYCStepViewModel(from: tcStepConfig, initialRule: tcRule, topController: customerVC)
-            sorted.insert(tcStepVM, at: 0)
-        }
+    var sorted = allStepModels.sorted {
+      $0.sortOrder < $1.sortOrder
     }
-
-    let firstKYCIndex = sorted.firstIndex(where: { return $0.identifier == "kyc"  })
-    let lastKYCIndex = sorted.lastIndex(where: { $0.identifier == "kyc" })
-
-    guard let firstKYCIndex, let lastKYCIndex else {
+    
+      // MARK: T&C injection
+    
+    let appConfig = try? Amani.sharedInstance
+      .appConfig()
+      .getApplicationConfig()
+    
+    let hasValidTermsURL =
+    appConfig?
+      .generalconfigs?
+      .termsConditionsURL
+      .flatMap {
+        URL(string: $0)
+      } != nil
+    
+    if appConfig?
+      .generalconfigs?
+      .showTermsAndConditions == true,
+       customer.termsAcceptedAt == nil,
+       hasValidTermsURL {
+      
+      if !sorted.contains(
+        where: {
+          $0.identifier ==
+          AppConstants
+            .StepsBeforeKYC
+            .termsAndConditions
+            .rawValue
+        }
+      ) {
+        
+        var tcStepConfig = StepConfig(
+          id: "TC",
+          sortOrder: -1,
+          identifier:
+            AppConstants
+            .StepsBeforeKYC
+            .termsAndConditions
+            .rawValue
+        )
+        
+        tcStepConfig.title =
+        "Terms and Conditions"
+        
+        tcStepConfig.documents = []
+        
+        let tcRule = KYCRuleModel(
+          id: "TC",
+          sortOrder: -1,
+          status:
+            DocumentStatus
+            .NOT_UPLOADED
+            .rawValue
+        )
+        
+        let tcStepVM = KYCStepViewModel(
+          from: tcStepConfig,
+          initialRule: tcRule,
+          topController: customerVC
+        )
+        
+        sorted.insert(
+          tcStepVM,
+          at: 0
+        )
+      }
+    }
+    
+    let firstKYCIndex =
+    sorted.firstIndex {
+      $0.identifier == "kyc"
+    }
+    
+    let lastKYCIndex =
+    sorted.lastIndex {
+      $0.identifier == "kyc"
+    }
+    
+    guard let firstKYCIndex,
+          let lastKYCIndex
+    else {
       preSteps = sorted
       postSteps = []
       return
     }
-
+    
     if firstKYCIndex == 0 {
       preSteps = []
     } else {
-      preSteps = Array(sorted[0 ... firstKYCIndex.advanced(by: -1)])
+      preSteps = Array(
+        sorted[..<firstKYCIndex]
+      )
     }
-    postSteps = Array(sorted[lastKYCIndex.advanced(by: 1)...])
+    
+    let postStart =
+    sorted.index(
+      after: lastKYCIndex
+    )
+    
+    if postStart < sorted.endIndex {
+      postSteps = Array(
+        sorted[postStart...]
+      )
+    } else {
+      postSteps = []
+    }
+  }
+  
+    // MARK: - Public helpers
+  
+  func stepNotExpected() {
+    
+    guard let token = activeStepToken else {
+      
+      if steps.isEmpty {
+        finishFlow()
+      } else {
+        executeStep()
+      }
+      
+      return
+    }
+    
+    skipStep(
+      token: token
+    )
   }
   
   public func hasPostSteps() -> Bool {
-    let approvedPostStepCount = postSteps.filter { $0.status != DocumentStatus.APPROVED }.filter({$0.status != DocumentStatus.PENDING_REVIEW})
-    return approvedPostStepCount.count > 0
+    
+    return postSteps.contains {
+      !isStepCompleted($0)
+    }
   }
 }

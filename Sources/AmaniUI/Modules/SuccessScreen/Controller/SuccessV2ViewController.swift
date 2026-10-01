@@ -236,7 +236,7 @@ class SuccessV2ViewController: BaseViewController {
     @objc func continueBtnAction(_ sender: UIButton) {
         let customer = Amani.sharedInstance.customerInfo().getCustomer()
         guard let customerId: String = customer.id else { return }
-        AmaniUI.sharedInstance.delegate?.onKYCSuccess(CustomerId: customerId)
+        AmaniUI.sharedInstance.completeKYC(customerID: customerId)
         AmaniUI.sharedInstance.closeAmaniSDK()
         navigationController?.dismiss(animated: true, completion: nil)
     }

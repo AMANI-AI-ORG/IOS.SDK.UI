@@ -334,40 +334,117 @@ class DocConfirmationV2ViewController: BaseViewController {
 // MARK: - MRZ delegate (identical logic to v1)
 
 extension DocConfirmationV2ViewController: mrzInfoDelegate {
-    func mrzInfo(_ mrz: AmaniSDK.MrzModel?, documentId: String?) {
-        if let mrzData = mrz {
-            var isReady = false
-            switch AmaniUI.sharedInstance.apiVersion {
-            case .v1:
-                isReady = true
-            case .v2:
-                isReady = AmaniUI.sharedInstance.isEnabledClientSideMrz ? true : (self.mrzDocumentId == documentId)
-            default:
-                break
-            }
-            if isReady {
-                AmaniUI.sharedInstance.nviData = NviModel(mrzModel: mrzData)
-                if !AmaniUI.sharedInstance.isEnabledClientSideMrz {
-                    dismissAnimationView()
-                }
-                confirmCallback?()
-            }
-        } else {
-            DispatchQueue.main.async {
-                let appConfig = try? Amani.sharedInstance.appConfig().getApplicationConfig()
-                let actions: [(String, UIAlertAction.Style)] = [
-                    (appConfig?.generalconfigs?.okText ?? "Re-try", .default)
-                ]
-                AlertDialogueUtility.shared.showAlertWithActions(
-                    vc: self,
-                    title: appConfig?.generalconfigs?.tryAgainText,
-                    message: self.documentVersion?.mrzReadErrorText,
-                    actions: actions
-                ) { _ in
-                    self.dismissAnimationView()
-                    self.navigationController?.popViewController(animated: true)
-                }
-            }
+  func mrzInfo(
+    _ mrz: AmaniSDK.MrzModel?,
+    documentId: String?
+  ) {
+    DispatchQueue.main.async { [weak self] in
+      guard let self else {
+        return
+      }
+      
+#if DEBUG
+      print(
+        "AMANI UI MRZ INFO:",
+        "mrz:",
+        mrz != nil,
+        "documentId:",
+        documentId ?? "nil",
+        "expectedDocumentId:",
+        self.mrzDocumentId ?? "nil"
+      )
+#endif
+      
+      if let mrzData = mrz {
+        var isReady = false
+        
+        switch AmaniUI.sharedInstance.apiVersion {
+          
+        case .v1:
+          isReady = true
+          
+        case .v2:
+          isReady =
+          AmaniUI.sharedInstance.isEnabledClientSideMrz
+          ? true
+          : self.mrzDocumentId == documentId
+          
+        default:
+          break
+        }
+        
+        guard isReady else {
+#if DEBUG
+          print(
+            "AMANI UI MRZ DOCUMENT ID MISMATCH"
+          )
+#endif
+          return
+        }
+        
+        AmaniUI.sharedInstance.nviData =
+        NviModel(
+          mrzModel: mrzData
+        )
+        
+        if !AmaniUI.sharedInstance.isEnabledClientSideMrz {
+          self.dismissAnimationView()
+        }
+        
+        self.confirmCallback?()
+        return
+      }
+      
+        // MARK: - MRZ Failure
+      
+#if DEBUG
+      print(
+        "AMANI UI MRZ FAILURE - DISMISSING LOADING"
+      )
+#endif
+      
+      self.dismissAnimationView()
+      
+      let appConfig =
+      try? Amani.sharedInstance
+        .appConfig()
+        .getApplicationConfig()
+      
+      let actions: [
+        (
+          String,
+          UIAlertAction.Style
+        )
+      ] = [
+        (
+          appConfig?
+            .generalconfigs?
+            .okText
+          ?? "Re-try",
+          .default
+        )
+      ]
+      
+      AlertDialogueUtility.shared
+        .showAlertWithActions(
+          vc: self,
+          title: appConfig?
+            .generalconfigs?
+            .tryAgainText,
+          message: self
+            .documentVersion?
+            .mrzReadErrorText,
+          actions: actions
+        ) { [weak self] _ in
+          guard let self else {
+            return
+          }
+          
+          self.navigationController?
+            .popViewController(
+              animated: true
+            )
         }
     }
+  }
 }
