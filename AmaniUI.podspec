@@ -1,7 +1,7 @@
 Pod::Spec.new do |s|
 
   s.name         = "AmaniUI"
-  s.version      = "1.4.4"
+  s.version      = "1.4.5"
 
   s.license = {
     :type => "Copyright",
@@ -64,7 +64,7 @@ Pod::Spec.new do |s|
 
     core.dependency(
       "AmaniSDK",
-      "~> 3.7.6"
+      "~> 3.7.8"
     )
   end
 
@@ -73,11 +73,7 @@ Pod::Spec.new do |s|
   s.subspec "SpeechVerifier" do |speech|
 
     speech.dependency "AmaniUI/Core"
-
-    speech.dependency(
-      "AmaniSpeechVerifier",
-      "~> 1.0.1"
-    )
+    speech.dependency "AmaniSpeechVerifier", "~> 1.0"
 
     speech.source_files =
       "Sources/AmaniUI/SpeechVerifierIntegration/**/*.swift"
