@@ -28,7 +28,31 @@ private enum SDKFinishResult {
   case cancelled
 }
 
+
+
 public class AmaniUI {
+  internal struct SpeechVerifierSessionContext {
+    let serverURL: String
+    let token: String
+  }
+  
+  internal var speechVerifierSessionContext:
+  SpeechVerifierSessionContext? {
+    
+    guard
+      let server,
+      !server.isEmpty,
+      let token,
+      !token.isEmpty
+    else {
+      return nil
+    }
+    
+    return SpeechVerifierSessionContext(
+      serverURL: server,
+      token: token
+    )
+  }
   public static let sharedInstance = AmaniUI()
     /// General Application Config
     /// This property represents the delegate methods.
@@ -46,7 +70,7 @@ public class AmaniUI {
   internal var voiceAssistant: AmaniVoiceAssistant?
 
   internal let sharedSDKInstance = Amani.sharedInstance
-  private let version = "1.4.4"
+  private let version = "1.4.5"
   
   var missingRules:[[String:String]]? = nil
   var rulesKYC: [KYCRuleModel] = []
@@ -866,9 +890,10 @@ extension AmaniUI: AmaniDelegate {
     )
   }
   
-  public func onStepModel(customerId: String, rules: [AmaniSDK.KYCRuleModel]?) {
-    let object: [Any?] = [customerId, rules]
+  public func onStepModel(customerId: String, documentId: String, rules: [AmaniSDK.KYCRuleModel]?) {
+    let object: [Any?] = [customerId, rules, documentId]
     debugPrint(rules)
+    debugPrint(documentId)
 //    DispatchQueue.main.async {
       self.generateRulesKYC(rules: rules)
 //    }

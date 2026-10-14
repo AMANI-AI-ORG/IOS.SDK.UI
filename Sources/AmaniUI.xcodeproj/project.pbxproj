@@ -39,6 +39,7 @@
 		48F461D52E5DC4EA0066297B /* QuestionTextInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48F461D42E5DC4EA0066297B /* QuestionTextInputView.swift */; };
 		911EC4D82F9B9D1A000C80F9 /* TermsAndConditionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 911EC4D52F9B9D1A000C80F9 /* TermsAndConditionsView.swift */; };
 		911EC4D92F9B9D1A000C80F9 /* TermsAndConditionsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 911EC4D62F9B9D1A000C80F9 /* TermsAndConditionsViewController.swift */; };
+		9143D3CD3080112000D6B215 /* SpeechHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9143D3CC3080112000D6B215 /* SpeechHandler.swift */; };
 		9197F9342F990C72005C1088 /* AmaniUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C544FEE328C2303700C0B406 /* AmaniUI.framework */; };
 		C523DEF72B3A740B00F68E32 /* CheckSMSViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C523DEF62B3A740B00F68E32 /* CheckSMSViewController.swift */; };
 		C523DEFA2B3A745F00F68E32 /* CheckSMSView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C523DEF92B3A745F00F68E32 /* CheckSMSView.swift */; };
@@ -142,6 +143,7 @@
 		48F461D42E5DC4EA0066297B /* QuestionTextInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionTextInputView.swift; sourceTree = "<group>"; };
 		911EC4D52F9B9D1A000C80F9 /* TermsAndConditionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsAndConditionsView.swift; sourceTree = "<group>"; };
 		911EC4D62F9B9D1A000C80F9 /* TermsAndConditionsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsAndConditionsViewController.swift; sourceTree = "<group>"; };
+		9143D3CC3080112000D6B215 /* SpeechHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechHandler.swift; sourceTree = "<group>"; };
 		9197F9302F990C72005C1088 /* AmaniUnitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AmaniUnitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C523DEF62B3A740B00F68E32 /* CheckSMSViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckSMSViewController.swift; sourceTree = "<group>"; };
 		C523DEF92B3A745F00F68E32 /* CheckSMSView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckSMSView.swift; sourceTree = "<group>"; };
@@ -337,6 +339,14 @@
 			path = TermsAndConditions;
 			sourceTree = "<group>";
 		};
+		9143D3D2308013BD00D6B215 /* SpeechVerifierIntegration */ = {
+			isa = PBXGroup;
+			children = (
+				9143D3CC3080112000D6B215 /* SpeechHandler.swift */,
+			);
+			path = SpeechVerifierIntegration;
+			sourceTree = "<group>";
+		};
 		C523DEF52B3A73EC00F68E32 /* ChecklSMSScreen */ = {
 			isa = PBXGroup;
 			children = (
@@ -433,6 +443,7 @@
 		C544FEE428C2303700C0B406 /* AmaniUI */ = {
 			isa = PBXGroup;
 			children = (
+				9143D3D2308013BD00D6B215 /* SpeechVerifierIntegration */,
 				185A2BF62BBD64AE00855F77 /* CountryPicker */,
 				C56169302B84CCF400050A8D /* NonKYCStepManager */,
 				C5A06F6F29127C0C009520AF /* DocumentHandler */,
@@ -823,7 +834,7 @@
 			packageReferences = (
 				488B08D22D68905B00935C5D /* XCRemoteSwiftPackageReference "AmaniVoiceAssistantSDK" */,
 				488B08D32D68906800935C5D /* XCRemoteSwiftPackageReference "lottie-spm" */,
-				1801C8E72DC2673400F53343 /* XCRemoteSwiftPackageReference "AmaniSDK-ios" */,
+				1801C8E72DC2673400F53343 /* XCRemoteSwiftPackageReference "AmaniSDK-iOS" */,
 			);
 			productRefGroup = 489D406E26BBE5DD0009AB39 /* Products */;
 			projectDirPath = "";
@@ -934,6 +945,7 @@
 				C5A06F7429127C55009520AF /* BaseDocumentHandler.swift in Sources */,
 				48F461D52E5DC4EA0066297B /* QuestionTextInputView.swift in Sources */,
 				48DF761029699A8F000D519A /* ContainerViewController.swift in Sources */,
+				9143D3CD3080112000D6B215 /* SpeechHandler.swift in Sources */,
 				C561693E2B84CD8400050A8D /* QuestionnaireViewModel.swift in Sources */,
 				C53C475528C8D9C800FA10B6 /* UtilityModels.swift in Sources */,
 				C56169452B84CD8400050A8D /* AnswerButton.swift in Sources */,
@@ -1232,7 +1244,7 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		1801C8E72DC2673400F53343 /* XCRemoteSwiftPackageReference "AmaniSDK-ios" */ = {
+		1801C8E72DC2673400F53343 /* XCRemoteSwiftPackageReference "AmaniSDK-iOS" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/AMANI-AI-ORG/AmaniSDK-iOS";
 			requirement = {
@@ -1269,7 +1281,7 @@
 /* Begin XCSwiftPackageProductDependency section */
 		1801C8E82DC2673400F53343 /* AmaniSDK */ = {
 			isa = XCSwiftPackageProductDependency;
-			package = 1801C8E72DC2673400F53343 /* XCRemoteSwiftPackageReference "AmaniSDK-ios" */;
+			package = 1801C8E72DC2673400F53343 /* XCRemoteSwiftPackageReference "AmaniSDK-iOS" */;
 			productName = AmaniSDK;
 		};
 		488B08D42D68906800935C5D /* Lottie */ = {

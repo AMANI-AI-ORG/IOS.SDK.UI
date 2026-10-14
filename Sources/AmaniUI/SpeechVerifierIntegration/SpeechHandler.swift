@@ -8,9 +8,9 @@
 import UIKit
 import CoreLocation
 import AmaniSDK
+import AmaniSpeechVerifier
 
 final class SpeechHandler: DocumentHandler {
-  
   weak var topVC: UIViewController?
   var stepViewModel: KYCStepViewModel
   var docID: DocumentID
@@ -18,11 +18,10 @@ final class SpeechHandler: DocumentHandler {
   private var containerVC: ContainerViewController?
   private var speechVerifierModule: SpeechVerifier?
   private var uploadLoadingView: UIView?
-  private var isUploadInProgress: Bool = false
+  private var isUploadInProgress = false
   private var cachedUploadResult: Bool?
   private var uploadCallbacks: [((Bool?, [String: Any]?) -> Void)] = []
-  
-  private var didFinishFlow: Bool = false
+  private var didFinishFlow = false
   
   required init(
     topVC: UIViewController,
@@ -38,138 +37,68 @@ final class SpeechHandler: DocumentHandler {
     docStep: DocumentStepModel,
     version: DocumentVersion,
     workingStepIndex: Int,
-    completion: @escaping (
-      Result<KYCStepViewModel, KYCStepError>
-    ) -> Void
+    completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
   ) {
-    
     resetFlowState()
-    
     let containerVC = ContainerViewController()
     self.containerVC = containerVC
-    
-    containerVC.docID = self.docID
+    containerVC.docID = docID
     containerVC.stepConfig = stepViewModel.stepConfig
     containerVC.isSpeechFlow = true
     
-    containerVC.setWillDisappearCallback {
-      [weak self] in
-      
-      AmaniUI.sharedInstance
-        .clearPendingSpeechVerifierResume()
-      
-      guard let verifier =
-              self?.speechVerifierModule
-      else {
+    containerVC.setWillDisappearCallback { [weak self] in
+      AmaniUI.sharedInstance.clearPendingSpeechVerifierResume()
+      guard let verifier = self?.speechVerifierModule else {
         return
       }
-      
-  
       DispatchQueue.main.async {
         verifier.stop()
       }
     }
     
-
-    containerVC.setDisappearCallback {
-      [weak self] in
-      
+    containerVC.setDisappearCallback { [weak self] in
       guard let self else {
         return
       }
-      
       self.stepView?.removeFromSuperview()
       self.stepView = nil
       self.speechVerifierModule = nil
       self.containerVC = nil
     }
     
-    let containerStep =
-    version.steps?[workingStepIndex] ?? docStep
-    
+    let containerStep = version.steps?[workingStepIndex] ?? docStep
     containerVC.bind(
       animationName: nil,
       docStep: containerStep,
       step: steps.front,
       docID: docID
     ) { [weak self, weak containerVC] in
-      
-      guard let self else {
+      guard let self, let containerVC else {
         return
       }
-      
-      guard let containerVC else {
+      guard let speechView = self.runSpeechVerifier(
+        step: docStep,
+        version: version,
+        completion: completion
+      ) else {
+        completion(.failure(.moduleError))
         return
       }
-      
-      guard let speechView =
-              self.runSpeechVerifier(
-                step: docStep,
-                version: version,
-                completion: completion
-              )
-      else {
-        completion(
-          .failure(.moduleError)
-        )
-        return
-      }
-      
       self.stepView = speechView
-      
-      containerVC.view.addSubview(
-        speechView
-      )
-      
-      containerVC.view.bringSubviewToFront(
-        speechView
-      )
-      
-      speechView.translatesAutoresizingMaskIntoConstraints =
-      false
-      
+      containerVC.view.addSubview(speechView)
+      containerVC.view.bringSubviewToFront(speechView)
+      speechView.translatesAutoresizingMaskIntoConstraints = false
       NSLayoutConstraint.activate([
-        speechView.leadingAnchor.constraint(
-          equalTo:
-            containerVC.view.leadingAnchor
-        ),
-        
-        speechView.trailingAnchor.constraint(
-          equalTo:
-            containerVC.view.trailingAnchor
-        ),
-        
-        speechView.topAnchor.constraint(
-          equalTo:
-            containerVC
-            .view
-            .safeAreaLayoutGuide
-            .topAnchor
-        ),
-        
-        speechView.bottomAnchor.constraint(
-          equalTo:
-            containerVC.view.bottomAnchor
-        )
+        speechView.leadingAnchor.constraint(equalTo: containerVC.view.leadingAnchor),
+        speechView.trailingAnchor.constraint(equalTo: containerVC.view.trailingAnchor),
+        speechView.topAnchor.constraint(equalTo: containerVC.view.safeAreaLayoutGuide.topAnchor),
+        speechView.bottomAnchor.constraint(equalTo: containerVC.view.bottomAnchor)
       ])
     }
     
-    topVC?
-      .navigationController?
-      .setNavigationBarHidden(
-        false,
-        animated: false
-      )
-    
-    topVC?
-      .navigationController?
-      .pushViewController(
-        containerVC,
-        animated: true
-      )
+    topVC?.navigationController?.setNavigationBarHidden(false, animated: false)
+    topVC?.navigationController?.pushViewController(containerVC, animated: true)
   }
-  
-  
   
   func upload(
     completion: @escaping ((Bool?, [String: Any]?) -> Void)
@@ -178,28 +107,23 @@ final class SpeechHandler: DocumentHandler {
       completion(cachedUploadResult, nil)
       return
     }
-    
     uploadCallbacks.append(completion)
-    
     guard !isUploadInProgress else {
       return
     }
-    
     guard let speechVerifierModule else {
       flushUploadCallbacks(result: false, extras: nil)
       return
     }
-    
     isUploadInProgress = true
-    
     speechVerifierModule.upload(
       location: AmaniUI.sharedInstance.location
     ) { [weak self] result in
-      guard let self else { return }
-      
+      guard let self else {
+        return
+      }
       self.isUploadInProgress = false
       self.cachedUploadResult = result
-      
       self.flushUploadCallbacks(
         result: result,
         extras: nil
@@ -211,18 +135,31 @@ final class SpeechHandler: DocumentHandler {
   // MARK: - Speech Verifier
 
 private extension SpeechHandler {
-  
-  private func runSpeechVerifier(
+  func runSpeechVerifier(
     step: DocumentStepModel,
     version: DocumentVersion,
     completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
   ) -> UIView? {
-    speechVerifierModule = Amani.sharedInstance.speechVerifier()
-    
-    guard let verifier = speechVerifierModule else {
+    guard let session = AmaniUI.sharedInstance.speechVerifierSessionContext else {
+      debugPrint("SpeechHandler: SpeechVerifier session context is missing.")
       return nil
     }
     
+    let verifier: SpeechVerifier
+    
+    do {
+      verifier = try SpeechVerifier.Builder()
+        .session(
+          serverURL: session.serverURL,
+          token: session.token
+        )
+        .build()
+    } catch {
+      debugPrint("SpeechHandler: SpeechVerifier build failed:", error)
+      return nil
+    }
+    
+    speechVerifierModule = verifier
     configureSpeechVerifier(
       verifier,
       step: step,
@@ -231,20 +168,21 @@ private extension SpeechHandler {
     
     verifier
       .setVideoRecording(enabled: true)
-//      .setEnableSpeechVoices(true)
+      .setVoiceProvider(makeSpeechVerifierVoiceProvider())
       .onSuccess { [weak self] result in
-        guard let self else { return }
-        
-        guard result == true else {
+        guard let self else {
+          return
+        }
+        guard result else {
           self.finishWithFailure(completion: completion)
           return
         }
-        
         self.handleSpeechSuccess(completion: completion)
       }
       .onFailure { [weak self] reason, currentAttempt in
-        guard let self else { return }
-        
+        guard let self else {
+          return
+        }
         self.handleSpeechFailure(
           reason: reason,
           currentAttempt: currentAttempt,
@@ -255,7 +193,7 @@ private extension SpeechHandler {
     do {
       return try verifier.start()
     } catch {
-      print("SpeechHandler start error:", error)
+      debugPrint("SpeechHandler: SpeechVerifier start failed:", error)
       return nil
     }
   }
@@ -265,62 +203,67 @@ private extension SpeechHandler {
     step: DocumentStepModel,
     version: DocumentVersion
   ) {
-    
-    let type = normalizedSpeechType(
-      from: version
-    )
-    
-    verifier.setType(
-      type: type
-    )
-    
-    verifier.setTimeout(
-      seconds:
-        version.timeoutSeconds ?? 30
-    )
-    
+    let type = normalizedSpeechType(from: version)
+    verifier.setType(type: type)
+    verifier.setTimeout(seconds: version.timeoutSeconds ?? 30)
     applySpeechVerifierAppearance(
       verifier,
       version: version
     )
-    
     applySpeechVerifierUITexts(
       verifier,
       version: version
     )
-//    
     applySpeechVerifierPrompts(
       verifier,
       step: step,
       version: version
     )
     
-    switch speechPhase(
-      from: type
-    ) {
-      
+    switch speechPhase(from: type) {
     case .identityAnswers:
-      
       configureIdentityAnswersFlow(
         verifier,
         version: version
       )
-      
     case .spokenText:
-      
       configureSpokenTextFlow(
         verifier,
         version: version
       )
     }
   }
-
+  
+  func makeSpeechVerifierVoiceProvider() -> SpeechVerifierVoiceProvider? {
+    guard let voiceURL = AmaniUI.sharedInstance.config?
+      .generalconfigs?
+      .ttsVoices?
+      .trimmingCharacters(in: .whitespacesAndNewlines),
+          !voiceURL.isEmpty
+    else {
+      return nil
+    }
+    
+    return SpeechVerifierVoiceProvider(
+      play: { key in
+        guard let assistant = AmaniUI.sharedInstance.voiceAssistant else {
+          return ""
+        }
+        return try await assistant.play(key: key)
+      },
+      stop: {
+        guard let assistant = AmaniUI.sharedInstance.voiceAssistant else {
+          return
+        }
+        try await assistant.stop()
+      }
+    )
+  }
 }
 
   // MARK: - Phase
 
 private extension SpeechHandler {
-  
   enum SpeechPhase {
     case identityAnswers
     case spokenText
@@ -354,29 +297,22 @@ private extension SpeechHandler {
   }
 }
 
-  // MARK: - Identity Answers Flow
+  // MARK: - Identity Answers
 
 private extension SpeechHandler {
-  
   func configureIdentityAnswersFlow(
     _ verifier: SpeechVerifier,
     version: DocumentVersion
   ) {
-    let configurations = identityQuestionConfigurations(
-      from: version
-    )
+    let configurations = identityQuestionConfigurations(from: version)
     
     if configurations.isEmpty {
       verifier.setIdentityQuestion(
-        defaultIdentityQuestionConfigurations(
-          from: version
-        )
+        defaultIdentityQuestionConfigurations(from: version)
       )
     } else {
       verifier.setIdentityQuestion(configurations)
     }
-    
-   
   }
   
   func identityQuestionConfigurations(
@@ -390,9 +326,7 @@ private extension SpeechHandler {
     let defaultThreshold =
     speechVerification.defaultMatchThresholdPercent ?? 100
     
-    var result: [
-      SpeechVerifierIdentityQuestionConfiguration
-    ] = []
+    var result: [SpeechVerifierIdentityQuestionConfiguration] = []
     
     for step in steps {
       let type = step.type?
@@ -434,8 +368,6 @@ private extension SpeechHandler {
     return result
   }
   
-  
-  
   func mapIdentityQuestionType(
     _ rawType: String?
   ) -> SpeechVerifierIdentityQuestionType? {
@@ -446,16 +378,12 @@ private extension SpeechHandler {
     switch type {
     case "ID_NUMBER":
       return .idNumber
-      
     case "MOTHER_NAME":
       return .motherName
-      
     case "FATHER_NAME":
       return .fatherName
-      
     case "DOCUMENT_NUMBER":
       return .documentNumber
-      
     default:
       return nil
     }
@@ -481,10 +409,9 @@ private extension SpeechHandler {
   }
 }
 
-  // MARK: - Spoken Text Flow
+  // MARK: - Spoken Text
 
 private extension SpeechHandler {
-  
   func configureSpokenTextFlow(
     _ verifier: SpeechVerifier,
     version: DocumentVersion
@@ -500,11 +427,6 @@ private extension SpeechHandler {
       return
     }
     
-    /*
-     UI selects one configured text and forwards that exact text's threshold.
-     Core stores it on the resolved runtime step, so it cannot leak into
-     identity questions or any later step.
-     */
     verifier.setText(
       selectedItem.text,
       selectedItem.matchThresholdPercent
@@ -561,11 +483,9 @@ private extension SpeechHandler {
   }
 }
 
-
-  // MARK: - Colors
+  // MARK: - Appearance
 
 private extension SpeechHandler {
-  
   func applySpeechVerifierAppearance(
     _ verifier: SpeechVerifier,
     version: DocumentVersion
@@ -579,38 +499,41 @@ private extension SpeechHandler {
     from version: DocumentVersion
   ) -> SpeechVerifierAppearance {
     let colors = version.speechVerifierUiColors
+    let instructionTextColor =
+    UIColor(hexString: colors?.instructionTextColor ?? "")
+    let visibleTextColor =
+    UIColor(hexString: colors?.speechTextColor ?? "")
+    let statusTextColor =
+    UIColor(hexString: colors?.statusTextColor ?? "")
+    let highlightColor =
+    UIColor(hexString: colors?.speechTextHighlightColor ?? "")
+    let overlayBackgroundColor =
+    UIColor(
+      hexString:
+        colors?.overlayBackgroundColor ??
+      "\(UIColor.black.withAlphaComponent(0.80))"
+    )
+    let retryButtonTextColor =
+    UIColor(hexString: colors?.retryButtonTextColor ?? "ffffff")
+    let retryButtonBackgroundColor =
+    UIColor(hexString: colors?.retryButtonBackgroundColor ?? "")
+    let listeningIconColor =
+    UIColor(
+      hexString:
+        colors?.micActiveColor ??
+      "\(highlightColor)"
+    )
+    let successIconColor =
+    UIColor(
+      hexString:
+        colors?.resultSuccessColor ??
+      "\(highlightColor)"
+    )
+    let failureIconColor =
+    UIColor(hexString: colors?.resultErrorColor ?? "")
     
-    
-    let instructionTextColor = UIColor(hexString: colors?.instructionTextColor ?? "")
-    
-    
-    let visibleTextColor = UIColor(hexString: colors?.speechTextColor ?? "")
-    
-    
-    let statusTextColor = UIColor(hexString: colors?.statusTextColor ?? "")
-    
-    
-    let highlightColor = UIColor(hexString: colors?.speechTextHighlightColor ?? "")
-    
-    
-    let overlayBackgroundColor = UIColor(hexString: colors?.overlayBackgroundColor ?? "\(UIColor.black.withAlphaComponent(0.80))")
-    
-    
-    let retryButtonTextColor = UIColor(hexString: colors?.retryButtonTextColor ?? "ffffff")
-    
-    
-    let retryButtonBackgroundColor = UIColor(hexString: colors?.retryButtonBackgroundColor ?? "")
-    
-    
-    let listeningIconColor = UIColor(hexString: colors?.micActiveColor ?? "\(highlightColor)")
-    
-    
-    let successIconColor = UIColor(hexString: colors?.resultSuccessColor ?? "\(highlightColor)")
-    
-    
-    let failureIconColor = UIColor(hexString: colors?.resultErrorColor ?? "")
-    
-    let exemptWords = version.speechVerification?.exemptWords?
+    let exemptWords = version.speechVerification?
+      .exemptWords?
       .map {
         $0.trimmingCharacters(
           in: .whitespacesAndNewlines
@@ -626,10 +549,12 @@ private extension SpeechHandler {
       highlightedTextColor: highlightColor,
       statusTextColor: statusTextColor,
       progressTintColor: highlightColor,
-      progressTrackTintColor: visibleTextColor.withAlphaComponent(0.25),
+      progressTrackTintColor:
+        visibleTextColor.withAlphaComponent(0.25),
       overlayBackgroundColor: overlayBackgroundColor,
       retryButtonTextColor: retryButtonTextColor,
-      retryButtonBackgroundColor: retryButtonBackgroundColor,
+      retryButtonBackgroundColor:
+        retryButtonBackgroundColor,
       listeningIconColor: listeningIconColor,
       successIconColor: successIconColor,
       failureIconColor: failureIconColor,
@@ -638,27 +563,104 @@ private extension SpeechHandler {
   }
 }
 
+  // MARK: - UI Texts & Prompts
+
+private extension SpeechHandler {
+  func applySpeechVerifierUITexts(
+    _ verifier: SpeechVerifier,
+    version: DocumentVersion
+  ) {
+    let texts = version.speechVerifierUiTexts
+    
+    verifier.setUITexts(
+      SpeechVerifierUITexts(
+        retry: texts?.retry,
+        failed: texts?.failed,
+        verified: texts?.verified,
+        listening: texts?.listening,
+        verifying: texts?.verifying,
+        instruction: texts?.instruction,
+        recognizerNotAvailable:
+          texts?.recognizerNotAvailable
+      )
+    )
+  }
+  
+  func applySpeechVerifierPrompts(
+    _ verifier: SpeechVerifier,
+    step: DocumentStepModel,
+    version: DocumentVersion
+  ) {
+    verifier.setPrompts(
+      makeSpeechVerifierPrompts(
+        step: step,
+        version: version
+      )
+    )
+  }
+  
+  func makeSpeechVerifierPrompts(
+    step: DocumentStepModel,
+    version: DocumentVersion
+  ) -> SpeechVerifierPrompts {
+    let captureDescription = step.captureDescription?
+      .trimmingCharacters(in: .whitespacesAndNewlines)
+    
+    let instructionText =
+    captureDescription?.isEmpty == false
+    ? captureDescription
+    : nil
+    
+    let configPrompts =
+    version.speechVerifierIdentityPrompts ?? [:]
+    
+    var identityPrompts:
+    [SpeechVerifierIdentityQuestionType: SpeechVerifierStepPrompt] = [:]
+    
+    for (rawType, promptText) in configPrompts {
+      guard let mappedType =
+              mapIdentityQuestionType(rawType)
+      else {
+        continue
+      }
+      
+      let cleaned =
+      promptText.trimmingCharacters(
+        in: .whitespacesAndNewlines
+      )
+      
+      guard !cleaned.isEmpty else {
+        continue
+      }
+      
+      identityPrompts[mappedType] =
+      SpeechVerifierStepPrompt(
+        visibleText: cleaned,
+        instructionText: instructionText
+      )
+    }
+    
+    return SpeechVerifierPrompts(
+      identityPrompts: identityPrompts,
+      spokenTextInstruction: instructionText
+    )
+  }
+}
+
   // MARK: - State
 
 private extension SpeechHandler {
-  
   func resetFlowState() {
-    
+    speechVerifierModule?.stop()
     didFinishFlow = false
-    
     cachedUploadResult = nil
-    
     uploadCallbacks.removeAll()
-    
     isUploadInProgress = false
-    
     uploadLoadingView?.removeFromSuperview()
     uploadLoadingView = nil
-    
+    stepView?.removeFromSuperview()
     stepView = nil
-    
     speechVerifierModule = nil
-    
     containerVC = nil
   }
   
@@ -678,7 +680,6 @@ private extension SpeechHandler {
   // MARK: - Flow
 
 private extension SpeechHandler {
-  
   func handleSpeechSuccess(
     completion: @escaping (
       Result<KYCStepViewModel, KYCStepError>
@@ -689,9 +690,7 @@ private extension SpeechHandler {
     }
     
     didFinishFlow = true
-    
-    AmaniUI.sharedInstance
-      .clearPendingSpeechVerifierResume()
+    AmaniUI.sharedInstance.clearPendingSpeechVerifierResume()
     
     debugPrint(
       "SpeechHandler: success received, starting upload."
@@ -708,7 +707,7 @@ private extension SpeechHandler {
         self.hideUploadLoading()
         
         guard self.isOwnContainerOnTop() else {
-          print(
+          debugPrint(
             "SpeechHandler success ignored: stale handler callback."
           )
           return
@@ -716,59 +715,50 @@ private extension SpeechHandler {
         
         self.stepView?.removeFromSuperview()
         self.stepView = nil
+        self.popOwnContainerIfNeeded()
         
         if result == true {
-          self.popOwnContainerIfNeeded()
-          
           completion(
-            .success(
-              self.stepViewModel
-            )
+            .success(self.stepViewModel)
           )
         } else {
-          self.popOwnContainerIfNeeded()
-          
           completion(
-            .failure(
-              .moduleError
-            )
+            .failure(.moduleError)
           )
         }
       }
     }
   }
- 
+  
   func handleSpeechFailure(
     reason: SpeechVerifierFailureReason,
     currentAttempt: Int,
-    completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
+    completion: @escaping (
+      Result<KYCStepViewModel, KYCStepError>
+    ) -> Void
   ) {
-    print("SpeechHandler failure:", reason.rawValue, "attempt:", currentAttempt)
+    debugPrint(
+      "SpeechHandler failure:",
+      reason.rawValue,
+      "attempt:",
+      currentAttempt
+    )
     
     switch reason {
     case .verificationFailed:
-     
       return
-      
     case .timeout:
-    
       return
-      
     case .speechRecognitionUnavailable:
-     
       return
-      
     case .cameraPermissionDenied,
         .microphonePermissionDenied,
         .speechRecognitionPermissionDenied:
-      
       AmaniUI.sharedInstance
         .markSpeechVerifierResumePending(
           stepID: stepViewModel.id
         )
-     
       return
-      
     case .cameraUnavailable,
         .microphoneUnavailable,
         .cameraInputFailed,
@@ -777,7 +767,9 @@ private extension SpeechHandler {
         .identityAnswerNotFound,
         .identityAnswerMismatch,
         .unknown:
-      finishWithFailure(completion: completion)
+      finishWithFailure(
+        completion: completion
+      )
     }
   }
   
@@ -786,18 +778,21 @@ private extension SpeechHandler {
       Result<KYCStepViewModel, KYCStepError>
     ) -> Void
   ) {
-    guard !didFinishFlow else { return }
-    didFinishFlow = true
+    guard !didFinishFlow else {
+      return
+    }
     
-    AmaniUI.sharedInstance
-      .clearPendingSpeechVerifierResume()
+    didFinishFlow = true
+    AmaniUI.sharedInstance.clearPendingSpeechVerifierResume()
     
     DispatchQueue.main.async {
       self.stepView?.removeFromSuperview()
       self.stepView = nil
       
       guard self.isOwnContainerOnTop() else {
-        print("SpeechHandler failure ignored: stale handler callback.")
+        debugPrint(
+          "SpeechHandler failure ignored: stale handler callback."
+        )
         return
       }
       
@@ -807,117 +802,40 @@ private extension SpeechHandler {
   }
 }
 
+  // MARK: - Navigation
 
 private extension SpeechHandler {
-  
   func isOwnContainerOnTop() -> Bool {
     guard let containerVC else {
       return false
     }
     
-    return topVC?.navigationController?.topViewController === containerVC
+    return topVC?
+      .navigationController?
+      .topViewController === containerVC
   }
   
   func popOwnContainerIfNeeded() {
     guard isOwnContainerOnTop() else {
-      print("SpeechHandler skip pop: this handler's container is not on top anymore.")
+      debugPrint(
+        "SpeechHandler skip pop: this handler's container is not on top anymore."
+      )
       return
     }
     
-    topVC?.navigationController?.popToViewController(
-      ofClass: HomeViewController.self
-    )
+    topVC?
+      .navigationController?
+      .popToViewController(
+        ofClass: HomeViewController.self
+      )
   }
 }
 
-
-  // MARK: - Prompts
+  // MARK: - Upload Loading
 
 private extension SpeechHandler {
-  
-  func applySpeechVerifierUITexts(
-    _ verifier: SpeechVerifier,
-    version: DocumentVersion
-  ) {
-    
-    let texts =
-    version.speechVerifierUiTexts
-    
-    verifier.setUITexts(
-      SpeechVerifierUITexts(
-        retry: texts?.retry,
-        failed: texts?.failed,
-        verified: texts?.verified,
-        listening: texts?.listening,
-        verifying: texts?.verifying,
-        instruction: texts?.instruction,
-        recognizerNotAvailable:
-          texts?.recognizerNotAvailable
-      )
-    )
-  }
-//  
-  func applySpeechVerifierPrompts(
-    _ verifier: SpeechVerifier,
-    step: DocumentStepModel,
-    version: DocumentVersion
-  ) {
-    verifier.setPrompts(
-      makeSpeechVerifierPrompts(
-        step: step,
-        version: version
-      )
-    )
-  }
-  
-  func makeSpeechVerifierPrompts(
-    step: DocumentStepModel,
-    version: DocumentVersion
-  ) -> SpeechVerifierPrompts {
-  
-    let captureDescription = step.captureDescription?
-      .trimmingCharacters(in: .whitespacesAndNewlines)
-    
-    let instructionText =
-    (captureDescription?.isEmpty == false) ? captureDescription : nil
-    
-    let configPrompts = version.speechVerifierIdentityPrompts ?? [:]
-    
-    var identityPrompts:
-    [SpeechVerifierIdentityQuestionType: SpeechVerifierStepPrompt] = [:]
-    
-    for (rawType, promptText) in configPrompts {
-      guard let mappedType = mapIdentityQuestionType(rawType) else {
-        continue
-      }
-      
-      let cleaned = promptText.trimmingCharacters(
-        in: .whitespacesAndNewlines
-      )
-      
-      guard !cleaned.isEmpty else {
-        continue
-      }
-      
-      
-    
-      identityPrompts[mappedType] = SpeechVerifierStepPrompt(
-        visibleText: cleaned,
-        instructionText: instructionText
-      )
-    }
-    
-    return SpeechVerifierPrompts(
-      identityPrompts: identityPrompts,
-      spokenTextInstruction: instructionText
-    )
-  }
-  
   func showUploadLoading() {
-    
-    guard let containerView =
-            containerVC?.view
-    else {
+    guard let containerView = containerVC?.view else {
       return
     }
     
@@ -925,37 +843,22 @@ private extension SpeechHandler {
       return
     }
     
-    let loadingView =
-    SpeechVerifierUploadLoadingView()
-    
-    loadingView.translatesAutoresizingMaskIntoConstraints =
-    false
-    
-    uploadLoadingView =
-    loadingView
-    
-    containerView.addSubview(
-      loadingView
-    )
-    
-    containerView.bringSubviewToFront(
-      loadingView
-    )
+    let loadingView = SpeechVerifierUploadLoadingView()
+    loadingView.translatesAutoresizingMaskIntoConstraints = false
+    uploadLoadingView = loadingView
+    containerView.addSubview(loadingView)
+    containerView.bringSubviewToFront(loadingView)
     
     NSLayoutConstraint.activate([
-      
       loadingView.leadingAnchor.constraint(
         equalTo: containerView.leadingAnchor
       ),
-      
       loadingView.trailingAnchor.constraint(
         equalTo: containerView.trailingAnchor
       ),
-      
       loadingView.topAnchor.constraint(
         equalTo: containerView.topAnchor
       ),
-      
       loadingView.bottomAnchor.constraint(
         equalTo: containerView.bottomAnchor
       )
@@ -963,67 +866,38 @@ private extension SpeechHandler {
   }
   
   func hideUploadLoading() {
-    
     uploadLoadingView?.removeFromSuperview()
-    
     uploadLoadingView = nil
   }
 }
 
-
 private final class SpeechVerifierUploadLoadingView: UIView {
-  
   private let spinner =
-  UIActivityIndicatorView(
-    style: .large
-  )
+  UIActivityIndicatorView(style: .large)
   
-  override init(
-    frame: CGRect
-  ) {
-    
-    super.init(
-      frame: frame
-    )
-    
+  override init(frame: CGRect) {
+    super.init(frame: frame)
     setupUI()
   }
   
-  required init?(
-    coder: NSCoder
-  ) {
-    
-    super.init(
-      coder: coder
-    )
-    
+  required init?(coder: NSCoder) {
+    super.init(coder: coder)
     setupUI()
   }
   
   private func setupUI() {
-    
     backgroundColor =
-    UIColor.black
-      .withAlphaComponent(0.45)
-    
+    UIColor.black.withAlphaComponent(0.45)
     isUserInteractionEnabled = true
-    
     spinner.color = .white
     spinner.hidesWhenStopped = true
-    
-    spinner.translatesAutoresizingMaskIntoConstraints =
-    false
-    
-    addSubview(
-      spinner
-    )
+    spinner.translatesAutoresizingMaskIntoConstraints = false
+    addSubview(spinner)
     
     NSLayoutConstraint.activate([
-      
       spinner.centerXAnchor.constraint(
         equalTo: centerXAnchor
       ),
-      
       spinner.centerYAnchor.constraint(
         equalTo: centerYAnchor
       )
