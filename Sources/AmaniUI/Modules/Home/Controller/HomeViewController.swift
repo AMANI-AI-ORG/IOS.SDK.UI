@@ -166,7 +166,7 @@ class HomeViewController: BaseViewController {
     guard let appConfig = appConfig else { return }
     let gc = appConfig.generalconfigs
     continueButton.translatesAutoresizingMaskIntoConstraints = false
-    continueButton.setTitle(gc?.buttonTextOptionalSteps ?? gc?.continueText ?? "Continue", for: .normal)
+    continueButton.setTitle(optionalStepsContinueButtonTitle(), for: .normal)
     continueButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
     continueButton.setTitleColor(hextoUIColor(hexString: gc?.primaryButtonTextColor ?? "FFFFFF"), for: .normal)
     continueButton.backgroundColor = hextoUIColor(hexString: gc?.primaryButtonBackgroundColor ?? "#C0395A")
@@ -189,9 +189,14 @@ class HomeViewController: BaseViewController {
   /// review, as long as at least one optional step is still incomplete — if everything
   /// (including optional steps) is already done, `goToSuccess()` takes over automatically.
   private func updateContinueButtonVisibility() {
+    setContinueButtonVisible(shouldShowOptionalStepsContinueButton())
+  }
+
+  /// Shared with `HomeV2ViewController`, which builds its own V2-styled button but reuses this
+  /// condition and `performSuccessNavigation()` rather than duplicating the step-filtering logic.
+  func shouldShowOptionalStepsContinueButton() -> Bool {
     guard let stepModels = self.stepModels, !isSuccess else {
-      setContinueButtonVisible(false)
-      return
+      return false
     }
     let kycSteps = stepModels.filter { $0.identifier == "kyc" || $0.identifier == nil }
     let optionalSteps = kycSteps.filter { $0.isOptional }
@@ -200,7 +205,13 @@ class HomeViewController: BaseViewController {
     let mandatoryComplete = mandatorySteps.allSatisfy { $0.status == .APPROVED || $0.status == .PENDING_REVIEW }
     let allComplete = kycSteps.allSatisfy { $0.status == .APPROVED || $0.status == .PENDING_REVIEW }
 
-    setContinueButtonVisible(mandatoryComplete && !optionalSteps.isEmpty && !allComplete)
+    return mandatoryComplete && !optionalSteps.isEmpty && !allComplete
+  }
+
+  /// Fallback chain shared with `HomeV2ViewController` for the optional-steps Continue button title.
+  func optionalStepsContinueButtonTitle() -> String {
+    let gc = appConfig?.generalconfigs
+    return gc?.buttonTextOptionalSteps ?? gc?.continueText ?? "Continue"
   }
 
   @objc private func continueButtonTapped() {
@@ -350,7 +361,8 @@ extension HomeViewController {
 
   /// Shared success-screen transition, used both by the automatic all-steps-complete path
   /// in `goToSuccess()` and by the manual "Continue" button when optional steps are skipped.
-  private func performSuccessNavigation() {
+  /// Not private: `HomeV2ViewController`'s own Continue button calls this directly.
+  func performSuccessNavigation() {
     isSuccess = true
     setContinueButtonVisible(false)
 
