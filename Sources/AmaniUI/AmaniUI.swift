@@ -11,7 +11,9 @@ import CoreLocation
 import AVFoundation
 import AVFAudio
 import Speech
-
+#if canImport(AmaniSpeechVerifier)
+import AmaniSpeechVerifier
+#endif
 private class AmaniBundleLocator {}
 
 private enum SDKFinishResult {
@@ -31,6 +33,7 @@ private enum SDKFinishResult {
 
 
 public class AmaniUI {
+#if canImport(AmaniSpeechVerifier)
   internal struct SpeechVerifierSessionContext {
     let serverURL: String
     let token: String
@@ -53,6 +56,7 @@ public class AmaniUI {
       token: token
     )
   }
+#endif
   public static let sharedInstance = AmaniUI()
     /// General Application Config
     /// This property represents the delegate methods.
@@ -106,7 +110,7 @@ public class AmaniUI {
   public var poseEstimationRecord:Bool? = nil
   public var isEnabledClientSideMrz: Bool = false
   public var preparationVideoURL: URL? = nil
-  
+#if canImport(AmaniSpeechVerifier)
   public var hasPendingSpeechVerifierResume: Bool {
     AmaniUIResumeStore.shared.hasPendingResume
   }
@@ -215,7 +219,7 @@ public class AmaniUI {
     
     return state
   }
-  
+  #endif
   /**
    This method used to get SDK bundle
    - returns: Bundle
@@ -671,7 +675,7 @@ public class AmaniUI {
     )
   }
   
- 
+#if canImport(AmaniSpeechVerifier)
   func markSpeechVerifierResumePending(
     stepID: String?
   ) {
@@ -699,56 +703,6 @@ public class AmaniUI {
   
   public func clearPendingSpeechVerifierResume() {
     AmaniUIResumeStore.shared.clear()
-  }
-
-  
-  internal func updateConfig(config: AppConfigModel) {
-    guard let rules = self.customerRespData?.rules else {
-      return
-    }
-    DispatchQueue.main.async {
-      self.generateRulesKYC(rules: rules)
-      self.setAppTheme(model: self.config?.generalconfigs!)
-      if self.apiVersion == .v2 {
-        self.nonKYCStepManager = NonKYCStepManager(for: config.stepConfig!, customer: self.customerRespData!, navigationController: self.sdkNavigationController, vc: self.parentVC!)
-        if self
-          .pendingSpeechVerifierResumeStateForCurrentSession()
-            != nil {
-          
-          self.startKYCHome()
-          return
-        }
-        self.nonKYCStepManager!.startFlow(forPreSteps: true) { [weak self] () in
-          guard let self = self else { return }
-          self.startKYCHome()
-        }
-      } else {
-        self.startKYCHome()
-      }
-    }
-  }
-  
-  private func startKYCHome() {
-    DispatchQueue.main.async {
-      switch self.uiVersion {
-      case .v1:
-        self.initialVC = HomeViewController()
-      case .v2:
-        self.initialVC = HomeV2ViewController()
-      }
-      self.initialVC?.bind(customerData: self.customerRespData!, nonKYCManager: self.nonKYCStepManager)
-      try? self.initialVC?.generateKYCStepViewModels(from: self.rulesKYC)
-      let stepModels = self.initialVC?.stepModels
-      self.sdkNavigationController.setViewControllers(
-        [self.initialVC!],
-        animated: true
-      )
-      guard self.parentVC?.presentedViewController == nil else { return }
-      guard !self.sdkNavigationController.isBeingPresented else { return }
-      self.parentVC?.present(self.sdkNavigationController, animated: true) { [weak self] in
-        self?.resumePendingSpeechVerifierIfNeeded(stepModels: stepModels)
-      }
-    }
   }
   
   private func resumePendingSpeechVerifierIfNeeded(
@@ -824,6 +778,58 @@ public class AmaniUI {
       }
     }
   }
+  #endif
+  
+  internal func updateConfig(config: AppConfigModel) {
+    guard let rules = self.customerRespData?.rules else {
+      return
+    }
+    DispatchQueue.main.async {
+      self.generateRulesKYC(rules: rules)
+      self.setAppTheme(model: self.config?.generalconfigs!)
+      if self.apiVersion == .v2 {
+        self.nonKYCStepManager = NonKYCStepManager(for: config.stepConfig!, customer: self.customerRespData!, navigationController: self.sdkNavigationController, vc: self.parentVC!)
+        if self
+          .pendingSpeechVerifierResumeStateForCurrentSession()
+            != nil {
+          
+          self.startKYCHome()
+          return
+        }
+        self.nonKYCStepManager!.startFlow(forPreSteps: true) { [weak self] () in
+          guard let self = self else { return }
+          self.startKYCHome()
+        }
+      } else {
+        self.startKYCHome()
+      }
+    }
+  }
+  
+  private func startKYCHome() {
+    DispatchQueue.main.async {
+      switch self.uiVersion {
+      case .v1:
+        self.initialVC = HomeViewController()
+      case .v2:
+        self.initialVC = HomeV2ViewController()
+      }
+      self.initialVC?.bind(customerData: self.customerRespData!, nonKYCManager: self.nonKYCStepManager)
+      try? self.initialVC?.generateKYCStepViewModels(from: self.rulesKYC)
+      let stepModels = self.initialVC?.stepModels
+      self.sdkNavigationController.setViewControllers(
+        [self.initialVC!],
+        animated: true
+      )
+      guard self.parentVC?.presentedViewController == nil else { return }
+      guard !self.sdkNavigationController.isBeingPresented else { return }
+      self.parentVC?.present(self.sdkNavigationController, animated: true) { [weak self] in
+        self?.resumePendingSpeechVerifierIfNeeded(stepModels: stepModels)
+      }
+    }
+  }
+  
+ 
   
   /**
    This method set up the app theme color
