@@ -166,7 +166,7 @@ class HomeViewController: BaseViewController {
     guard let appConfig = appConfig else { return }
     let gc = appConfig.generalconfigs
     continueButton.translatesAutoresizingMaskIntoConstraints = false
-    continueButton.setTitle(gc?.buttonTextOptionalSteps ?? "Continue", for: .normal)
+    continueButton.setTitle(gc?.buttonTextOptionalSteps ?? gc?.continueText ?? "Continue", for: .normal)
     continueButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
     continueButton.setTitleColor(hextoUIColor(hexString: gc?.primaryButtonTextColor ?? "FFFFFF"), for: .normal)
     continueButton.backgroundColor = hextoUIColor(hexString: gc?.primaryButtonBackgroundColor ?? "#C0395A")
