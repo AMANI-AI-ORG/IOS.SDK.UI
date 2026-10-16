@@ -485,9 +485,11 @@ public class AmaniUI {
   func closeAmaniSDK() {
     
       // MARK: - Resume State
-    
+
+#if canImport(AmaniSpeechVerifier)
     clearPendingSpeechVerifierResume()
-    
+#endif
+
       // MARK: - Core SDK Session
     
     /*
@@ -789,13 +791,15 @@ public class AmaniUI {
       self.setAppTheme(model: self.config?.generalconfigs!)
       if self.apiVersion == .v2 {
         self.nonKYCStepManager = NonKYCStepManager(for: config.stepConfig!, customer: self.customerRespData!, navigationController: self.sdkNavigationController, vc: self.parentVC!)
+#if canImport(AmaniSpeechVerifier)
         if self
           .pendingSpeechVerifierResumeStateForCurrentSession()
             != nil {
-          
+
           self.startKYCHome()
           return
         }
+#endif
         self.nonKYCStepManager!.startFlow(forPreSteps: true) { [weak self] () in
           guard let self = self else { return }
           self.startKYCHome()
@@ -824,7 +828,9 @@ public class AmaniUI {
       guard self.parentVC?.presentedViewController == nil else { return }
       guard !self.sdkNavigationController.isBeingPresented else { return }
       self.parentVC?.present(self.sdkNavigationController, animated: true) { [weak self] in
+#if canImport(AmaniSpeechVerifier)
         self?.resumePendingSpeechVerifierIfNeeded(stepModels: stepModels)
+#endif
       }
     }
   }

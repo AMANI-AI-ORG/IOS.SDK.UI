@@ -180,7 +180,7 @@ class DocumentHandlerHelper {
         docID: .ST
       )
 #else
-      return nil
+      fatalError("Speech verification step requires the AmaniUI/SpeechVerifier subspec")
 #endif
       
     case .IB:
