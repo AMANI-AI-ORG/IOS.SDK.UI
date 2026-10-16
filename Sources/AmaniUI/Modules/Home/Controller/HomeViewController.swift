@@ -208,6 +208,21 @@ class HomeViewController: BaseViewController {
     return mandatoryComplete && !optionalSteps.isEmpty && !allComplete
   }
 
+  /// True once an optional step has been skipped to reach success — i.e. the mandatory steps
+  /// are done but not every KYC step is. Used to let the success screen's back button return to
+  /// Home (so the user can still finish the optional step) instead of closing the SDK, which is
+  /// the right behavior only when every step, optional included, is actually complete.
+  private func hasPendingOptionalSteps() -> Bool {
+    guard let stepModels = self.stepModels else {
+      return false
+    }
+    let kycSteps = stepModels.filter { $0.identifier == "kyc" || $0.identifier == nil }
+    guard !kycSteps.isEmpty else {
+      return false
+    }
+    return !kycSteps.allSatisfy { $0.status == .APPROVED || $0.status == .PENDING_REVIEW }
+  }
+
   /// Fallback chain shared with `HomeV2ViewController` for the optional-steps Continue button title.
   func optionalStepsContinueButtonTitle() -> String {
     let gc = appConfig?.generalconfigs
@@ -363,6 +378,10 @@ extension HomeViewController {
   /// in `goToSuccess()` and by the manual "Continue" button when optional steps are skipped.
   /// Not private: `HomeV2ViewController`'s own Continue button calls this directly.
   func performSuccessNavigation() {
+    // Computed before isSuccess flips to true, since hasPendingOptionalSteps() only makes sense
+    // against the pre-navigation step state.
+    let viaOptionalSkip = hasPendingOptionalSteps()
+
     isSuccess = true
     setContinueButtonVisible(false)
 
@@ -391,7 +410,7 @@ extension HomeViewController {
           )
 
           let successVC =
-          self.makeSuccessViewController()
+          self.makeSuccessViewController(allowsReturnToHome: viaOptionalSkip)
 
           guard let navigationController =
                   self.navigationController
@@ -432,7 +451,7 @@ extension HomeViewController {
       )
 
       let successVC =
-      self.makeSuccessViewController()
+      self.makeSuccessViewController(allowsReturnToHome: viaOptionalSkip)
 
       self.navigationController?
         .pushViewController(
@@ -441,14 +460,16 @@ extension HomeViewController {
         )
     }
   }
-  
-  func makeSuccessViewController() -> UIViewController {
+
+  func makeSuccessViewController(allowsReturnToHome: Bool = false) -> UIViewController {
     if AmaniUI.sharedInstance.uiVersion == .v2 {
       let vc = SuccessV2ViewController()
       vc.bind(stepModels: stepModels)
       return vc
     } else {
-      return SuccessViewController()
+      let vc = SuccessViewController()
+      vc.allowsReturnToHome = allowsReturnToHome
+      return vc
     }
   }
 
