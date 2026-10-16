@@ -107,25 +107,49 @@ final class SpeechHandler: DocumentHandler {
       completion(cachedUploadResult, nil)
       return
     }
+    
     uploadCallbacks.append(completion)
+    
     guard !isUploadInProgress else {
       return
     }
+    
     guard let speechVerifierModule else {
-      flushUploadCallbacks(result: false, extras: nil)
+#if DEBUG
+      debugPrint(
+        "SpeechHandler upload failed: SpeechVerifier instance is missing."
+      )
+#endif
+      flushUploadCallbacks(
+        result: false,
+        extras: nil
+      )
       return
     }
+    
     isUploadInProgress = true
+    
     speechVerifierModule.upload(
       location: AmaniUI.sharedInstance.location
     ) { [weak self] result in
       guard let self else {
         return
       }
+      
+      let success = result == true
+      
+#if DEBUG
+      debugPrint(
+        "SpeechHandler upload completed:",
+        success
+      )
+#endif
+      
       self.isUploadInProgress = false
-      self.cachedUploadResult = result
+      self.cachedUploadResult = success
+      
       self.flushUploadCallbacks(
-        result: result,
+        result: success,
         extras: nil
       )
     }
@@ -690,11 +714,15 @@ private extension SpeechHandler {
     }
     
     didFinishFlow = true
-    AmaniUI.sharedInstance.clearPendingSpeechVerifierResume()
     
+    AmaniUI.sharedInstance
+      .clearPendingSpeechVerifierResume()
+    
+#if DEBUG
     debugPrint(
-      "SpeechHandler: success received, starting upload."
+      "SpeechHandler: verification succeeded, starting upload."
     )
+#endif
     
     showUploadLoading()
     
@@ -707,25 +735,32 @@ private extension SpeechHandler {
         self.hideUploadLoading()
         
         guard self.isOwnContainerOnTop() else {
+#if DEBUG
           debugPrint(
-            "SpeechHandler success ignored: stale handler callback."
+            "SpeechHandler: upload callback ignored because container is no longer active."
           )
+#endif
           return
         }
         
         self.stepView?.removeFromSuperview()
         self.stepView = nil
-        self.popOwnContainerIfNeeded()
         
-        if result == true {
-          completion(
-            .success(self.stepViewModel)
-          )
-        } else {
+        guard result == true else {
+          self.popOwnContainerIfNeeded()
           completion(
             .failure(.moduleError)
           )
+          return
         }
+        
+        self.popOwnContainerIfNeeded()
+        
+        completion(
+          .success(
+            self.stepViewModel
+          )
+        )
       }
     }
   }
