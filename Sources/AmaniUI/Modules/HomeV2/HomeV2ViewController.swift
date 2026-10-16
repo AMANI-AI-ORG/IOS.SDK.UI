@@ -11,6 +11,9 @@ class HomeV2ViewController: HomeViewController {
     private let scrollView = UIScrollView()
     private let stepsStack = UIStackView()
     private var stepCards: [HomeV2StepCard] = []
+    private let continueButton = UIButton(type: .custom)
+    private var scrollViewBottomToSafeAreaConstraint: NSLayoutConstraint!
+    private var scrollViewBottomToButtonConstraint: NSLayoutConstraint!
 
     // MARK: - Lifecycle
 
@@ -139,13 +142,31 @@ class HomeV2ViewController: HomeViewController {
         scrollView.showsVerticalScrollIndicator = false
         scrollView.addSubview(contentStack)
 
+        // Continue button — hidden by default, shown once mandatory steps are complete
+        // while optional ones are still pending (see shouldShowOptionalStepsContinueButton()).
+        continueButton.translatesAutoresizingMaskIntoConstraints = false
+        continueButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
+        continueButton.layer.cornerRadius = AmaniUI.sharedInstance.style.ctaButtonCornerRadius
+        continueButton.addTarget(self, action: #selector(v2ContinueButtonTapped), for: .touchUpInside)
+        continueButton.isHidden = true
+
         view.addSubview(scrollView)
+        view.addSubview(continueButton)
+
+        scrollViewBottomToSafeAreaConstraint = scrollView.bottomAnchor.constraint(
+            equalTo: view.safeAreaLayoutGuide.bottomAnchor,
+            constant: -20
+        )
+        scrollViewBottomToButtonConstraint = scrollView.bottomAnchor.constraint(
+            equalTo: continueButton.topAnchor,
+            constant: -16
+        )
 
         NSLayoutConstraint.activate([
             scrollView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
             scrollView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             scrollView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            scrollView.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -20),
+            scrollViewBottomToSafeAreaConstraint,
 
             // Content stack fills scroll view width
             contentStack.topAnchor.constraint(equalTo: scrollView.topAnchor, constant: 20),
@@ -156,6 +177,12 @@ class HomeV2ViewController: HomeViewController {
 
             // Progress view fixed height
             progressView.heightAnchor.constraint(equalToConstant: 56),
+
+            // Continue button pinned to the bottom, outside the scroll view
+            continueButton.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 20),
+            continueButton.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -20),
+            continueButton.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -16),
+            continueButton.heightAnchor.constraint(equalToConstant: AmaniUI.sharedInstance.style.ctaButtonHeight),
         ])
     }
 
@@ -190,6 +217,34 @@ class HomeV2ViewController: HomeViewController {
             stepsStack.addArrangedSubview(card)
             stepCards.append(card)
         }
+
+        configureContinueButton(accentColor: accentColor)
+    }
+
+    // MARK: - Continue button (optional-steps skip)
+
+    private func configureContinueButton(accentColor: UIColor) {
+        let gc = AmaniUI.sharedInstance.config?.generalconfigs
+        continueButton.setTitle(optionalStepsContinueButtonTitle(), for: .normal)
+        continueButton.setTitleColor(hextoUIColor(hexString: gc?.primaryButtonTextColor ?? "FFFFFF"), for: .normal)
+        continueButton.backgroundColor = accentColor
+        if let borderColorHex = gc?.primaryButtonBorderColor {
+            continueButton.layer.borderWidth = 1.5
+            continueButton.layer.borderColor = hextoUIColor(hexString: borderColorHex).cgColor
+        }
+        setContinueButtonVisible(shouldShowOptionalStepsContinueButton())
+    }
+
+    private func setContinueButtonVisible(_ visible: Bool) {
+        continueButton.isHidden = !visible
+        scrollViewBottomToButtonConstraint?.isActive = visible
+        scrollViewBottomToSafeAreaConstraint?.isActive = !visible
+    }
+
+    @objc private func v2ContinueButtonTapped() {
+        guard !isSuccess else { return }
+        setContinueButtonVisible(false)
+        performSuccessNavigation()
     }
 
     // MARK: - Selection

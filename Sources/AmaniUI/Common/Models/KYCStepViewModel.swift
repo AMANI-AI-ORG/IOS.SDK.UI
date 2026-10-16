@@ -13,6 +13,7 @@ class KYCStepViewModel {
   var id: String
   var title: String
   var mandatoryStepIDs: [String] = []
+  var isOptional: Bool = false
   var status: DocumentStatus = DocumentStatus.NOT_UPLOADED
   private var isphysicalContractEnabled: Bool!
   var textColor: UIColor = ThemeColor.blackColor
@@ -41,6 +42,7 @@ class KYCStepViewModel {
     }
       
     mandatoryStepIDs = stepConfig.mandatoryStepIDs ?? []
+    isOptional = stepConfig.isOptional ?? false
     isphysicalContractEnabled = stepConfig.phase != nil && stepConfig.phase! as Int == 0 ? true : false
     maxAttempt = stepConfig.maxAttempt ?? 3
     status = DocumentStatus(rawValue: initialRule.status ?? self.status.rawValue)!

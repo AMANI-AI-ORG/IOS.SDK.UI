@@ -64,7 +64,33 @@ class NonKYCStepManager {
   ) {
     DispatchQueue.main.async { [weak self] in
       guard let self else { return }
-      
+
+      if self.isFlowRunning,
+         let abandonedVC = self.currentStepViewController,
+         let navVCs = self.navigationController?.viewControllers,
+         !navVCs.contains(where: { $0 === abandonedVC }) {
+
+        /*
+         The previous step's view controller is no longer in the
+         navigation stack — the user backed out of it (e.g. tapped
+         the back button) without completing it, so its completion
+         handler never fired and the flow state got stuck "running"
+         forever. Reset it so this retry isn't silently dropped by
+         the duplicate-flow guard below.
+         */
+        print(
+          "[NonKYC] Previous flow was abandoned - resetting state before retry",
+          "manager:",
+          ObjectIdentifier(self)
+        )
+
+        self.isFlowRunning = false
+        self.isFinishingFlow = false
+        self.currentStep = nil
+        self.currentStepViewController = nil
+        self.activeStepToken = nil
+      }
+
       guard !self.isFlowRunning else {
         print(
           "[NonKYC] Duplicate startFlow ignored",
@@ -73,7 +99,7 @@ class NonKYCStepManager {
         )
         return
       }
-      
+
       guard !self.isFinishingFlow else {
         print("[NonKYC] startFlow ignored - flow is finishing")
         return
