@@ -200,12 +200,24 @@ class HomeViewController: BaseViewController {
     }
     let kycSteps = stepModels.filter { $0.identifier == "kyc" || $0.identifier == nil }
     let optionalSteps = kycSteps.filter { $0.isOptional }
-    let mandatorySteps = kycSteps.filter { !$0.isOptional }
-
-    let mandatoryComplete = mandatorySteps.allSatisfy { $0.status == .APPROVED || $0.status == .PENDING_REVIEW }
     let allComplete = kycSteps.allSatisfy { $0.status == .APPROVED || $0.status == .PENDING_REVIEW }
 
-    return mandatoryComplete && !optionalSteps.isEmpty && !allComplete
+    return areMandatoryKYCStepsComplete() && !optionalSteps.isEmpty && !allComplete
+  }
+
+  /// True once every mandatory (non-optional) KYC step is approved or pending review, regardless
+  /// of whether any optional steps are still outstanding. Shared with
+  /// `AmaniUI.popViewController()`, which treats closing the SDK from Home once only optional
+  /// steps remain as a success — the same outcome as if the user had pressed the optional-steps
+  /// Continue button instead of just backing out.
+  func areMandatoryKYCStepsComplete() -> Bool {
+    guard let stepModels = self.stepModels else {
+      return false
+    }
+    let kycSteps = stepModels.filter { $0.identifier == "kyc" || $0.identifier == nil }
+    let mandatorySteps = kycSteps.filter { !$0.isOptional }
+
+    return mandatorySteps.allSatisfy { $0.status == .APPROVED || $0.status == .PENDING_REVIEW }
   }
 
   /// True once an optional step has been skipped to reach success — i.e. the mandatory steps

@@ -641,14 +641,31 @@ public class AmaniUI {
     guard let customerID,
           !customerID.isEmpty
     else {
-      
+
       finishSDK(
         result: .cancelled
       )
-      
+
       return
     }
-    
+
+    if initialVC?.areMandatoryKYCStepsComplete() == true {
+
+      /*
+       Every mandatory step is done; anything still missing is optional-only.
+       Backing out here should report the same outcome as the explicit
+       optional-steps Continue button: a success, not a failure/cancel.
+       */
+
+      finishSDK(
+        result: .success(
+          customerID: customerID
+        )
+      )
+
+      return
+    }
+
     if let failedRules {
       
       finishSDK(
