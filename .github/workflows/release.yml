@@ -226,11 +226,12 @@ jobs:
             exit 1
           fi
           echo "value=$VERSION" >> "$GITHUB_OUTPUT"
-      - name: Checkout validated source commit
+      - name: Checkout selected branch
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.sha }}
+          ref: ${{ github.ref_name }}
           fetch-depth: 0
+          persist-credentials: true
           token: ${{ secrets.RELEASE_AUTOMATION_PAT }}
       - name: Verify branch still points to validated commit
         shell: bash
@@ -322,3 +323,4 @@ jobs:
     steps:
       - name: Summary
         run: echo '::notice title=Dry Run::Unit tests and both CocoaPods subspecs passed.'
+
