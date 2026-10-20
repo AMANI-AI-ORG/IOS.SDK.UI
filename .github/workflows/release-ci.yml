@@ -1,11 +1,13 @@
-name: ② Release · Verify
+name: '② Release · Verify'
 
 on:
   workflow_dispatch:
-
   pull_request:
     types: [opened, synchronize, reopened]
     branches: [main]
+
+permissions:
+  contents: read
 
 env:
   XCODE_PROJECT: Sources/AmaniUI.xcodeproj
@@ -17,27 +19,51 @@ env:
 
 jobs:
   check-release:
-    - name: Detect release branch
-  id: check
-  shell: bash
-  env:
-    BRANCH: ${{ github.head_ref || github.ref_name }}
-  run: |
-    if [[ "$BRANCH" =~ ^release/([0-9]+\.[0-9]+\.[0-9]+([a-zA-Z0-9._-]*)?)$ ]]; then
-      echo "is_release=true" >> "$GITHUB_OUTPUT"
-      echo "version=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
-    else
-      echo "is_release=false" >> "$GITHUB_OUTPUT"
-      echo "ℹ️ Not a release branch: $BRANCH"
-    fi
+    name: Detect release branch
+    runs-on: ubuntu-latest
+    outputs:
+      is_release: ${{ steps.check.outputs.is_release }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - name: Detect release branch
+        id: check
+        shell: bash
+        env:
+          BRANCH: ${{ github.head_ref || github.ref_name }}
+        run: |
+          set -euo pipefail
+          if [[ "$BRANCH" =~ ^release/([0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9][a-zA-Z0-9._-]*)?)$ ]]; then
+            echo "is_release=true" >> "$GITHUB_OUTPUT"
+            echo "version=${BASH_REMATCH[1]}" >> "$GITHUB_OUTPUT"
+          else
+            echo "is_release=false" >> "$GITHUB_OUTPUT"
+            echo "version=" >> "$GITHUB_OUTPUT"
+            echo "Non-release branch: $BRANCH"
+          fi
 
   unit-tests:
     name: Run Unit Tests
     needs: check-release
-    if: needs.check-release.outputs.is_release == 'true'
+    if: needs.check-release.outputs.is_release == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Verify checked-out sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "=== Commit ==="
+          git rev-parse HEAD
+          echo "=== Branch ==="
+          echo "$GITHUB_REF_NAME"
+          for file in \
+            Sources/AmaniUI/UIVersion.swift \
+            Sources/AmaniUI/Common/Styles/UIStyle.swift \
+            Sources/AmaniUI/Modules/ContainerVC/ContainerV2ViewController.swift; do
+            test -f "$file" || { echo "::error file=$file::Missing Swift source"; exit 1; }
+          done
+          plutil -lint "${XCODE_PROJECT}/project.pbxproj"
       - name: Print toolchain info
         run: |
           sw_vers
@@ -51,7 +77,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-spm-
       - name: Resolve project dependencies
+        shell: bash
         run: |
+          set -euo pipefail
           mkdir -p "${SPM_CACHE_DIR}"
           xcodebuild -resolvePackageDependencies \
             -project "${XCODE_PROJECT}" \
@@ -73,8 +101,9 @@ jobs:
             test 2>&1 | tee build/unit-tests.log
       - name: Print compiler errors
         if: failure()
+        shell: bash
         run: |
-          grep -nE 'error:|fatal error:|BUILD FAILED' build/unit-tests.log || true
+          grep -nE 'error:|fatal error:|BUILD FAILED|TEST FAILED' build/unit-tests.log || true
           tail -n 200 build/unit-tests.log || true
       - name: Upload unit-test results
         if: always()
@@ -89,10 +118,11 @@ jobs:
   cocoapods-validation:
     name: Validate CocoaPods Core & SpeechVerifier
     needs: check-release
-    if: needs.check-release.outputs.is_release == 'true'
+    if: needs.check-release.outputs.is_release == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v4
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
@@ -127,92 +157,30 @@ jobs:
           path: '*-lint.log'
           if-no-files-found: ignore
 
-  version-bump:
-    name: Verify/Bump Version in AmaniUI.podspec
+  version-check:
+    name: Verify podspec version
     needs: [check-release, unit-tests, cocoapods-validation]
-    if: needs.check-release.outputs.is_release == 'true'
+    if: needs.check-release.outputs.is_release == 'true' && github.event_name == 'pull_request'
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
     steps:
-      - name: Checkout release PR branch
+      - name: Checkout tested PR revision
         uses: actions/checkout@v4
-        with:
-          ref: ${{ github.head_ref }}
-          fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Verify Swift source files
-      shell: bash
-      run: |
-      set -euo pipefail
-
-      echo "=== Current commit ==="
-      git rev-parse HEAD
-
-      echo "=== Current branch ==="
-      git branch -a
-
-      echo "=== Required Swift files ==="
-
-      for file in \
-        UIVersion.swift \
-        UIStyle.swift \
-        ContainerV2ViewController.swift
-      do
-        echo "Checking $file"
-
-        matches=$(git ls-files \
-          "Sources/**/$file")
-
-        if [ -z "$matches" ]; then
-          echo "::error::$file not tracked by Git"
-          exit 1
-        fi
-
-        echo "$matches"
-      done
-
-      echo "=== Xcode project validation ==="
-      plutil -lint \
-        Sources/AmaniUI.xcodeproj/project.pbxproj
-      - name: Ensure podspec version matches branch
+      - name: Ensure podspec version matches release branch
+        shell: bash
         env:
           VERSION: ${{ needs.check-release.outputs.version }}
-        shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           import os, pathlib, re, sys
           path = pathlib.Path(os.environ['VERSION_BUMP_FILE'])
-          if not path.exists():
-              sys.exit('AmaniUI.podspec not found')
-          text = path.read_text()
-          version = os.environ['VERSION']
-          new, count = re.subn(
-              r'''(s\.version\s*=\s*["'])[^"']+(["'])''',
-              lambda m: m.group(1) + version + m.group(2),
-              text, count=1
-          )
-          if count != 1:
+          content = path.read_text()
+          match = re.search(r'''s\.version\s*=\s*["']([^"']+)["']''', content)
+          if not match:
               sys.exit('Cannot locate podspec version')
-          if new == text:
-              print('Podspec version matches release branch')
-          else:
-              path.write_text(new)
-              print('Podspec version updated')
+          actual = match.group(1)
+          expected = os.environ['VERSION']
+          if actual != expected:
+              sys.exit(f'Podspec version {actual} != release branch {expected}. Update before merge.')
+          print(f'Podspec version verified: {actual}')
           PY
-      - name: Push version bump if necessary
-        env:
-          VERSION: ${{ needs.check-release.outputs.version }}
-        shell: bash
-        run: |
-          set -euo pipefail
-          git add "${VERSION_BUMP_FILE}"
-          if git diff --cached --quiet; then
-            echo 'No bump needed'
-            exit 0
-          fi
-          git config user.name 'github-actions[bot]'
-          git config user.email 'github-actions[bot]@users.noreply.github.com'
-          git commit -m "chore(release): bump version to ${VERSION}"
-          git push
