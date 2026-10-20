@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name = 'AmaniUI'
-  s.version = '1.4.8-alpha06'
+  s.version = '1.4.9-alpha09'
   s.license = {
     :type => 'Copyright',
     :text => "Copyright 2026\nAmani Ai AŞ."
