@@ -8,8 +8,12 @@
 import UIKit
 import CoreLocation
 import AmaniSDK
+#if canImport(AmaniSpeechVerifier)
 import AmaniSpeechVerifier
+#endif
 
+
+#if canImport(AmaniSpeechVerifier)
 final class SpeechHandler: DocumentHandler {
   weak var topVC: UIViewController?
   var stepViewModel: KYCStepViewModel
@@ -107,49 +111,25 @@ final class SpeechHandler: DocumentHandler {
       completion(cachedUploadResult, nil)
       return
     }
-    
     uploadCallbacks.append(completion)
-    
     guard !isUploadInProgress else {
       return
     }
-    
     guard let speechVerifierModule else {
-#if DEBUG
-      debugPrint(
-        "SpeechHandler upload failed: SpeechVerifier instance is missing."
-      )
-#endif
-      flushUploadCallbacks(
-        result: false,
-        extras: nil
-      )
+      flushUploadCallbacks(result: false, extras: nil)
       return
     }
-    
     isUploadInProgress = true
-    
     speechVerifierModule.upload(
       location: AmaniUI.sharedInstance.location
     ) { [weak self] result in
       guard let self else {
         return
       }
-      
-      let success = result == true
-      
-#if DEBUG
-      debugPrint(
-        "SpeechHandler upload completed:",
-        success
-      )
-#endif
-      
       self.isUploadInProgress = false
-      self.cachedUploadResult = success
-      
+      self.cachedUploadResult = result
       self.flushUploadCallbacks(
-        result: success,
+        result: result,
         extras: nil
       )
     }
@@ -714,15 +694,11 @@ private extension SpeechHandler {
     }
     
     didFinishFlow = true
+    AmaniUI.sharedInstance.clearPendingSpeechVerifierResume()
     
-    AmaniUI.sharedInstance
-      .clearPendingSpeechVerifierResume()
-    
-#if DEBUG
     debugPrint(
-      "SpeechHandler: verification succeeded, starting upload."
+      "SpeechHandler: success received, starting upload."
     )
-#endif
     
     showUploadLoading()
     
@@ -735,32 +711,25 @@ private extension SpeechHandler {
         self.hideUploadLoading()
         
         guard self.isOwnContainerOnTop() else {
-#if DEBUG
           debugPrint(
-            "SpeechHandler: upload callback ignored because container is no longer active."
+            "SpeechHandler success ignored: stale handler callback."
           )
-#endif
           return
         }
         
         self.stepView?.removeFromSuperview()
         self.stepView = nil
+        self.popOwnContainerIfNeeded()
         
-        guard result == true else {
-          self.popOwnContainerIfNeeded()
+        if result == true {
+          completion(
+            .success(self.stepViewModel)
+          )
+        } else {
           completion(
             .failure(.moduleError)
           )
-          return
         }
-        
-        self.popOwnContainerIfNeeded()
-        
-        completion(
-          .success(
-            self.stepViewModel
-          )
-        )
       }
     }
   }
@@ -945,3 +914,4 @@ private final class SpeechVerifierUploadLoadingView: UIView {
     spinner.stopAnimating()
   }
 }
+#endif

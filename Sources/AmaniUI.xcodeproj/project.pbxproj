@@ -37,9 +37,15 @@
 		48E081172C7F662400EAD39B /* AnimationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48E081152C7F662400EAD39B /* AnimationView.swift */; };
 		48EAA84E29E37C9B001A2A35 /* SignatureViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48B90A0129A2656100508E63 /* SignatureViewController.swift */; };
 		48F461D52E5DC4EA0066297B /* QuestionTextInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48F461D42E5DC4EA0066297B /* QuestionTextInputView.swift */; };
+		910E52E030875DC800C1DD08 /* UIStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 910E52DE30875DC800C1DD08 /* UIStyle.swift */; };
+		910E52E230875E4D00C1DD08 /* SpeechHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 910E52E130875E4D00C1DD08 /* SpeechHandler.swift */; };
+		910E52E630875E7400C1DD08 /* ContainerV2ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 910E52E530875E7400C1DD08 /* ContainerV2ViewController.swift */; };
+		910E52F03087601D00C1DD08 /* UIVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 910E52EF3087601D00C1DD08 /* UIVersion.swift */; };
+		910E52F63087608C00C1DD08 /* HomeV2StepCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 910E52F13087608C00C1DD08 /* HomeV2StepCard.swift */; };
+		910E52F73087608C00C1DD08 /* HomeV2ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 910E52F43087608C00C1DD08 /* HomeV2ViewController.swift */; };
+		910E52F83087608C00C1DD08 /* StepProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 910E52F23087608C00C1DD08 /* StepProgressView.swift */; };
 		911EC4D82F9B9D1A000C80F9 /* TermsAndConditionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 911EC4D52F9B9D1A000C80F9 /* TermsAndConditionsView.swift */; };
 		911EC4D92F9B9D1A000C80F9 /* TermsAndConditionsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 911EC4D62F9B9D1A000C80F9 /* TermsAndConditionsViewController.swift */; };
-		9143D3CD3080112000D6B215 /* SpeechHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9143D3CC3080112000D6B215 /* SpeechHandler.swift */; };
 		9197F9342F990C72005C1088 /* AmaniUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C544FEE328C2303700C0B406 /* AmaniUI.framework */; };
 		C523DEF72B3A740B00F68E32 /* CheckSMSViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C523DEF62B3A740B00F68E32 /* CheckSMSViewController.swift */; };
 		C523DEFA2B3A745F00F68E32 /* CheckSMSView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C523DEF92B3A745F00F68E32 /* CheckSMSView.swift */; };
@@ -141,9 +147,15 @@
 		48DF760F29699A8F000D519A /* ContainerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerViewController.swift; sourceTree = "<group>"; };
 		48E081152C7F662400EAD39B /* AnimationView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnimationView.swift; sourceTree = "<group>"; };
 		48F461D42E5DC4EA0066297B /* QuestionTextInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionTextInputView.swift; sourceTree = "<group>"; };
+		910E52DE30875DC800C1DD08 /* UIStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIStyle.swift; sourceTree = "<group>"; };
+		910E52E130875E4D00C1DD08 /* SpeechHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechHandler.swift; sourceTree = "<group>"; };
+		910E52E530875E7400C1DD08 /* ContainerV2ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerV2ViewController.swift; sourceTree = "<group>"; };
+		910E52EF3087601D00C1DD08 /* UIVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIVersion.swift; sourceTree = "<group>"; };
+		910E52F13087608C00C1DD08 /* HomeV2StepCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeV2StepCard.swift; sourceTree = "<group>"; };
+		910E52F23087608C00C1DD08 /* StepProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepProgressView.swift; sourceTree = "<group>"; };
+		910E52F43087608C00C1DD08 /* HomeV2ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeV2ViewController.swift; sourceTree = "<group>"; };
 		911EC4D52F9B9D1A000C80F9 /* TermsAndConditionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsAndConditionsView.swift; sourceTree = "<group>"; };
 		911EC4D62F9B9D1A000C80F9 /* TermsAndConditionsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsAndConditionsViewController.swift; sourceTree = "<group>"; };
-		9143D3CC3080112000D6B215 /* SpeechHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechHandler.swift; sourceTree = "<group>"; };
 		9197F9302F990C72005C1088 /* AmaniUnitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AmaniUnitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C523DEF62B3A740B00F68E32 /* CheckSMSViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckSMSViewController.swift; sourceTree = "<group>"; };
 		C523DEF92B3A745F00F68E32 /* CheckSMSView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckSMSView.swift; sourceTree = "<group>"; };
@@ -318,6 +330,7 @@
 			isa = PBXGroup;
 			children = (
 				48DF760F29699A8F000D519A /* ContainerViewController.swift */,
+				910E52E530875E7400C1DD08 /* ContainerV2ViewController.swift */,
 			);
 			path = ContainerVC;
 			sourceTree = "<group>";
@@ -328,6 +341,32 @@
 				48E081152C7F662400EAD39B /* AnimationView.swift */,
 			);
 			path = AnimationView;
+			sourceTree = "<group>";
+		};
+		910E52DF30875DC800C1DD08 /* Styles */ = {
+			isa = PBXGroup;
+			children = (
+				910E52DE30875DC800C1DD08 /* UIStyle.swift */,
+			);
+			path = Styles;
+			sourceTree = "<group>";
+		};
+		910E52F33087608C00C1DD08 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				910E52F13087608C00C1DD08 /* HomeV2StepCard.swift */,
+				910E52F23087608C00C1DD08 /* StepProgressView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		910E52F53087608C00C1DD08 /* HomeV2 */ = {
+			isa = PBXGroup;
+			children = (
+				910E52F33087608C00C1DD08 /* Views */,
+				910E52F43087608C00C1DD08 /* HomeV2ViewController.swift */,
+			);
+			path = HomeV2;
 			sourceTree = "<group>";
 		};
 		911EC4D72F9B9D1A000C80F9 /* TermsAndConditions */ = {
@@ -342,7 +381,7 @@
 		9143D3D2308013BD00D6B215 /* SpeechVerifierIntegration */ = {
 			isa = PBXGroup;
 			children = (
-				9143D3CC3080112000D6B215 /* SpeechHandler.swift */,
+				910E52E130875E4D00C1DD08 /* SpeechHandler.swift */,
 			);
 			path = SpeechVerifierIntegration;
 			sourceTree = "<group>";
@@ -412,6 +451,7 @@
 			children = (
 				48E081162C7F662400EAD39B /* AnimationView */,
 				C538D74F28EC83F80033BB53 /* Controller */,
+				910E52F53087608C00C1DD08 /* HomeV2 */,
 			);
 			path = DocConfirmation;
 			sourceTree = "<group>";
@@ -453,6 +493,7 @@
 				C544FEF328C2573200C0B406 /* Modules */,
 				C544FEE528C2303700C0B406 /* AmaniUI.h */,
 				C544FEF128C24DE500C0B406 /* AmaniUI.swift */,
+				910E52EF3087601D00C1DD08 /* UIVersion.swift */,
 				484E26F7295A3DC700839E54 /* AmaniUIDelegate.swift */,
 				18E7B2CA2BD271370073C268 /* PrivacyInfo.xcprivacy */,
 			);
@@ -483,6 +524,7 @@
 				C5FD51302B39BD2D0057DB87 /* Components */,
 				C54B58AF28C76148005DBAA9 /* Utils */,
 				C544FEF628C2574D00C0B406 /* Models */,
+				910E52DF30875DC800C1DD08 /* Styles */,
 			);
 			path = Common;
 			sourceTree = "<group>";
@@ -878,6 +920,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C56169532B84CF8E00050A8D /* NonKYCStepManager.swift in Sources */,
+				910E52E230875E4D00C1DD08 /* SpeechHandler.swift in Sources */,
 				C56169402B84CD8400050A8D /* QuestionView.swift in Sources */,
 				1899046D2D5E4A7600CA2F60 /* DocumentsHandler.swift in Sources */,
 				C561694D2B84CDE200050A8D /* ProfileInfoViewModel.swift in Sources */,
@@ -904,6 +947,7 @@
 				C58BD65428EEEE19009301EC /* OvalOverlayView.swift in Sources */,
 				C561693F2B84CD8400050A8D /* QuestionnaireViewController.swift in Sources */,
 				1899046E2D5E4A7600CA2F60 /* DocumentsHandlerDelegate.swift in Sources */,
+				910E52F03087601D00C1DD08 /* UIVersion.swift in Sources */,
 				1899046F2D5E4A7600CA2F60 /* DocumentsHandlerVNDelegate.swift in Sources */,
 				C561694F2B84CDE200050A8D /* ProfileInfoView.swift in Sources */,
 				C53DFE0228ED81F500AE7D32 /* DocConfirmationViewController.swift in Sources */,
@@ -923,6 +967,9 @@
 				C56169412B84CD8400050A8D /* QuestionSubmitButton.swift in Sources */,
 				C5FD513F2B39BD970057DB87 /* EmailOTPView.swift in Sources */,
 				C52F145228F5B70400D7A5A6 /* DocumentHandler.swift in Sources */,
+				910E52F63087608C00C1DD08 /* HomeV2StepCard.swift in Sources */,
+				910E52F73087608C00C1DD08 /* HomeV2ViewController.swift in Sources */,
+				910E52F83087608C00C1DD08 /* StepProgressView.swift in Sources */,
 				48EAA84E29E37C9B001A2A35 /* SignatureViewController.swift in Sources */,
 				185A2BFD2BBD64AE00855F77 /* ColorCompatibility.swift in Sources */,
 				C54B58B128C76160005DBAA9 /* BaseViewController.swift in Sources */,
@@ -940,12 +987,12 @@
 				C539A5C9290FE9F9003386F8 /* SuccessViewController.swift in Sources */,
 				C56169432B84CD8400050A8D /* SingleAnswerButton.swift in Sources */,
 				C5FD51362B39BD2D0057DB87 /* RoundedButton.swift in Sources */,
+				910E52E630875E7400C1DD08 /* ContainerV2ViewController.swift in Sources */,
 				C5A4506C2B3A33820064AAA7 /* PhoneOTPViewController.swift in Sources */,
 				185A2BF82BBD64AE00855F77 /* UIStackView+Extension.swift in Sources */,
 				C5A06F7429127C55009520AF /* BaseDocumentHandler.swift in Sources */,
 				48F461D52E5DC4EA0066297B /* QuestionTextInputView.swift in Sources */,
 				48DF761029699A8F000D519A /* ContainerViewController.swift in Sources */,
-				9143D3CD3080112000D6B215 /* SpeechHandler.swift in Sources */,
 				C561693E2B84CD8400050A8D /* QuestionnaireViewModel.swift in Sources */,
 				C53C475528C8D9C800FA10B6 /* UtilityModels.swift in Sources */,
 				C56169452B84CD8400050A8D /* AnswerButton.swift in Sources */,
@@ -955,6 +1002,7 @@
 				C56169462B84CD8400050A8D /* QuestionnaireView.swift in Sources */,
 				C5FD513D2B39BD970057DB87 /* EmailOTPViewModel.swift in Sources */,
 				185A2C022BBD64AE00855F77 /* CountryPickerViewController.swift in Sources */,
+				910E52E030875DC800C1DD08 /* UIStyle.swift in Sources */,
 				C5FD51492B39BF240057DB87 /* CheckMailViewController.swift in Sources */,
 				488B08DD2D6892C100935C5D /* NFCConfigureView.swift in Sources */,
 				185A2C052BBD64AE00855F77 /* SeperatorAppearance.swift in Sources */,
