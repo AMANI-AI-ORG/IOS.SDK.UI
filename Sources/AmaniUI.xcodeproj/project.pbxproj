@@ -37,9 +37,25 @@
 		48E081172C7F662400EAD39B /* AnimationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48E081152C7F662400EAD39B /* AnimationView.swift */; };
 		48EAA84E29E37C9B001A2A35 /* SignatureViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48B90A0129A2656100508E63 /* SignatureViewController.swift */; };
 		48F461D52E5DC4EA0066297B /* QuestionTextInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 48F461D42E5DC4EA0066297B /* QuestionTextInputView.swift */; };
+		910E52E030875DC800C1DD08 /* UIStyle.swift in Sources */ = {isa = PBXBuildFile; fileRef = 910E52DE30875DC800C1DD08 /* UIStyle.swift */; };
+		910E52E230875E4D00C1DD08 /* SpeechHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 910E52E130875E4D00C1DD08 /* SpeechHandler.swift */; };
+		910E52E630875E7400C1DD08 /* ContainerV2ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 910E52E530875E7400C1DD08 /* ContainerV2ViewController.swift */; };
+		910E52F03087601D00C1DD08 /* UIVersion.swift in Sources */ = {isa = PBXBuildFile; fileRef = 910E52EF3087601D00C1DD08 /* UIVersion.swift */; };
+		910E52FA308768A300C1DD08 /* SuccessV2ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 910E52F9308768A300C1DD08 /* SuccessV2ViewController.swift */; };
+		910E530030876BB100C1DD08 /* GalleryDocumentHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 910E52FF30876BB100C1DD08 /* GalleryDocumentHandler.swift */; };
+		910E530230876BBB00C1DD08 /* PDFDocumentHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 910E530130876BBB00C1DD08 /* PDFDocumentHandler.swift */; };
+		910E530430876C3700C1DD08 /* NFCV2ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 910E530330876C3700C1DD08 /* NFCV2ViewController.swift */; };
+		910E530630876C4300C1DD08 /* NFCConfigureV2View.swift in Sources */ = {isa = PBXBuildFile; fileRef = 910E530530876C4300C1DD08 /* NFCConfigureV2View.swift */; };
+		910E530930876C8E00C1DD08 /* DocumentUploadInfoViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 910E530730876C8D00C1DD08 /* DocumentUploadInfoViewController.swift */; };
+		910E530C30876E3600C1DD08 /* UILabelExtension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 910E530B30876E3300C1DD08 /* UILabelExtension.swift */; };
+		910E530E30876E8400C1DD08 /* DocConfirmationV2ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 910E530D30876E8400C1DD08 /* DocConfirmationV2ViewController.swift */; };
+		910E531330876F8700C1DD08 /* VersionV2ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 910E531130876F8700C1DD08 /* VersionV2ViewController.swift */; };
+		910E531430876F8700C1DD08 /* DocumentOptionCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 910E530F30876F8700C1DD08 /* DocumentOptionCard.swift */; };
+		910E533A308772BE00C1DD08 /* StepProgressView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 910E5336308772BE00C1DD08 /* StepProgressView.swift */; };
+		910E533B308772BE00C1DD08 /* HomeV2StepCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 910E5335308772BE00C1DD08 /* HomeV2StepCard.swift */; };
+		910E533C308772BE00C1DD08 /* HomeV2ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 910E5338308772BE00C1DD08 /* HomeV2ViewController.swift */; };
 		911EC4D82F9B9D1A000C80F9 /* TermsAndConditionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 911EC4D52F9B9D1A000C80F9 /* TermsAndConditionsView.swift */; };
 		911EC4D92F9B9D1A000C80F9 /* TermsAndConditionsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 911EC4D62F9B9D1A000C80F9 /* TermsAndConditionsViewController.swift */; };
-		9143D3CD3080112000D6B215 /* SpeechHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9143D3CC3080112000D6B215 /* SpeechHandler.swift */; };
 		9197F9342F990C72005C1088 /* AmaniUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C544FEE328C2303700C0B406 /* AmaniUI.framework */; };
 		C523DEF72B3A740B00F68E32 /* CheckSMSViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C523DEF62B3A740B00F68E32 /* CheckSMSViewController.swift */; };
 		C523DEFA2B3A745F00F68E32 /* CheckSMSView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C523DEF92B3A745F00F68E32 /* CheckSMSView.swift */; };
@@ -141,9 +157,28 @@
 		48DF760F29699A8F000D519A /* ContainerViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerViewController.swift; sourceTree = "<group>"; };
 		48E081152C7F662400EAD39B /* AnimationView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AnimationView.swift; sourceTree = "<group>"; };
 		48F461D42E5DC4EA0066297B /* QuestionTextInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuestionTextInputView.swift; sourceTree = "<group>"; };
+		910E52DE30875DC800C1DD08 /* UIStyle.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIStyle.swift; sourceTree = "<group>"; };
+		910E52E130875E4D00C1DD08 /* SpeechHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechHandler.swift; sourceTree = "<group>"; };
+		910E52E530875E7400C1DD08 /* ContainerV2ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerV2ViewController.swift; sourceTree = "<group>"; };
+		910E52EF3087601D00C1DD08 /* UIVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIVersion.swift; sourceTree = "<group>"; };
+		910E52F13087608C00C1DD08 /* HomeV2StepCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeV2StepCard.swift; sourceTree = "<group>"; };
+		910E52F23087608C00C1DD08 /* StepProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepProgressView.swift; sourceTree = "<group>"; };
+		910E52F43087608C00C1DD08 /* HomeV2ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeV2ViewController.swift; sourceTree = "<group>"; };
+		910E52F9308768A300C1DD08 /* SuccessV2ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuccessV2ViewController.swift; sourceTree = "<group>"; };
+		910E52FF30876BB100C1DD08 /* GalleryDocumentHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryDocumentHandler.swift; sourceTree = "<group>"; };
+		910E530130876BBB00C1DD08 /* PDFDocumentHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFDocumentHandler.swift; sourceTree = "<group>"; };
+		910E530330876C3700C1DD08 /* NFCV2ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NFCV2ViewController.swift; sourceTree = "<group>"; };
+		910E530530876C4300C1DD08 /* NFCConfigureV2View.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NFCConfigureV2View.swift; sourceTree = "<group>"; };
+		910E530730876C8D00C1DD08 /* DocumentUploadInfoViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentUploadInfoViewController.swift; sourceTree = "<group>"; };
+		910E530B30876E3300C1DD08 /* UILabelExtension.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UILabelExtension.swift; sourceTree = "<group>"; };
+		910E530D30876E8400C1DD08 /* DocConfirmationV2ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocConfirmationV2ViewController.swift; sourceTree = "<group>"; };
+		910E530F30876F8700C1DD08 /* DocumentOptionCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentOptionCard.swift; sourceTree = "<group>"; };
+		910E531130876F8700C1DD08 /* VersionV2ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VersionV2ViewController.swift; sourceTree = "<group>"; };
+		910E5335308772BE00C1DD08 /* HomeV2StepCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeV2StepCard.swift; sourceTree = "<group>"; };
+		910E5336308772BE00C1DD08 /* StepProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepProgressView.swift; sourceTree = "<group>"; };
+		910E5338308772BE00C1DD08 /* HomeV2ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeV2ViewController.swift; sourceTree = "<group>"; };
 		911EC4D52F9B9D1A000C80F9 /* TermsAndConditionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsAndConditionsView.swift; sourceTree = "<group>"; };
 		911EC4D62F9B9D1A000C80F9 /* TermsAndConditionsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsAndConditionsViewController.swift; sourceTree = "<group>"; };
-		9143D3CC3080112000D6B215 /* SpeechHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechHandler.swift; sourceTree = "<group>"; };
 		9197F9302F990C72005C1088 /* AmaniUnitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AmaniUnitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C523DEF62B3A740B00F68E32 /* CheckSMSViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckSMSViewController.swift; sourceTree = "<group>"; };
 		C523DEF92B3A745F00F68E32 /* CheckSMSView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckSMSView.swift; sourceTree = "<group>"; };
@@ -270,6 +305,7 @@
 			isa = PBXGroup;
 			children = (
 				488B08DB2D6892C100935C5D /* NFCConfigureView.swift */,
+				910E530530876C4300C1DD08 /* NFCConfigureV2View.swift */,
 			);
 			path = NFCConfigureView;
 			sourceTree = "<group>";
@@ -318,6 +354,7 @@
 			isa = PBXGroup;
 			children = (
 				48DF760F29699A8F000D519A /* ContainerViewController.swift */,
+				910E52E530875E7400C1DD08 /* ContainerV2ViewController.swift */,
 			);
 			path = ContainerVC;
 			sourceTree = "<group>";
@@ -328,6 +365,75 @@
 				48E081152C7F662400EAD39B /* AnimationView.swift */,
 			);
 			path = AnimationView;
+			sourceTree = "<group>";
+		};
+		910E52DF30875DC800C1DD08 /* Styles */ = {
+			isa = PBXGroup;
+			children = (
+				910E52DE30875DC800C1DD08 /* UIStyle.swift */,
+			);
+			path = Styles;
+			sourceTree = "<group>";
+		};
+		910E52F33087608C00C1DD08 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				910E52F13087608C00C1DD08 /* HomeV2StepCard.swift */,
+				910E52F23087608C00C1DD08 /* StepProgressView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		910E52F53087608C00C1DD08 /* HomeV2 */ = {
+			isa = PBXGroup;
+			children = (
+				910E52F33087608C00C1DD08 /* Views */,
+				910E52F43087608C00C1DD08 /* HomeV2ViewController.swift */,
+			);
+			path = HomeV2;
+			sourceTree = "<group>";
+		};
+		910E530830876C8D00C1DD08 /* PhotoLibrary */ = {
+			isa = PBXGroup;
+			children = (
+				910E530730876C8D00C1DD08 /* DocumentUploadInfoViewController.swift */,
+			);
+			path = PhotoLibrary;
+			sourceTree = "<group>";
+		};
+		910E531030876F8700C1DD08 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				910E530F30876F8700C1DD08 /* DocumentOptionCard.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		910E531230876F8700C1DD08 /* VersionSelectV2 */ = {
+			isa = PBXGroup;
+			children = (
+				910E531030876F8700C1DD08 /* Views */,
+				910E531130876F8700C1DD08 /* VersionV2ViewController.swift */,
+			);
+			path = VersionSelectV2;
+			sourceTree = "<group>";
+		};
+		910E5337308772BE00C1DD08 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				910E5335308772BE00C1DD08 /* HomeV2StepCard.swift */,
+				910E5336308772BE00C1DD08 /* StepProgressView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		910E5339308772BE00C1DD08 /* HomeV2 */ = {
+			isa = PBXGroup;
+			children = (
+				910E5337308772BE00C1DD08 /* Views */,
+				910E5338308772BE00C1DD08 /* HomeV2ViewController.swift */,
+			);
+			path = HomeV2;
 			sourceTree = "<group>";
 		};
 		911EC4D72F9B9D1A000C80F9 /* TermsAndConditions */ = {
@@ -342,7 +448,7 @@
 		9143D3D2308013BD00D6B215 /* SpeechVerifierIntegration */ = {
 			isa = PBXGroup;
 			children = (
-				9143D3CC3080112000D6B215 /* SpeechHandler.swift */,
+				910E52E130875E4D00C1DD08 /* SpeechHandler.swift */,
 			);
 			path = SpeechVerifierIntegration;
 			sourceTree = "<group>";
@@ -403,6 +509,7 @@
 			isa = PBXGroup;
 			children = (
 				C52F145728F9819100D7A5A6 /* NFCViewController.swift */,
+				910E530330876C3700C1DD08 /* NFCV2ViewController.swift */,
 			);
 			path = Controller;
 			sourceTree = "<group>";
@@ -412,6 +519,7 @@
 			children = (
 				48E081162C7F662400EAD39B /* AnimationView */,
 				C538D74F28EC83F80033BB53 /* Controller */,
+				910E52F53087608C00C1DD08 /* HomeV2 */,
 			);
 			path = DocConfirmation;
 			sourceTree = "<group>";
@@ -420,6 +528,7 @@
 			isa = PBXGroup;
 			children = (
 				C53DFE0128ED81F500AE7D32 /* DocConfirmationViewController.swift */,
+				910E530D30876E8400C1DD08 /* DocConfirmationV2ViewController.swift */,
 			);
 			path = Controller;
 			sourceTree = "<group>";
@@ -436,6 +545,7 @@
 			isa = PBXGroup;
 			children = (
 				C539A5C7290FE9F9003386F8 /* SuccessViewController.swift */,
+				910E52F9308768A300C1DD08 /* SuccessV2ViewController.swift */,
 			);
 			path = Controller;
 			sourceTree = "<group>";
@@ -453,6 +563,7 @@
 				C544FEF328C2573200C0B406 /* Modules */,
 				C544FEE528C2303700C0B406 /* AmaniUI.h */,
 				C544FEF128C24DE500C0B406 /* AmaniUI.swift */,
+				910E52EF3087601D00C1DD08 /* UIVersion.swift */,
 				484E26F7295A3DC700839E54 /* AmaniUIDelegate.swift */,
 				18E7B2CA2BD271370073C268 /* PrivacyInfo.xcprivacy */,
 			);
@@ -462,6 +573,8 @@
 		C544FEF328C2573200C0B406 /* Modules */ = {
 			isa = PBXGroup;
 			children = (
+				910E5339308772BE00C1DD08 /* HomeV2 */,
+				910E531230876F8700C1DD08 /* VersionSelectV2 */,
 				911EC4D72F9B9D1A000C80F9 /* TermsAndConditions */,
 				C56169472B84CDE200050A8D /* ProfileInfo */,
 				C56169312B84CD8400050A8D /* Questtionairre */,
@@ -473,6 +586,7 @@
 				C52F144728F5AE0400D7A5A6 /* VersionSelect */,
 				C538D74E28EC82C50033BB53 /* DocConfirmation */,
 				C544FEF728C2576B00C0B406 /* Home */,
+				910E530830876C8D00C1DD08 /* PhotoLibrary */,
 			);
 			path = Modules;
 			sourceTree = "<group>";
@@ -483,6 +597,7 @@
 				C5FD51302B39BD2D0057DB87 /* Components */,
 				C54B58AF28C76148005DBAA9 /* Utils */,
 				C544FEF628C2574D00C0B406 /* Models */,
+				910E52DF30875DC800C1DD08 /* Styles */,
 			);
 			path = Common;
 			sourceTree = "<group>";
@@ -531,6 +646,7 @@
 		C54B58B228C761A1005DBAA9 /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
+				910E530B30876E3300C1DD08 /* UILabelExtension.swift */,
 				C54B58B328C761BF005DBAA9 /* UIColorExtensions.swift */,
 				C53C474E28C7718300FA10B6 /* UIViewExtensions.swift */,
 				C5984DD628F9B35000DA64B3 /* UINavigationControllerExtensions.swift */,
@@ -636,6 +752,8 @@
 				189904692D5E4A7600CA2F60 /* DocumentsHandler.swift */,
 				1899046A2D5E4A7600CA2F60 /* DocumentsHandlerDelegate.swift */,
 				1899046B2D5E4A7600CA2F60 /* DocumentsHandlerVNDelegate.swift */,
+				910E52FF30876BB100C1DD08 /* GalleryDocumentHandler.swift */,
+				910E530130876BBB00C1DD08 /* PDFDocumentHandler.swift */,
 			);
 			path = Handlers;
 			sourceTree = "<group>";
@@ -878,7 +996,12 @@
 			buildActionMask = 2147483647;
 			files = (
 				C56169532B84CF8E00050A8D /* NonKYCStepManager.swift in Sources */,
+				910E52E230875E4D00C1DD08 /* SpeechHandler.swift in Sources */,
+				910E530630876C4300C1DD08 /* NFCConfigureV2View.swift in Sources */,
 				C56169402B84CD8400050A8D /* QuestionView.swift in Sources */,
+				910E531330876F8700C1DD08 /* VersionV2ViewController.swift in Sources */,
+				910E531430876F8700C1DD08 /* DocumentOptionCard.swift in Sources */,
+				910E530230876BBB00C1DD08 /* PDFDocumentHandler.swift in Sources */,
 				1899046D2D5E4A7600CA2F60 /* DocumentsHandler.swift in Sources */,
 				C561694D2B84CDE200050A8D /* ProfileInfoViewModel.swift in Sources */,
 				C5FD14972B7FC78E00E02F95 /* KeyboardAvoidenceViewController.swift in Sources */,
@@ -892,9 +1015,11 @@
 				185A2C012BBD64AE00855F77 /* CountryPickerCell.swift in Sources */,
 				C56169422B84CD8400050A8D /* QuestionDropdownView.swift in Sources */,
 				C53C475728C9E2AF00FA10B6 /* KYCStepViewModel.swift in Sources */,
+				910E52FA308768A300C1DD08 /* SuccessV2ViewController.swift in Sources */,
 				C5FD51482B39BF240057DB87 /* CheckMailView.swift in Sources */,
 				C52F145928F9819100D7A5A6 /* NFCViewController.swift in Sources */,
 				C523DEFD2B3A747100F68E32 /* CheckSMSViewModel.swift in Sources */,
+				910E530C30876E3600C1DD08 /* UILabelExtension.swift in Sources */,
 				C523DEFA2B3A745F00F68E32 /* CheckSMSView.swift in Sources */,
 				48E081172C7F662400EAD39B /* AnimationView.swift in Sources */,
 				C54B58B428C761BF005DBAA9 /* UIColorExtensions.swift in Sources */,
@@ -904,16 +1029,19 @@
 				C58BD65428EEEE19009301EC /* OvalOverlayView.swift in Sources */,
 				C561693F2B84CD8400050A8D /* QuestionnaireViewController.swift in Sources */,
 				1899046E2D5E4A7600CA2F60 /* DocumentsHandlerDelegate.swift in Sources */,
+				910E52F03087601D00C1DD08 /* UIVersion.swift in Sources */,
 				1899046F2D5E4A7600CA2F60 /* DocumentsHandlerVNDelegate.swift in Sources */,
 				C561694F2B84CDE200050A8D /* ProfileInfoView.swift in Sources */,
 				C53DFE0228ED81F500AE7D32 /* DocConfirmationViewController.swift in Sources */,
 				C544FEF228C24DE500C0B406 /* AmaniUI.swift in Sources */,
 				C54B58A928C75279005DBAA9 /* KYCStepTableView.swift in Sources */,
+				910E530E30876E8400C1DD08 /* DocConfirmationV2ViewController.swift in Sources */,
 				C54B58AC28C75279005DBAA9 /* KYCStepTableViewCell.swift in Sources */,
 				C53C474F28C7718300FA10B6 /* UIViewExtensions.swift in Sources */,
 				C539A5C329093DB4003386F8 /* AlertDialougeUtility.swift in Sources */,
 				C523DF002B3BF75A00F68E32 /* AmaniErrorExtensions.swift in Sources */,
 				C5FD51342B39BD2D0057DB87 /* RoundedTextInput.swift in Sources */,
+				910E530030876BB100C1DD08 /* GalleryDocumentHandler.swift in Sources */,
 				C52F144F28F5AE3D00D7A5A6 /* VersionViewController.swift in Sources */,
 				C52F145028F5AE3D00D7A5A6 /* VersionSelectTableViewCell.swift in Sources */,
 				C54B58AB28C75279005DBAA9 /* HomeViewController.swift in Sources */,
@@ -923,6 +1051,7 @@
 				C56169412B84CD8400050A8D /* QuestionSubmitButton.swift in Sources */,
 				C5FD513F2B39BD970057DB87 /* EmailOTPView.swift in Sources */,
 				C52F145228F5B70400D7A5A6 /* DocumentHandler.swift in Sources */,
+				910E530430876C3700C1DD08 /* NFCV2ViewController.swift in Sources */,
 				48EAA84E29E37C9B001A2A35 /* SignatureViewController.swift in Sources */,
 				185A2BFD2BBD64AE00855F77 /* ColorCompatibility.swift in Sources */,
 				C54B58B128C76160005DBAA9 /* BaseViewController.swift in Sources */,
@@ -940,21 +1069,26 @@
 				C539A5C9290FE9F9003386F8 /* SuccessViewController.swift in Sources */,
 				C56169432B84CD8400050A8D /* SingleAnswerButton.swift in Sources */,
 				C5FD51362B39BD2D0057DB87 /* RoundedButton.swift in Sources */,
+				910E52E630875E7400C1DD08 /* ContainerV2ViewController.swift in Sources */,
 				C5A4506C2B3A33820064AAA7 /* PhoneOTPViewController.swift in Sources */,
 				185A2BF82BBD64AE00855F77 /* UIStackView+Extension.swift in Sources */,
 				C5A06F7429127C55009520AF /* BaseDocumentHandler.swift in Sources */,
+				910E533A308772BE00C1DD08 /* StepProgressView.swift in Sources */,
+				910E533B308772BE00C1DD08 /* HomeV2StepCard.swift in Sources */,
+				910E533C308772BE00C1DD08 /* HomeV2ViewController.swift in Sources */,
 				48F461D52E5DC4EA0066297B /* QuestionTextInputView.swift in Sources */,
 				48DF761029699A8F000D519A /* ContainerViewController.swift in Sources */,
-				9143D3CD3080112000D6B215 /* SpeechHandler.swift in Sources */,
 				C561693E2B84CD8400050A8D /* QuestionnaireViewModel.swift in Sources */,
 				C53C475528C8D9C800FA10B6 /* UtilityModels.swift in Sources */,
 				C56169452B84CD8400050A8D /* AnswerButton.swift in Sources */,
+				910E530930876C8E00C1DD08 /* DocumentUploadInfoViewController.swift in Sources */,
 				185A2BFE2BBD64AE00855F77 /* Config.swift in Sources */,
 				185A2BF92BBD64AE00855F77 /* UIView+Extension.swift in Sources */,
 				C5BA62A42914006B004108B4 /* NFHandler.swift in Sources */,
 				C56169462B84CD8400050A8D /* QuestionnaireView.swift in Sources */,
 				C5FD513D2B39BD970057DB87 /* EmailOTPViewModel.swift in Sources */,
 				185A2C022BBD64AE00855F77 /* CountryPickerViewController.swift in Sources */,
+				910E52E030875DC800C1DD08 /* UIStyle.swift in Sources */,
 				C5FD51492B39BF240057DB87 /* CheckMailViewController.swift in Sources */,
 				488B08DD2D6892C100935C5D /* NFCConfigureView.swift in Sources */,
 				185A2C052BBD64AE00855F77 /* SeperatorAppearance.swift in Sources */,

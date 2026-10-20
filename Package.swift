@@ -1,49 +1,74 @@
 // swift-tools-version:5.3
+
 import PackageDescription
 
-let UIVersion = "1.4.8"
-
 let package = Package(
-    name: "AmaniUI",
-    defaultLocalization: "en",
-    platforms: [
-        .iOS(.v13)
-    ],
-    products: [
-        .library(
-            name: "AmaniUI",
-            targets: ["AmaniUI"]
-        )
-    ],
-    dependencies: [
-        .package(
-            name: "Lottie",
-            url: "https://github.com/airbnb/lottie-spm.git",
-            from: "4.5.0"
+  name: "AmaniUI",
+  defaultLocalization: "en",
+  platforms: [
+    .iOS(.v13)
+  ],
+  products: [
+    .library(
+      name: "AmaniUI",
+      targets: ["AmaniUI"]
+    ),
+    .library(
+      name: "AmaniUISpeechVerifier",
+      targets: ["AmaniUISpeechVerifier"]
+    )
+  ],
+  dependencies: [
+    .package(
+      name: "Lottie",
+      url: "https://github.com/airbnb/lottie-spm.git",
+      from: "4.5.0"
+    ),
+    .package(
+      name: "AmaniSDK",
+      url: "https://github.com/AMANI-AI-ORG/AmaniSDK-iOS",
+      from: "3.7.9"
+    ),
+    .package(
+      name: "AmaniRepo",
+      url: "https://github.com/AmaniTechnologiesLtd/Mobile_SDK_Repo.git",
+      from: "1.0.3"
+    )
+  ],
+  targets: [
+    .target(
+      name: "AmaniUI",
+      dependencies: [
+        .product(
+          name: "AmaniSDK",
+          package: "AmaniSDK"
         ),
-        .package(
-            name: "AmaniSDK",
-            url: "https://github.com/AMANI-AI-ORG/AmaniSDK-iOS",
-            from: "3.7.8"
+        "Lottie"
+      ],
+      path: "Sources/AmaniUI",
+      exclude: [
+        "SpeechVerifierIntegration"
+      ],
+      resources: [
+        .process("Assets"),
+        .process("PrivacyInfo.xcprivacy")
+      ],
+      linkerSettings: [
+        .linkedFramework("CryptoKit"),
+        .linkedFramework("CoreNFC"),
+        .linkedFramework("CryptoTokenKit")
+      ]
+    ),
+    .target(
+      name: "AmaniUISpeechVerifier",
+      dependencies: [
+        "AmaniUI",
+        .product(
+          name: "AmaniSpeechVerifier",
+          package: "AmaniSpeechVerifier"
         )
-    ],
-    targets: [
-        .target(
-            name: "AmaniUI",
-            dependencies: [
-                    .product(name:"AmaniSDK", package:"AmaniSDK"),
-                    "Lottie"
-                ],
-            resources: [
-              .process("Assets"),
-              .process("PrivacyInfo.xcprivacy")
-            ],
-            linkerSettings:[
-              .linkedFramework("CryptoKit"),
-              .linkedFramework("CoreNFC"),
-              .linkedFramework("CryptoTokenKit"),
-            ]
-        )  
-    ]
+      ],
+      path: "Sources/AmaniUISpeechVerifier"
+    )
+  ]
 )
-
