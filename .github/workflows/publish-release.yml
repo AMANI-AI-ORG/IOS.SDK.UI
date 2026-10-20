@@ -6,7 +6,8 @@ on:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
+  pull-requests: write
 
 concurrency:
   group: amaniui-publish
@@ -270,9 +271,11 @@ jobs:
       needs.publish.result == 'success' &&
       needs.publish.outputs.is_prerelease != 'true' &&
       contains(github.event.pull_request.labels.*.name, 'measure-size')
+    permissions:
+      contents: write
+      pull-requests: write
     uses: ./.github/workflows/release-measure.yml
     with:
       version_label: ${{ needs.publish.outputs.version }}
       update_history: true
     secrets: inherit
-
