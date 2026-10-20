@@ -11,10 +11,52 @@ import CoreLocation
 import AVFoundation
 import AVFAudio
 import Speech
-
+#if canImport(AmaniSpeechVerifier)
+import AmaniSpeechVerifier
+#endif
 private class AmaniBundleLocator {}
 
+private enum SDKFinishResult {
+  
+  case success(
+    customerID: String
+  )
+  
+  case failed(
+    customerID: String,
+    rules: [[String: String]]?
+  )
+  
+  case cancelled
+}
+
+
+
 public class AmaniUI {
+#if canImport(AmaniSpeechVerifier)
+  internal struct SpeechVerifierSessionContext {
+    let serverURL: String
+    let token: String
+  }
+  
+  internal var speechVerifierSessionContext:
+  SpeechVerifierSessionContext? {
+    
+    guard
+      let server,
+      !server.isEmpty,
+      let token,
+      !token.isEmpty
+    else {
+      return nil
+    }
+    
+    return SpeechVerifierSessionContext(
+      serverURL: server,
+      token: token
+    )
+  }
+#endif
   public static let sharedInstance = AmaniUI()
     /// General Application Config
     /// This property represents the delegate methods.
@@ -32,7 +74,7 @@ public class AmaniUI {
   internal var voiceAssistant: AmaniVoiceAssistant?
 
   internal let sharedSDKInstance = Amani.sharedInstance
-  private let version = "1.4.3"
+  private let version = "1.4.8"
   
   var missingRules:[[String:String]]? = nil
   var rulesKYC: [KYCRuleModel] = []
@@ -68,7 +110,7 @@ public class AmaniUI {
   public var poseEstimationRecord:Bool? = nil
   public var isEnabledClientSideMrz: Bool = false
   public var preparationVideoURL: URL? = nil
-  
+#if canImport(AmaniSpeechVerifier)
   public var hasPendingSpeechVerifierResume: Bool {
     AmaniUIResumeStore.shared.hasPendingResume
   }
@@ -177,7 +219,7 @@ public class AmaniUI {
     
     return state
   }
-  
+  #endif
   /**
    This method used to get SDK bundle
    - returns: Bundle
@@ -441,30 +483,218 @@ public class AmaniUI {
   }
   
   func closeAmaniSDK() {
-    clearPendingSpeechVerifierResume()
-    config = nil
-    rulesKYC = []
-    sharedSDKInstance.removeDelegates()
-    sharedSDKInstance.disconnectFromSSE()
     
+      // MARK: - Resume State
+
+#if canImport(AmaniSpeechVerifier)
+    clearPendingSpeechVerifierResume()
+#endif
+
+      // MARK: - Core SDK Session
+    
+    /*
+     CoreSDK is the actual owner of:
+     - sdkToken
+     - companyID
+     - customer
+     - NVI/MRZ
+     - SSE
+     - AmaniService
+     - logger
+     - session Keychain records
+     
+     endSession() clears all customer/session-specific
+     CoreSDK state.
+     */
+//    sharedSDKInstance.endSession()
+    
+    /*
+     AmaniUI registers itself again in showSDK(),
+     therefore Core delegates can safely be removed here.
+     */
+    sharedSDKInstance.removeDelegates()
+    
+      // MARK: - AmaniUI Sensitive Runtime State
+    
+    customerRespData = nil
+    token = nil
+    userName = nil
+    password = nil
+    sharedSecret = nil
+    customer = nil
+    nviData = nil
+    location = nil
+    
+      // MARK: - UI Flow State
+    
+    config = nil
+    missingRules = nil
+    rulesKYC.removeAll()
+    nonKYCStepManager = nil
+    initialVC = nil
+    parentVC = nil
+    server = nil
+    country = nil
+    
+    /*
+     Stop any currently playing voice.
+     */
+//    do {
+//      try await voiceAssistant?.stop()
+//    } catch {
+//      print("VoiceAssistant can't stop play")
+//    }
+//    
+    voiceAssistant = nil
+  }
+  
+  private func finishSDK(
+    result: SDKFinishResult
+  ) {
+    
+    /*
+     IMPORTANT:
+     
+     Result için gereken değerlerin tamamı bu fonksiyona
+     gelmeden önce capture edilmiş olmalı.
+     
+     closeAmaniSDK() customer/session bilgisini temizler.
+     */
+    
+    closeAmaniSDK()
+    
+    let notifyHost: () -> Void = {
+      [weak self] in
+      
+      guard let self else {
+        return
+      }
+      
+      switch result {
+        
+      case .success(
+        let customerID
+      ):
+        
+        self.delegate?
+          .onKYCSuccess(
+            CustomerId: customerID
+          )
+        
+      case .failed(
+        let customerID,
+        let rules
+      ):
+        
+        self.delegate?
+          .onKYCFailed(
+            CustomerId: customerID,
+            Rules: rules
+          )
+        
+      case .cancelled:
+        
+        /*
+         Existing API'nizde explicit
+         onKYCCancelled olmadığı için
+         şu anda callback göndermiyoruz.
+         
+         İleride eklenebilir.
+         */
+        break
+      }
+    }
+    
+    DispatchQueue.main.async {
+      
+      /*
+       SDK currently presented.
+       */
+      if self.sdkNavigationController
+        .presentingViewController != nil {
+        
+        self.sdkNavigationController.dismiss(
+          animated: true,
+          completion: notifyHost
+        )
+        
+      } else {
+        
+        /*
+         UI already disappeared for some reason.
+         Still deliver the terminal result.
+         */
+        notifyHost()
+      }
+    }
   }
   
   @objc
   public func popViewController() {
-    let customer = sharedSDKInstance.customerInfo().getCustomer()
-    guard let customerId:String = customer.id else {return}
     
-    if let missingRules = missingRules {
-      self.delegate?.onKYCFailed(CustomerId: customerId, Rules: missingRules)
-    }
-    closeAmaniSDK()
-    DispatchQueue.main.async {
-      self.sdkNavigationController.dismiss(animated: true)
-    }
+    let customerID =
+    customerRespData?.id
     
+    let failedRules =
+    missingRules
+    
+    guard let customerID,
+          !customerID.isEmpty
+    else {
+
+      finishSDK(
+        result: .cancelled
+      )
+
+      return
+    }
+
+    if initialVC?.areMandatoryKYCStepsComplete() == true {
+
+      /*
+       Every mandatory step is done; anything still missing is optional-only.
+       Backing out here should report the same outcome as the explicit
+       optional-steps Continue button: a success, not a failure/cancel.
+       */
+
+      finishSDK(
+        result: .success(
+          customerID: customerID
+        )
+      )
+
+      return
+    }
+
+    if let failedRules {
+      
+      finishSDK(
+        result: .failed(
+          customerID: customerID,
+          rules: failedRules
+        )
+      )
+      
+    } else {
+      
+      finishSDK(
+        result: .cancelled
+      )
+    }
   }
   
- 
+  func completeKYC(
+    customerID: String
+  ) {
+    
+    finishSDK(
+      result: .success(
+        customerID: customerID
+      )
+    )
+  }
+  
+#if canImport(AmaniSpeechVerifier)
   func markSpeechVerifierResumePending(
     stepID: String?
   ) {
@@ -492,56 +722,6 @@ public class AmaniUI {
   
   public func clearPendingSpeechVerifierResume() {
     AmaniUIResumeStore.shared.clear()
-  }
-
-  
-  internal func updateConfig(config: AppConfigModel) {
-    guard let rules = self.customerRespData?.rules else {
-      return
-    }
-    DispatchQueue.main.async {
-      self.generateRulesKYC(rules: rules)
-      self.setAppTheme(model: self.config?.generalconfigs!)
-      if self.apiVersion == .v2 {
-        self.nonKYCStepManager = NonKYCStepManager(for: config.stepConfig!, customer: self.customerRespData!, navigationController: self.sdkNavigationController, vc: self.parentVC!)
-        if self
-          .pendingSpeechVerifierResumeStateForCurrentSession()
-            != nil {
-          
-          self.startKYCHome()
-          return
-        }
-        self.nonKYCStepManager!.startFlow(forPreSteps: true) { [weak self] () in
-          guard let self = self else { return }
-          self.startKYCHome()
-        }
-      } else {
-        self.startKYCHome()
-      }
-    }
-  }
-  
-  private func startKYCHome() {
-    DispatchQueue.main.async {
-      switch self.uiVersion {
-      case .v1:
-        self.initialVC = HomeViewController()
-      case .v2:
-        self.initialVC = HomeV2ViewController()
-      }
-      self.initialVC?.bind(customerData: self.customerRespData!, nonKYCManager: self.nonKYCStepManager)
-      try? self.initialVC?.generateKYCStepViewModels(from: self.rulesKYC)
-      let stepModels = self.initialVC?.stepModels
-      self.sdkNavigationController.setViewControllers(
-        [self.initialVC!],
-        animated: true
-      )
-      guard self.parentVC?.presentedViewController == nil else { return }
-      guard !self.sdkNavigationController.isBeingPresented else { return }
-      self.parentVC?.present(self.sdkNavigationController, animated: true) { [weak self] in
-        self?.resumePendingSpeechVerifierIfNeeded(stepModels: stepModels)
-      }
-    }
   }
   
   private func resumePendingSpeechVerifierIfNeeded(
@@ -617,6 +797,62 @@ public class AmaniUI {
       }
     }
   }
+  #endif
+  
+  internal func updateConfig(config: AppConfigModel) {
+    guard let rules = self.customerRespData?.rules else {
+      return
+    }
+    DispatchQueue.main.async {
+      self.generateRulesKYC(rules: rules)
+      self.setAppTheme(model: self.config?.generalconfigs!)
+      if self.apiVersion == .v2 {
+        self.nonKYCStepManager = NonKYCStepManager(for: config.stepConfig!, customer: self.customerRespData!, navigationController: self.sdkNavigationController, vc: self.parentVC!)
+#if canImport(AmaniSpeechVerifier)
+        if self
+          .pendingSpeechVerifierResumeStateForCurrentSession()
+            != nil {
+
+          self.startKYCHome()
+          return
+        }
+#endif
+        self.nonKYCStepManager!.startFlow(forPreSteps: true) { [weak self] () in
+          guard let self = self else { return }
+          self.startKYCHome()
+        }
+      } else {
+        self.startKYCHome()
+      }
+    }
+  }
+  
+  private func startKYCHome() {
+    DispatchQueue.main.async {
+      switch self.uiVersion {
+      case .v1:
+        self.initialVC = HomeViewController()
+      case .v2:
+        self.initialVC = HomeV2ViewController()
+      }
+      self.initialVC?.bind(customerData: self.customerRespData!, nonKYCManager: self.nonKYCStepManager)
+      try? self.initialVC?.generateKYCStepViewModels(from: self.rulesKYC)
+      let stepModels = self.initialVC?.stepModels
+      self.sdkNavigationController.setViewControllers(
+        [self.initialVC!],
+        animated: true
+      )
+      guard self.parentVC?.presentedViewController == nil else { return }
+      guard !self.sdkNavigationController.isBeingPresented else { return }
+      self.parentVC?.present(self.sdkNavigationController, animated: true) { [weak self] in
+#if canImport(AmaniSpeechVerifier)
+        self?.resumePendingSpeechVerifierIfNeeded(stepModels: stepModels)
+#endif
+      }
+    }
+  }
+  
+ 
   
   /**
    This method set up the app theme color
@@ -683,9 +919,10 @@ extension AmaniUI: AmaniDelegate {
     )
   }
   
-  public func onStepModel(customerId: String, rules: [AmaniSDK.KYCRuleModel]?) {
-    let object: [Any?] = [customerId, rules]
+  public func onStepModel(customerId: String, documentId: String, rules: [AmaniSDK.KYCRuleModel]?) {
+    let object: [Any?] = [customerId, rules, documentId]
     debugPrint(rules)
+    debugPrint(documentId)
 //    DispatchQueue.main.async {
       self.generateRulesKYC(rules: rules)
 //    }

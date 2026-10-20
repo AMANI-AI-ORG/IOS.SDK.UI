@@ -10,7 +10,13 @@ class SuccessViewController: BaseViewController {
     private var info2TextLabel = UILabel()
     private var continueButton = UIButton()
     private var amaniLogo = UIImageView()
-    
+
+    /// Set by `HomeViewController` when this screen was reached via the optional-steps
+    /// Continue button (a mandatory-only completion), rather than every step — including
+    /// optional ones — being approved. In that case an optional step is still available to
+    /// finish, so the back button should return to Home instead of closing the SDK.
+    var allowsReturnToHome: Bool = false
+
   override func viewDidLoad() {
     super.viewDidLoad()
     setupUI()
@@ -34,6 +40,10 @@ class SuccessViewController: BaseViewController {
   }
   
   override func popViewController() {
+    guard !allowsReturnToHome else {
+      navigationController?.popViewController(animated: true)
+      return
+    }
     AmaniUI.sharedInstance.closeAmaniSDK()
     navigationController?.dismiss(animated: true, completion: nil)
   }
@@ -41,7 +51,7 @@ class SuccessViewController: BaseViewController {
   @objc func continueBtnAction(_ sender: UIButton) {
         let customer = Amani.sharedInstance.customerInfo().getCustomer()
         guard let customerId: String = customer.id else { return }
-        AmaniUI.sharedInstance.delegate?.onKYCSuccess(CustomerId: customerId)
+        AmaniUI.sharedInstance.completeKYC(customerID: customerId)
         AmaniUI.sharedInstance.closeAmaniSDK()
 
         navigationController?.dismiss(animated: true, completion: nil)

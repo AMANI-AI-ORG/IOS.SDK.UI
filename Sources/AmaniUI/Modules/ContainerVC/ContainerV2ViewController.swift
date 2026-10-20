@@ -112,11 +112,17 @@ class ContainerV2ViewController: BaseViewController {
 
     // MARK: - Lifecycle
 
-    override func viewDidLoad() {
-        super.viewDidLoad()
-        guard !bypassIntro else { return }
-        setupV2UI()
+  override func viewDidLoad() {
+    super.viewDidLoad()
+    
+    setupNavigation()
+    
+    guard !bypassIntro else {
+      return
     }
+    
+    setupV2UI()
+  }
 
   override func viewWillAppear(_ animated: Bool) {
     super.viewWillAppear(animated)
@@ -203,6 +209,50 @@ class ContainerV2ViewController: BaseViewController {
     }
 
     // MARK: - UI Setup
+  
+  private func setupNavigation() {
+    
+    let appConfig = try? Amani.sharedInstance
+      .appConfig()
+      .getApplicationConfig()
+    
+    let gc = appConfig?.generalconfigs
+    
+    let navColor = hextoUIColor(
+      hexString: gc?.topBarFontColor ?? "1A1A2E"
+    )
+    
+    let currentContent = content
+    
+    setNavigationBarWith(
+      title: currentContent.navTitle,
+      textColor: navColor
+    )
+    
+    let backButton = makeNavButton(
+      icon: UIImage(systemName: "arrow.left"),
+      tintColor: navColor
+    )
+    
+    backButton.addTarget(
+      self,
+      action: #selector(popViewController),
+      for: .touchUpInside
+    )
+    
+    let item = UIBarButtonItem(
+      customView: backButton
+    )
+    
+#if compiler(>=6.2)
+    if #available(iOS 26.0, *) {
+      item.hidesSharedBackground = true
+    }
+#endif
+    
+    navigationItem.leftItemsSupplementBackButton = false
+    navigationItem.leftBarButtonItem = item
+  }
 
     private func setupV2UI() {
         let appConfig = try? Amani.sharedInstance.appConfig().getApplicationConfig()
@@ -213,20 +263,6 @@ class ContainerV2ViewController: BaseViewController {
         view.backgroundColor = bgColor
         let currentContent = content
 
-        // Navigation bar
-        setNavigationBarWith(title: currentContent.navTitle, textColor: hextoUIColor(hexString: gc?.topBarFontColor ?? "1A1A2E"))
-        let backButton = makeNavButton(
-            icon: UIImage(systemName: "arrow.left"),
-            tintColor: hextoUIColor(hexString: gc?.topBarFontColor ?? "1A1A2E")
-        )
-        backButton.addTarget(self, action: #selector(popViewController), for: .touchUpInside)
-        let backBarItem = UIBarButtonItem(customView: backButton)
-    #if compiler(>=6.2)
-      if #available(iOS 26.0, *) {
-        backBarItem.hidesSharedBackground = true
-      }
-    #endif
-        navigationItem.leftBarButtonItem = backBarItem
 
         // Eyebrow — hidden entirely when there's no eyebrow label configured (e.g. Selfie by design)
         let hasEyebrow = !(currentContent.eyebrowLabel?.isEmpty ?? true)

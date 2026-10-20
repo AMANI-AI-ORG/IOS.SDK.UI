@@ -8,6 +8,9 @@
 import AmaniSDK
 import Foundation
 import UIKit
+#if canImport(AmaniSpeechVerifier)
+import AmaniSpeechVerifier
+#endif
 
 class DocumentHandlerHelper {
   var versionList: [DocumentVersion] = []
@@ -170,11 +173,15 @@ class DocumentHandlerHelper {
       
     case .ST:
       
+#if canImport(AmaniSpeechVerifier)
       return SpeechHandler(
         topVC: topViewController,
         stepVM: stepViewModel,
         docID: .ST
       )
+#else
+      fatalError("Speech verification step requires the AmaniUI/SpeechVerifier subspec")
+#endif
       
     case .IB:
       

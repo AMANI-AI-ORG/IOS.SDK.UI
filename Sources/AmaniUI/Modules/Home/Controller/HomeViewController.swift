@@ -18,6 +18,9 @@ class HomeViewController: BaseViewController {
     private var descriptionLabel = UILabel()
   private var kycStepTblView: KYCStepTblView! = KYCStepTblView()
     private var amaniLogo = UIImageView()
+    private var continueButton = UIButton(type: .custom)
+    private var tableBottomToLogoConstraint: NSLayoutConstraint!
+    private var tableBottomToButtonConstraint: NSLayoutConstraint!
     
  // MARK: - HomeViewController LifeCycle
   override func viewDidLoad() {
@@ -125,6 +128,7 @@ class HomeViewController: BaseViewController {
       //      onVC.headView.layer.cornerRadius = 25
       //      onVC.headView.backgroundColor = hextoUIColor(hexString: model.appBackground ?? "0F2435")
     self.setBackgroundColorOfTableView(color: hextoUIColor(hexString: appConfig.generalconfigs?.appBackground ?? "253C59"))
+    setupContinueButton()
     setConstraints()
     
 //    var customerInfo = Amani.sharedInstance.customerInfo().getCustomer()
@@ -142,17 +146,104 @@ class HomeViewController: BaseViewController {
   private func refreshUI() {
     var customerInfo =
     Amani.sharedInstance.customerInfo().getCustomer()
-    
+
     if let rules = customerInfo.rules,
        rules.isEmpty,
        let customerData {
       customerInfo = customerData
     }
-    
+
     isSuccess = false
-    
+
     setCustomerInfo(model: customerInfo)
     goToSuccess()
+    updateContinueButtonVisibility()
+  }
+
+  /// Sets up the bottom "Continue" button shown once all mandatory steps are complete,
+  /// letting the user proceed without finishing steps marked optional in the backend config.
+  private func setupContinueButton() {
+    guard let appConfig = appConfig else { return }
+    let gc = appConfig.generalconfigs
+    continueButton.translatesAutoresizingMaskIntoConstraints = false
+    continueButton.setTitle(optionalStepsContinueButtonTitle(), for: .normal)
+    continueButton.titleLabel?.font = UIFont.systemFont(ofSize: 16, weight: .semibold)
+    continueButton.setTitleColor(hextoUIColor(hexString: gc?.primaryButtonTextColor ?? "FFFFFF"), for: .normal)
+    continueButton.backgroundColor = hextoUIColor(hexString: gc?.primaryButtonBackgroundColor ?? "#C0395A")
+    continueButton.layer.cornerRadius = AmaniUI.sharedInstance.style.ctaButtonCornerRadius
+    if let borderColorHex = gc?.primaryButtonBorderColor {
+      continueButton.layer.borderWidth = 1.5
+      continueButton.layer.borderColor = hextoUIColor(hexString: borderColorHex).cgColor
+    }
+    continueButton.addTarget(self, action: #selector(continueButtonTapped), for: .touchUpInside)
+    continueButton.isHidden = true
+  }
+
+  private func setContinueButtonVisible(_ visible: Bool) {
+    continueButton.isHidden = !visible
+    tableBottomToButtonConstraint?.isActive = visible
+    tableBottomToLogoConstraint?.isActive = !visible
+  }
+
+  /// Shows the Continue button once every mandatory (non-optional) step is approved/pending
+  /// review, as long as at least one optional step is still incomplete — if everything
+  /// (including optional steps) is already done, `goToSuccess()` takes over automatically.
+  private func updateContinueButtonVisibility() {
+    setContinueButtonVisible(shouldShowOptionalStepsContinueButton())
+  }
+
+  /// Shared with `HomeV2ViewController`, which builds its own V2-styled button but reuses this
+  /// condition and `performSuccessNavigation()` rather than duplicating the step-filtering logic.
+  func shouldShowOptionalStepsContinueButton() -> Bool {
+    guard let stepModels = self.stepModels, !isSuccess else {
+      return false
+    }
+    let kycSteps = stepModels.filter { $0.identifier == "kyc" || $0.identifier == nil }
+    let optionalSteps = kycSteps.filter { $0.isOptional }
+    let allComplete = kycSteps.allSatisfy { $0.status == .APPROVED || $0.status == .PENDING_REVIEW }
+
+    return areMandatoryKYCStepsComplete() && !optionalSteps.isEmpty && !allComplete
+  }
+
+  /// True once every mandatory (non-optional) KYC step is approved or pending review, regardless
+  /// of whether any optional steps are still outstanding. Shared with
+  /// `AmaniUI.popViewController()`, which treats closing the SDK from Home once only optional
+  /// steps remain as a success — the same outcome as if the user had pressed the optional-steps
+  /// Continue button instead of just backing out.
+  func areMandatoryKYCStepsComplete() -> Bool {
+    guard let stepModels = self.stepModels else {
+      return false
+    }
+    let kycSteps = stepModels.filter { $0.identifier == "kyc" || $0.identifier == nil }
+    let mandatorySteps = kycSteps.filter { !$0.isOptional }
+
+    return mandatorySteps.allSatisfy { $0.status == .APPROVED || $0.status == .PENDING_REVIEW }
+  }
+
+  /// True once an optional step has been skipped to reach success — i.e. the mandatory steps
+  /// are done but not every KYC step is. Used to let the success screen's back button return to
+  /// Home (so the user can still finish the optional step) instead of closing the SDK, which is
+  /// the right behavior only when every step, optional included, is actually complete.
+  private func hasPendingOptionalSteps() -> Bool {
+    guard let stepModels = self.stepModels else {
+      return false
+    }
+    let kycSteps = stepModels.filter { $0.identifier == "kyc" || $0.identifier == nil }
+    guard !kycSteps.isEmpty else {
+      return false
+    }
+    return !kycSteps.allSatisfy { $0.status == .APPROVED || $0.status == .PENDING_REVIEW }
+  }
+
+  /// Fallback chain shared with `HomeV2ViewController` for the optional-steps Continue button title.
+  func optionalStepsContinueButtonTitle() -> String {
+    let gc = appConfig?.generalconfigs
+    return gc?.buttonTextOptionalSteps ?? gc?.continueText ?? "Continue"
+  }
+
+  @objc private func continueButtonTapped() {
+    guard !isSuccess else { return }
+    performSuccessNavigation()
   }
   
   // MARK: - Actions
@@ -256,6 +347,7 @@ class HomeViewController: BaseViewController {
         guard let stepModelleri = try? self.generateKYCStepViewModels(from: AmaniUI.sharedInstance.rulesKYC) else { return }
         self.kycStepTblView.updateDataAndReload(stepModels: stepModelleri)
         self.goToSuccess()
+        self.updateContinueButtonVisibility()
       }
     }
   }
@@ -266,37 +358,130 @@ class HomeViewController: BaseViewController {
 extension HomeViewController {
 
   func goToSuccess() {
+
     guard let stepModels = self.stepModels else {
       print("no model info passed 209")
       return
     }
-    var stepResults:[Bool] = stepModels.compactMap({return ($0.identifier == "kyc" || $0.identifier == nil) && ($0.status == .APPROVED || $0.status == .PENDING_REVIEW)})
-    if !isSuccess && stepResults.count > 0 && !(stepResults.contains(false)) {
-      isSuccess = true
-      if let nonKYCManager = self.nonKYCStepManager, nonKYCManager.hasPostSteps() {
-        nonKYCManager.startFlow(forPreSteps: false) {[weak self] () in
-          DispatchQueue.main.async {
-            let successVC = self?.makeSuccessViewController()
-            if let vc = successVC { self?.navigationController?.pushViewController(vc, animated: true) }
-          }
-        }
-      } else {
-        DispatchQueue.main.async {
-          let successVC = self.makeSuccessViewController()
-          self.navigationController?.pushViewController(successVC, animated: false)
-        }
-      }
+
+    let stepResults: [Bool] = stepModels.compactMap {
+
+      return
+      ($0.identifier == "kyc" || $0.identifier == nil)
+      &&
+      (
+        $0.status == .APPROVED
+        || $0.status == .PENDING_REVIEW
+      )
     }
 
+    guard
+      !isSuccess,
+      stepResults.count > 0,
+      !stepResults.contains(false)
+    else {
+      return
+    }
+
+    performSuccessNavigation()
   }
-  
-  func makeSuccessViewController() -> UIViewController {
+
+  /// Shared success-screen transition, used both by the automatic all-steps-complete path
+  /// in `goToSuccess()` and by the manual "Continue" button when optional steps are skipped.
+  /// Not private: `HomeV2ViewController`'s own Continue button calls this directly.
+  func performSuccessNavigation() {
+    // Computed before isSuccess flips to true, since hasPendingOptionalSteps() only makes sense
+    // against the pre-navigation step state.
+    let viaOptionalSkip = hasPendingOptionalSteps()
+
+    isSuccess = true
+    setContinueButtonVisible(false)
+
+    /*
+     KYC tamamlandı.
+
+     Eğer POST-KYC step varsa önce onları çalıştır.
+     */
+    if let nonKYCManager = nonKYCStepManager,
+       nonKYCManager.hasPostSteps() {
+
+      print("[Home] Starting post-KYC flow")
+
+      nonKYCManager.startFlow(
+        forPreSteps: false
+      ) { [weak self] in
+
+        DispatchQueue.main.async {
+
+          guard let self else {
+            return
+          }
+
+          print(
+            "[Home] Post-KYC flow completed - showing success"
+          )
+
+          let successVC =
+          self.makeSuccessViewController(allowsReturnToHome: viaOptionalSkip)
+
+          guard let navigationController =
+                  self.navigationController
+          else {
+            print(
+              "[Home] navigationController nil"
+            )
+            return
+          }
+
+          /*
+
+           Final stack:
+           Home -> Success
+           */
+          navigationController.setViewControllers(
+            [
+              self,
+              successVC
+            ],
+            animated: true
+          )
+        }
+      }
+
+      return
+    }
+
+
+    DispatchQueue.main.async { [weak self] in
+
+      guard let self else {
+        return
+      }
+
+      print(
+        "[Home] No post-KYC steps - showing success"
+      )
+
+      let successVC =
+      self.makeSuccessViewController(allowsReturnToHome: viaOptionalSkip)
+
+      self.navigationController?
+        .pushViewController(
+          successVC,
+          animated: true
+        )
+    }
+  }
+
+  func makeSuccessViewController(allowsReturnToHome: Bool = false) -> UIViewController {
     if AmaniUI.sharedInstance.uiVersion == .v2 {
       let vc = SuccessV2ViewController()
       vc.bind(stepModels: stepModels)
       return vc
     } else {
-      return SuccessViewController()
+      let vc = SuccessViewController()
+      vc.allowsReturnToHome = allowsReturnToHome
+      return vc
     }
   }
 
@@ -345,8 +530,18 @@ extension HomeViewController {
     
     view.addSubview(descriptionLabel)
     view.addSubview(kycStepTblView)
+    view.addSubview(continueButton)
     view.addSubview(amaniLogo)
-    
+
+    tableBottomToLogoConstraint = kycStepTblView.bottomAnchor.constraint(
+      equalTo: amaniLogo.topAnchor,
+      constant: -24
+    )
+    tableBottomToButtonConstraint = kycStepTblView.bottomAnchor.constraint(
+      equalTo: continueButton.topAnchor,
+      constant: -16
+    )
+
     NSLayoutConstraint.activate([
       
       // MARK: Description
@@ -386,25 +581,43 @@ extension HomeViewController {
       ),
       
       // MARK: Table
-      
+
       kycStepTblView.topAnchor.constraint(
         equalTo: descriptionLabel.bottomAnchor,
         constant: 24
       ),
-      
+
       kycStepTblView.leadingAnchor.constraint(
         equalTo: view.safeAreaLayoutGuide.leadingAnchor,
         constant: 20
       ),
-      
+
       kycStepTblView.trailingAnchor.constraint(
         equalTo: view.safeAreaLayoutGuide.trailingAnchor,
         constant: -20
       ),
-      
-      kycStepTblView.bottomAnchor.constraint(
+
+      tableBottomToLogoConstraint,
+
+      // MARK: Continue button (optional-steps skip)
+
+      continueButton.leadingAnchor.constraint(
+        equalTo: view.safeAreaLayoutGuide.leadingAnchor,
+        constant: 20
+      ),
+
+      continueButton.trailingAnchor.constraint(
+        equalTo: view.safeAreaLayoutGuide.trailingAnchor,
+        constant: -20
+      ),
+
+      continueButton.bottomAnchor.constraint(
         equalTo: amaniLogo.topAnchor,
-        constant: -24
+        constant: -16
+      ),
+
+      continueButton.heightAnchor.constraint(
+        equalToConstant: AmaniUI.sharedInstance.style.ctaButtonHeight
       )
     ])
   }

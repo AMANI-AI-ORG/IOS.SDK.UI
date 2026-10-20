@@ -28,22 +28,43 @@ class EmailOTPViewModel {
   }
   
   func submitEmailForOTP() {
-    state = .loading
-    customerInfo.setEmail(email: email)
-    customerInfo.upload(location: AmaniUI.sharedInstance.location) { [weak self] emailChanged in
-        if emailChanged == false {
-          self?.state = .failed
-          return
+    
+    DispatchQueue.main.async { [weak self] in
+      self?.state = .loading
+    }
+    
+    customerInfo.setEmail(
+      email: email
+    )
+    
+    customerInfo.upload(
+      location: AmaniUI.sharedInstance.location
+    ) { [weak self] emailChanged in
+      
+      guard let self else { return }
+      
+      guard emailChanged == true else {
+        
+        DispatchQueue.main.async {
+          self.state = .failed
         }
         
-        self?.customerInfo.requestEmailOTPCode { success in
+        return
+      }
+      
+      self.customerInfo.requestEmailOTPCode { [weak self] success in
+        guard let self else { return }
+        
+        DispatchQueue.main.async {
+          
           if success == true {
-            self?.state = .success
+            self.state = .success
           } else {
-            self?.state = .failed
+            self.state = .failed
           }
         }
       }
+    }
   }
   
   private func isValidEmail() -> Bool {
