@@ -189,16 +189,18 @@ class PhoneOTPView: UIView {
     withDocument document: DocumentVersion?
   ) {
     phoneInput.setDelegate(delegate: self)
-    
+    // `document` is already the resolved DocumentVersion for this OTP step, and carries its own
+    // invalidPhoneNumberError — no need to re-derive it via a hardcoded stepConfig array index.
+    let invalidPhoneMessage = document?.invalidPhoneNumberError
+
     phoneInput.textPublisher
       .assign(to: \.phone, on: viewModel)
       .store(in: &cancellables)
-    
+
     viewModel.isEmailValidPublisher
       .sink(receiveValue: { [weak self] isValidEmail in
           if !isValidEmail || self?.phoneInput.field.text == "" {
-              let message = self?.appConfig?.stepConfig?[2].documents?[0].versions?[0].invalidPhoneNumberError
-          self?.phoneInput.showError(message: message ?? "This phone number is wrong")
+          self?.phoneInput.showError(message: invalidPhoneMessage ?? "This phone number is wrong")
         } else {
           self?.phoneInput.hideError()
         }
@@ -278,7 +280,7 @@ class PhoneOTPView: UIView {
       DispatchQueue.main.async {
         self.submitButton.titleLabel?.text = document.nextButtonText
         self.descriptionText.text = step.captureDescription
-        self.phoneLegend.text = document.phoneHint
+        self.phoneLegend.text = document.phoneTitle ?? document.phoneHint
       }
     }
   }

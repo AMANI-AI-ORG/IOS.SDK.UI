@@ -22,13 +22,13 @@ struct UIStyle {
     )
 
     static let v2 = UIStyle(
-        cardCornerRadius: 16,
+        cardCornerRadius: CGFloat(AmaniUI.sharedInstance.config?.generalconfigs?.buttonRadius ?? 16),
         badgeSize: 40,
-        badgeCornerRadius: 12,
-        ctaButtonCornerRadius: 16,
+        badgeCornerRadius: CGFloat(AmaniUI.sharedInstance.config?.generalconfigs?.buttonRadius ?? 12),
+        ctaButtonCornerRadius: CGFloat(AmaniUI.sharedInstance.config?.generalconfigs?.buttonRadius ?? 16),
         ctaButtonHeight: 56,
         cardBorderWidth: 1.5,
         navButtonSize: 36,
-        navButtonCornerRadius: 14
+        navButtonCornerRadius: CGFloat(AmaniUI.sharedInstance.config?.generalconfigs?.buttonRadius ?? 14)
     )
 }

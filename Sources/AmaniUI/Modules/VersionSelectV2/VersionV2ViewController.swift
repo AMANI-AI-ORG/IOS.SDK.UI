@@ -46,7 +46,7 @@ class VersionV2ViewController: BaseViewController {
         view.backgroundColor = bgColor
 
         // Navigation bar
-        let navTitle = stepVM?.stepConfig.title ?? "Choose your ID"
+        let navTitle = stepVM?.getRuleModel().title ?? stepVM?.stepConfig.documentSelectionTitle ?? "Choose your ID"
         setNavigationBarWith(title: navTitle)
         let backButton = makeNavButton(
             icon: UIImage(systemName: "arrow.left"),

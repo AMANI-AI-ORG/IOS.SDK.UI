@@ -27,7 +27,7 @@ extension DocumentHandler {
   func startConfirmVC(image: UIImage, docStep: DocumentStepModel, docVer: DocumentVersion,stepId:Int = 0, retake: (() -> Void)? = nil, completion: @escaping () -> Void) {
     if AmaniUI.sharedInstance.uiVersion == .v2 {
       let confirmVC = DocConfirmationV2ViewController()
-      confirmVC.bind(image: image, documentID: docID, docVer: docVer, docStep: docStep, stepid: stepId, retake: retake, callback: completion)
+      confirmVC.bind(image: image, documentID: docID, docVer: docVer, docStep: docStep, stepid: stepId, stepConfirmText: self.stepViewModel.stepConfig.confirm, retake: retake, callback: completion)
       self.topVC?.navigationController?.pushViewController(confirmVC, animated: true)
     } else {
       let confirmVC = DocConfirmationViewController()

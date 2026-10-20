@@ -167,7 +167,7 @@ class IdHandler: DocumentHandler {
             if AmaniUI.sharedInstance.uiVersion == .v2 {
                 let nfcCaptureView = NFCV2ViewController()
                 nfcCaptureView.docID = "NFC"
-                nfcCaptureView.bind(documentVersion: docVer, callback: callback)
+                nfcCaptureView.bind(documentVersion: docVer, stepConfirmText: self.stepViewModel.stepConfig.confirm, callback: callback)
                 self.topVC?.navigationController?.pushViewController(nfcCaptureView, animated: true)
             } else {
                 let nfcCaptureView = NFCViewController()
