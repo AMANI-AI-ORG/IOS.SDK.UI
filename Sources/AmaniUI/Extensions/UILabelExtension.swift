@@ -1,11 +1,12 @@
 //
 //  UILabelExtension.swift
-//  Pods
+//  AmaniUI
 //
-//  Created by Bedri Doğan on 10.09.2026.
+//  Created by Bedri Doğan on 20.10.2026.
 //
+import UIKit
 
- extension UILabel {
+extension UILabel {
   
   func setText(
     _ text: String?,
