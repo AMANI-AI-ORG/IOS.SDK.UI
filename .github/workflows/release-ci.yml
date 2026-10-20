@@ -47,7 +47,7 @@ jobs:
     if: needs.check-release.outputs.is_release == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: macos-15
     steps:
-      - name: Checkout
+      - name: Checkout selected or PR revision
         uses: actions/checkout@v4
       - name: Verify checked-out sources
         shell: bash
@@ -56,7 +56,7 @@ jobs:
           echo "=== Commit ==="
           git rev-parse HEAD
           echo "=== Branch ==="
-          echo "$GITHUB_REF_NAME"
+          echo "Ref: $GITHUB_REF_NAME / Head: $GITHUB_HEAD_REF"
           for file in \
             Sources/AmaniUI/UIVersion.swift \
             Sources/AmaniUI/Common/Styles/UIStyle.swift \
@@ -121,8 +121,52 @@ jobs:
     if: needs.check-release.outputs.is_release == 'true' || github.event_name == 'workflow_dispatch'
     runs-on: macos-15
     steps:
-      - name: Checkout
+      - name: Checkout selected or PR revision
         uses: actions/checkout@v4
+      - name: Diagnose CocoaPods sources
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "=== GitHub event ==="
+          echo "Event: $GITHUB_EVENT_NAME"
+          echo "Ref: $GITHUB_REF"
+          echo "SHA: $GITHUB_SHA"
+
+          echo "=== Current commit ==="
+          git rev-parse HEAD
+          git log -1 --oneline
+
+          echo "=== Working tree ==="
+          git status --short
+
+          echo "=== Duplicate filename candidates ==="
+          find Sources/AmaniUI -type f \
+            \( -name '* 2.swift' \
+            -o -iname '*copy*.swift' \
+            -o -iname '*backup*.swift' \) \
+            -print
+
+          echo "=== ContainerV2 definitions ==="
+          grep -Rn \
+            'class ContainerV2ViewController' \
+            Sources/AmaniUI || true
+
+          echo "=== Podspec source files ==="
+          ruby -e '
+            files = Dir.glob("Sources/AmaniUI/**/*.{h,m,swift}")
+            files.sort.each { |f| puts f }
+            puts "Total: #{files.count}"
+          '
+
+          echo "=== CocoaPods subspec selections ==="
+          pod ipc spec AmaniUI.podspec | ruby -rjson -e '
+            data = JSON.parse(STDIN.read)
+            data.fetch("subspecs", []).each do |subspec|
+              puts "#{subspec["name"]}: #{subspec["source_files"].inspect}"
+              puts "  exclude_files: #{subspec["exclude_files"].inspect}"
+            end
+          '
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:

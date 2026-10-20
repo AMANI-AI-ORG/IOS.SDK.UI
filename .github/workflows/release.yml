@@ -27,6 +27,7 @@ permissions:
 
 env:
   MAIN_BRANCH: main
+  SOURCE_BRANCH: ${{ github.ref_name }}
   XCODE_PROJECT: Sources/AmaniUI.xcodeproj
   UNIT_TEST_SCHEME: AmaniUnitTests
   XCODE_DESTINATION: 'platform=iOS Simulator,name=iPhone 16,OS=latest'
@@ -39,8 +40,10 @@ jobs:
     name: Run Unit Tests
     runs-on: macos-15
     steps:
-      - name: Checkout
+      - name: Checkout selected branch
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
       - name: Verify checked-out revision
         shell: bash
         run: |
@@ -109,8 +112,54 @@ jobs:
     name: Validate CocoaPods Core & SpeechVerifier
     runs-on: macos-15
     steps:
-      - name: Checkout
+      - name: Checkout selected branch
         uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Diagnose CocoaPods sources
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "=== GitHub event ==="
+          echo "Event: $GITHUB_EVENT_NAME"
+          echo "Ref: $GITHUB_REF"
+          echo "SHA: $GITHUB_SHA"
+
+          echo "=== Current commit ==="
+          git rev-parse HEAD
+          git log -1 --oneline
+
+          echo "=== Working tree ==="
+          git status --short
+
+          echo "=== Duplicate filename candidates ==="
+          find Sources/AmaniUI -type f \
+            \( -name '* 2.swift' \
+            -o -iname '*copy*.swift' \
+            -o -iname '*backup*.swift' \) \
+            -print
+
+          echo "=== ContainerV2 definitions ==="
+          grep -Rn \
+            'class ContainerV2ViewController' \
+            Sources/AmaniUI || true
+
+          echo "=== Podspec source files ==="
+          ruby -e '
+            files = Dir.glob("Sources/AmaniUI/**/*.{h,m,swift}")
+            files.sort.each { |f| puts f }
+            puts "Total: #{files.count}"
+          '
+
+          echo "=== CocoaPods subspec selections ==="
+          pod ipc spec AmaniUI.podspec | ruby -rjson -e '
+            data = JSON.parse(STDIN.read)
+            data.fetch("subspecs", []).each do |subspec|
+              puts "#{subspec["name"]}: #{subspec["source_files"].inspect}"
+              puts "  exclude_files: #{subspec["exclude_files"].inspect}"
+            end
+          '
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
@@ -155,6 +204,15 @@ jobs:
       pull-requests: write
       issues: write
     steps:
+      - name: Require release automation PAT
+        shell: bash
+        env:
+          RELEASE_AUTOMATION_PAT: ${{ secrets.RELEASE_AUTOMATION_PAT }}
+        run: |
+          if [[ -z "$RELEASE_AUTOMATION_PAT" ]]; then
+            echo "::error::Set RELEASE_AUTOMATION_PAT secret so release PR creation triggers Verify workflow."
+            exit 1
+          fi
       - name: Validate version
         id: version
         shell: bash
@@ -168,12 +226,27 @@ jobs:
             exit 1
           fi
           echo "value=$VERSION" >> "$GITHUB_OUTPUT"
-      - name: Checkout main
+      - name: Checkout selected branch
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.ref_name }}
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
+          persist-credentials: true
+          token: ${{ secrets.RELEASE_AUTOMATION_PAT }}
+      - name: Verify branch still points to validated commit
+        shell: bash
+        run: |
+          set -euo pipefail
+          REMOTE_SHA=$(git ls-remote origin "refs/heads/${SOURCE_BRANCH}" | cut -f1)
+          if [[ -z "$REMOTE_SHA" || "$REMOTE_SHA" != "$GITHUB_SHA" ]]; then
+            echo "::error::Source branch changed after validation. Run workflow again."
+            exit 1
+          fi
+          git fetch origin "${MAIN_BRANCH}" --no-tags
+          if [[ "$SOURCE_BRANCH" != "$MAIN_BRANCH" ]] && ! git merge-base --is-ancestor "origin/${MAIN_BRANCH}" HEAD; then
+            echo "::error::Selected branch is not up to date with main; merge or rebase main before release."
+            exit 1
+          fi
       - name: Verify source files
         shell: bash
         run: |
@@ -225,7 +298,7 @@ jobs:
       - name: Create release PR
         shell: bash
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_AUTOMATION_PAT }}
           VERSION: ${{ steps.version.outputs.value }}
           RELEASE_NOTES: ${{ inputs.release_notes }}
           MEASURE_SIZE: ${{ inputs.measure_size }}
@@ -250,3 +323,4 @@ jobs:
     steps:
       - name: Summary
         run: echo '::notice title=Dry Run::Unit tests and both CocoaPods subspecs passed.'
+

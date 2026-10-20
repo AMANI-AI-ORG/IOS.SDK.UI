@@ -161,9 +161,6 @@
 		910E52E130875E4D00C1DD08 /* SpeechHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpeechHandler.swift; sourceTree = "<group>"; };
 		910E52E530875E7400C1DD08 /* ContainerV2ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContainerV2ViewController.swift; sourceTree = "<group>"; };
 		910E52EF3087601D00C1DD08 /* UIVersion.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UIVersion.swift; sourceTree = "<group>"; };
-		910E52F13087608C00C1DD08 /* HomeV2StepCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeV2StepCard.swift; sourceTree = "<group>"; };
-		910E52F23087608C00C1DD08 /* StepProgressView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StepProgressView.swift; sourceTree = "<group>"; };
-		910E52F43087608C00C1DD08 /* HomeV2ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeV2ViewController.swift; sourceTree = "<group>"; };
 		910E52F9308768A300C1DD08 /* SuccessV2ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SuccessV2ViewController.swift; sourceTree = "<group>"; };
 		910E52FF30876BB100C1DD08 /* GalleryDocumentHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GalleryDocumentHandler.swift; sourceTree = "<group>"; };
 		910E530130876BBB00C1DD08 /* PDFDocumentHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFDocumentHandler.swift; sourceTree = "<group>"; };
@@ -375,24 +372,6 @@
 			path = Styles;
 			sourceTree = "<group>";
 		};
-		910E52F33087608C00C1DD08 /* Views */ = {
-			isa = PBXGroup;
-			children = (
-				910E52F13087608C00C1DD08 /* HomeV2StepCard.swift */,
-				910E52F23087608C00C1DD08 /* StepProgressView.swift */,
-			);
-			path = Views;
-			sourceTree = "<group>";
-		};
-		910E52F53087608C00C1DD08 /* HomeV2 */ = {
-			isa = PBXGroup;
-			children = (
-				910E52F33087608C00C1DD08 /* Views */,
-				910E52F43087608C00C1DD08 /* HomeV2ViewController.swift */,
-			);
-			path = HomeV2;
-			sourceTree = "<group>";
-		};
 		910E530830876C8D00C1DD08 /* PhotoLibrary */ = {
 			isa = PBXGroup;
 			children = (
@@ -519,7 +498,6 @@
 			children = (
 				48E081162C7F662400EAD39B /* AnimationView */,
 				C538D74F28EC83F80033BB53 /* Controller */,
-				910E52F53087608C00C1DD08 /* HomeV2 */,
 			);
 			path = DocConfirmation;
 			sourceTree = "<group>";
