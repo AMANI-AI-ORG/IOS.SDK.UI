@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: false
 
 env:
-  MOBILE_SDK_REPO: AmaniTechnologiesLtd/Mobile_SDK_Repo
+  MOBILE_SDK_REPO: AMANI-AI-ORG/Mobile_SDK_Repo
   MOBILE_SDK_REPO_PATH: Mobile_SDK_Repo
   POD_NAME: AmaniUI
   PODSPEC_FILE: AmaniUI.podspec
