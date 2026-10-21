@@ -4,6 +4,12 @@ on:
   pull_request:
     types: [closed]
     branches: [main]
+  workflow_dispatch:
+    inputs:
+      pr_number:
+        description: 'Merged release PR number to publish/retry (e.g. 42)'
+        type: number
+        required: true
 
 permissions:
   contents: write
@@ -25,9 +31,10 @@ jobs:
   publish:
     name: Create Tag, Update Specs Repo & Publish Release
     if: >-
-      github.event.pull_request.merged == true &&
-      startsWith(github.event.pull_request.head.ref, 'release/') &&
-      github.event.pull_request.head.repo.full_name == github.repository
+      github.event_name == 'workflow_dispatch' ||
+      (github.event.pull_request.merged == true &&
+       startsWith(github.event.pull_request.head.ref, 'release/') &&
+       github.event.pull_request.head.repo.full_name == github.repository)
     runs-on: ubuntu-latest
     environment: production
     permissions:
@@ -36,13 +43,62 @@ jobs:
     outputs:
       version: ${{ steps.version.outputs.value }}
       is_prerelease: ${{ steps.prerelease.outputs.is_prerelease }}
+      measure_size: ${{ steps.resolve.outputs.measure_size }}
 
     steps:
+      - name: Resolve and validate merged release PR
+        id: resolve
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          EVENT_NAME: ${{ github.event_name }}
+          EVENT_PR: ${{ github.event.pull_request.number }}
+          MANUAL_PR: ${{ inputs.pr_number }}
+          RUN_REF: ${{ github.ref }}
+        run: |
+          set -euo pipefail
+          if [[ "$EVENT_NAME" == 'workflow_dispatch' && "$RUN_REF" != 'refs/heads/main' ]]; then
+            echo '::error::Manual publishing must be started from the main branch.'
+            exit 1
+          fi
+          PR_NUMBER="$EVENT_PR"
+          if [[ "$EVENT_NAME" == 'workflow_dispatch' ]]; then PR_NUMBER="$MANUAL_PR"; fi
+          if [[ ! "$PR_NUMBER" =~ ^[0-9]+$ ]]; then
+            echo '::error::A numeric PR number is required.'
+            exit 1
+          fi
+          pr_json="$(mktemp)"
+          trap 'rm -f "$pr_json"' EXIT
+          gh api "repos/${GITHUB_REPOSITORY}/pulls/${PR_NUMBER}" > "$pr_json"
+          if ! jq -e             --arg repo "$GITHUB_REPOSITORY"             '.merged == true and .base.ref == "main" and
+             .head.repo.full_name == $repo and
+             (.head.ref | startswith("release/")) and
+             (.merge_commit_sha != null)' "$pr_json" >/dev/null; then
+            echo '::error::PR must be merged into main, originate from this repository, and use a release/ branch.'
+            exit 1
+          fi
+          if [[ "$EVENT_NAME" == 'pull_request' ]]; then
+            EVENT_MERGE_SHA='${{ github.event.pull_request.merge_commit_sha }}'
+            API_MERGE_SHA="$(jq -r '.merge_commit_sha' "$pr_json")"
+            if [[ "$EVENT_MERGE_SHA" != "$API_MERGE_SHA" ]]; then
+              echo '::error::Merge SHA changed unexpectedly; refusing publish.'
+              exit 1
+            fi
+          fi
+          BRANCH="$(jq -r '.head.ref' "$pr_json")"
+          MERGE_SHA="$(jq -r '.merge_commit_sha' "$pr_json")"
+          MEASURE_SIZE="$(jq -r 'if any(.labels[]?; .name == "measure-size") then "true" else "false" end' "$pr_json")"
+          echo "branch=$BRANCH" >> "$GITHUB_OUTPUT"
+          echo "merge_sha=$MERGE_SHA" >> "$GITHUB_OUTPUT"
+          echo "pr_number=$PR_NUMBER" >> "$GITHUB_OUTPUT"
+          echo "measure_size=$MEASURE_SIZE" >> "$GITHUB_OUTPUT"
+          echo "Validated merged PR #$PR_NUMBER on $MERGE_SHA"
+
       - name: Extract version from release branch
         id: version
         shell: bash
         env:
-          BRANCH: ${{ github.event.pull_request.head.ref }}
+          BRANCH: ${{ steps.resolve.outputs.branch }}
         run: |
           set -euo pipefail
           VERSION="${BRANCH#release/}"
@@ -61,26 +117,39 @@ jobs:
         run: |
           set -euo pipefail
           if [[ -z "${SPECS_PAT}" ]]; then
-            echo "::error::MOBILESDKREPO_PAT is empty or inaccessible. Add an approved token with Contents: Read and write for ${MOBILE_SDK_REPO}."
+            echo '::error::MOBILESDKREPO_PAT is missing. Check the production environment and Actions repository secrets.'
             exit 1
           fi
           echo "::add-mask::${SPECS_PAT}"
-          echo "Checking Mobile SDK repository access"
-          curl --fail-with-body --silent --show-error \
+
+          echo 'Checking Mobile SDK repository API response...'
+          response_file="$(mktemp)"
+          trap 'rm -f "$response_file"' EXIT
+          http_status="$(curl --silent --show-error --output "$response_file" --write-out '%{http_code}' \
             -H "Authorization: Bearer ${SPECS_PAT}" \
             -H 'Accept: application/vnd.github+json' \
-            "https://api.github.com/repos/${MOBILE_SDK_REPO}" \
-            | python3 -c 'import json,sys; d=json.load(sys.stdin); print("Spec repo:",d.get("full_name"),"push_permission:",d.get("permissions",{}).get("push")); sys.exit(0 if d.get("permissions",{}).get("push") is True else 1)'
-          echo "Checking source repository write permission"
-          gh api "repos/${GITHUB_REPOSITORY}" --jq '.permissions.push' | grep -qx true || {
-            echo '::error::GITHUB_TOKEN cannot push to the source repository.'
+            -H 'X-GitHub-Api-Version: 2022-11-28' \
+            "https://api.github.com/repos/${MOBILE_SDK_REPO}")"
+          echo "GitHub API HTTP status: ${http_status}"
+          if [[ "$http_status" != '200' ]]; then
+            error_message="$(jq -r '.message // "Unknown API error"' "$response_file" 2>/dev/null || echo 'Invalid GitHub API response')"
+            echo "::error::Mobile SDK repository access failed: ${error_message}"
             exit 1
-          }
+          fi
+          jq -r '"Repository: \(.full_name // "unknown")", "Reported push permission: \(.permissions.push // "unknown")"' "$response_file"
+          actual_repo="$(jq -r '.full_name // empty' "$response_file")"
+          if [[ "$actual_repo" != "$MOBILE_SDK_REPO" ]]; then
+            echo '::error::Unexpected repository response; ensure token can access the specs repository.'
+            exit 1
+          fi
+          echo 'Source repository authentication check...'
+          gh api "repos/${GITHUB_REPOSITORY}" --jq '.full_name'
+          echo 'Credential preflight passed; write access will be tested by the actual pushes.'
 
       - name: Checkout source repo at merged commit
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.pull_request.merge_commit_sha }}
+          ref: ${{ steps.resolve.outputs.merge_sha }}
           fetch-depth: 0
           persist-credentials: true
           token: ${{ github.token }}
@@ -222,10 +291,14 @@ jobs:
         id: notes
         shell: python3 {0}
         env:
-          PR_BODY: ${{ github.event.pull_request.body }}
+          PR_NUMBER: ${{ steps.resolve.outputs.pr_number }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          import os,re
-          raw=os.environ.get('PR_BODY','')
+          import json, os, re, subprocess
+          repo = os.environ['GITHUB_REPOSITORY']
+          pr = os.environ['PR_NUMBER']
+          response = subprocess.check_output(['gh', 'api', f'repos/{repo}/pulls/{pr}'], text=True)
+          raw = json.loads(response).get('body') or '' 
           match=re.search(r'###\s*Release\s*Notes\s*\n(.*)',raw,re.S|re.I)
           if match: raw=match.group(1).strip()
           labels=[(r'\bfix(?:es|ed)?\b','Fix'),(r'\bfeature\b','Feature'),(r'\bimprovement\b','Improvement'),(r'\bupdate[sd]?\b','Update'),(r'\bchange[sd]?\b','Change')]
@@ -260,7 +333,7 @@ jobs:
       - name: Delete release branch
         shell: bash
         env:
-          BRANCH: ${{ github.event.pull_request.head.ref }}
+          BRANCH: ${{ steps.resolve.outputs.branch }}
         run: |
           git push origin --delete "$BRANCH" || true
 
@@ -270,7 +343,8 @@ jobs:
     if: >-
       needs.publish.result == 'success' &&
       needs.publish.outputs.is_prerelease != 'true' &&
-      contains(github.event.pull_request.labels.*.name, 'measure-size')
+      needs.publish.outputs.measure_size == 'true' &&
+      github.event_name == 'pull_request' 
     permissions:
       contents: write
       pull-requests: write
