@@ -122,6 +122,7 @@ class DocumentHandlerHelper {
     docID: String,
     step: DocumentStepModel,
     version: DocumentVersion,
+    skipIntermediateScreen: Bool = false,
     completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
   ) {
 
@@ -133,11 +134,15 @@ class DocumentHandlerHelper {
 
     case "gallery":
 
-      currentDocumentHandler = GalleryDocumentHandler(
+      let galleryHandler = GalleryDocumentHandler(
         topVC: topViewController,
         stepVM: stepViewModel,
         docID: resolvedDocumentID
       )
+
+      galleryHandler.skipInfoScreen = skipIntermediateScreen
+
+      currentDocumentHandler = galleryHandler
 
     case "pdffile":
 
@@ -205,6 +210,7 @@ class DocumentHandlerHelper {
             docID: docID,
             step: step,
             version: version,
+            skipIntermediateScreen: true,
             completion: completion
           )
         }
