@@ -88,59 +88,146 @@ class DocumentHandlerHelper {
       return
     }
     
-    let resolvedDocumentID =
-    DocumentID(rawValue: docID)
-    ?? .OD(docID)
-    
       // MARK: - Source based handlers
-    
+
     let documentSource = currentDocumentVersion
       .documentSource?
       .trimmingCharacters(in: .whitespacesAndNewlines)
       .lowercased()
-    
+
+    if documentSource == "optional" {
+
+      presentSourceSelection(
+        documentVersion: currentDocumentVersion,
+        docID: docID,
+        step: step,
+        version: currentDocumentVersion,
+        completion: completion
+      )
+
+      return
+    }
+
+    runHandler(
+      forResolvedSource: documentSource,
+      docID: docID,
+      step: step,
+      version: currentDocumentVersion,
+      completion: completion
+    )
+  }
+
+  private func runHandler(
+    forResolvedSource documentSource: String?,
+    docID: String,
+    step: DocumentStepModel,
+    version: DocumentVersion,
+    completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
+  ) {
+
+    let resolvedDocumentID =
+    DocumentID(rawValue: docID)
+    ?? .OD(docID)
+
     switch documentSource {
-      
+
     case "gallery":
-      
+
       currentDocumentHandler = GalleryDocumentHandler(
         topVC: topViewController,
         stepVM: stepViewModel,
         docID: resolvedDocumentID
       )
-      
+
     case "pdffile":
-      
+
       currentDocumentHandler = PDFDocumentHandler(
         topVC: topViewController,
         stepVM: stepViewModel,
         docID: resolvedDocumentID
       )
-      
+
+    case "camera":
+
+      currentDocumentHandler = CameraDocumentHandler(
+        topVC: topViewController,
+        stepVM: stepViewModel,
+        docID: resolvedDocumentID
+      )
+
     default:
-      
+
       currentDocumentHandler = makeDefaultHandler(
         for: docID
       )
     }
-    
+
     guard let currentDocumentHandler else {
       completion(.failure(.configError))
       return
     }
-    
+
     currentDocumentHandler.start(
       docStep: step,
-      version: currentDocumentVersion,
+      version: version,
       workingStepIndex: 0,
       completion: completion
+    )
+  }
+
+  private func presentSourceSelection(
+    documentVersion: DocumentVersion,
+    docID: String,
+    step: DocumentStepModel,
+    version: DocumentVersion,
+    completion: @escaping (Result<KYCStepViewModel, KYCStepError>) -> Void
+  ) {
+
+    guard let topViewController else {
+      completion(.failure(.configError))
+      return
+    }
+
+    let selectionVC = DocumentSourceSelectionViewController()
+
+    selectionVC.bind(
+      documentVersion: documentVersion,
+      onSelect: { [weak self] source in
+
+        guard let self else {
+          return
+        }
+
+        selectionVC.dismiss(animated: true) {
+
+          self.runHandler(
+            forResolvedSource: source.rawValue,
+            docID: docID,
+            step: step,
+            version: version,
+            completion: completion
+          )
+        }
+      },
+      onCancel: {
+
+        selectionVC.dismiss(animated: true)
+      }
+    )
+
+    selectionVC.modalPresentationStyle = .overFullScreen
+    selectionVC.modalTransitionStyle = .crossDissolve
+
+    topViewController.present(
+      selectionVC,
+      animated: true
     )
   }
 
   func upload(completion: @escaping ((Bool?, [String : Any]?) -> Void)) {
     currentDocumentHandler?.upload(completion: completion)
   }
-  
+
   private func makeDefaultHandler(
     for docID: String
   ) -> DocumentHandler {
