@@ -13,11 +13,16 @@ import AmaniSDK
 final class GalleryDocumentHandler: NSObject, DocumentHandler {
   
   weak var topVC: UIViewController?
-  
+
   var stepViewModel: KYCStepViewModel
   var docID: DocumentID
   var stepView: UIView?
-  
+
+    /// When the user already picked "gallery" from the documentSource
+    /// "optional" selection popup, the intermediate info screen is
+    /// redundant — go straight to the system picker.
+  var skipInfoScreen: Bool = false
+
   private var files: [FileWithType] = []
   
   private var callback:
@@ -51,22 +56,33 @@ final class GalleryDocumentHandler: NSObject, DocumentHandler {
     }
     
     callback = completion
-    
+
     documentModule.setType(type: type)
-    
+
+    if skipInfoScreen {
+
+      guard let topVC else {
+        completion(.failure(.configError))
+        return
+      }
+
+      openGallery(from: topVC)
+      return
+    }
+
     let infoVC = DocumentUploadInfoViewController()
-    
+
     infoVC.bind(
       documentVersion: version
     ) { [weak self, weak infoVC] in
-      
+
       guard let self, let infoVC else {
         return
       }
-      
+
       self.openGallery(from: infoVC)
     }
-    
+
     topVC?.navigationController?.pushViewController(
       infoVC,
       animated: true
