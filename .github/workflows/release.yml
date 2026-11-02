@@ -33,8 +33,7 @@ env:
   XCODE_DESTINATION: 'platform=iOS Simulator,name=iPhone 16,OS=latest'
   VERSION_BUMP_FILE: AmaniUI.podspec
   SPM_CACHE_DIR: .spm-cache
-  POD_SOURCES: 'https://github.com/AmaniTechnologiesLtd/Mobile_SDK_Repo,https://cdn.cocoapods.org/'
-
+  POD_SOURCES: 'https://github.com/AMANI-AI-ORG/Mobile_SDK_Repo,https://cdn.cocoapods.org/'
 jobs:
   unit-tests:
     name: Run Unit Tests
@@ -107,7 +106,6 @@ jobs:
             build/UnitTests.xcresult
             build/unit-tests.log
           if-no-files-found: ignore
-
   cocoapods-validation:
     name: Validate CocoaPods Core & SpeechVerifier
     runs-on: macos-15
@@ -193,7 +191,6 @@ jobs:
           name: cocoapods-lint-prepare
           path: '*-lint.log'
           if-no-files-found: ignore
-
   create-release-pr:
     name: Create Release Branch & PR
     needs: [unit-tests, cocoapods-validation]
@@ -314,7 +311,6 @@ jobs:
           if [[ "$MEASURE_SIZE" == 'true' ]]; then labels+=(--label measure-size); fi
           gh pr create --base main --head "release/${VERSION}" \
             --title "release: ${VERSION}" --body-file /tmp/pr-body.md "${labels[@]}"
-
   dry-run-notice:
     name: Dry Run — Validation Only
     needs: [unit-tests, cocoapods-validation]

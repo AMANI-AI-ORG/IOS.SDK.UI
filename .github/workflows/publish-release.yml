@@ -351,5 +351,6 @@ jobs:
     uses: ./.github/workflows/release-measure.yml
     with:
       version_label: ${{ needs.publish.outputs.version }}
+      source_ref: ${{ needs.publish.outputs.version }}
       update_history: true
     secrets: inherit
