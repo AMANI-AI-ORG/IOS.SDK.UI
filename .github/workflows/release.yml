@@ -1,5 +1,4 @@
-name: ① Release · Prepare
-
+name: '① Release · Prepare'
 on:
   workflow_dispatch:
     inputs:
@@ -21,22 +20,39 @@ on:
         required: false
         default: false
         type: boolean
-
+permissions:
+  contents: read
 env:
   MAIN_BRANCH: main
+  SOURCE_BRANCH: ${{ github.ref_name }}
   XCODE_PROJECT: Sources/AmaniUI.xcodeproj
   UNIT_TEST_SCHEME: AmaniUnitTests
   XCODE_DESTINATION: 'platform=iOS Simulator,name=iPhone 16,OS=latest'
   VERSION_BUMP_FILE: AmaniUI.podspec
   SPM_CACHE_DIR: .spm-cache
-  POD_SOURCES: 'https://github.com/AmaniTechnologiesLtd/Mobile_SDK_Repo,https://cdn.cocoapods.org/'
-
+  POD_SOURCES: 'https://github.com/AMANI-AI-ORG/Mobile_SDK_Repo,https://cdn.cocoapods.org/'
 jobs:
   unit-tests:
     name: Run Unit Tests
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout selected branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Verify checked-out revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rev-parse HEAD
+          echo "Branch: $GITHUB_REF_NAME"
+          plutil -lint "${XCODE_PROJECT}/project.pbxproj"
+          for file in \
+            Sources/AmaniUI/UIVersion.swift \
+            Sources/AmaniUI/Common/Styles/UIStyle.swift \
+            Sources/AmaniUI/Modules/ContainerVC/ContainerV2ViewController.swift; do
+            test -f "$file" || { echo "::error file=$file::Missing source"; exit 1; }
+          done
       - name: Print toolchain info
         run: |
           sw_vers
@@ -50,7 +66,9 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-spm-
       - name: Resolve project dependencies
+        shell: bash
         run: |
+          set -euo pipefail
           mkdir -p "${SPM_CACHE_DIR}"
           xcodebuild -resolvePackageDependencies \
             -project "${XCODE_PROJECT}" \
@@ -72,8 +90,9 @@ jobs:
             test 2>&1 | tee build/unit-tests.log
       - name: Print Swift compiler errors
         if: failure()
+        shell: bash
         run: |
-          grep -nE 'error:|fatal error:|BUILD FAILED' build/unit-tests.log || true
+          grep -nE 'error:|fatal error:|BUILD FAILED|TEST FAILED' build/unit-tests.log || true
           tail -n 200 build/unit-tests.log || true
       - name: Upload unit-test results
         if: always()
@@ -84,21 +103,59 @@ jobs:
             build/UnitTests.xcresult
             build/unit-tests.log
           if-no-files-found: ignore
-
   cocoapods-validation:
     name: Validate CocoaPods Core & SpeechVerifier
     runs-on: macos-15
     steps:
-      - uses: actions/checkout@v4
+      - name: Checkout selected branch
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+      - name: Diagnose CocoaPods sources
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "=== GitHub event ==="
+          echo "Event: $GITHUB_EVENT_NAME"
+          echo "Ref: $GITHUB_REF"
+          echo "SHA: $GITHUB_SHA"
+          echo "=== Current commit ==="
+          git rev-parse HEAD
+          git log -1 --oneline
+          echo "=== Working tree ==="
+          git status --short
+          echo "=== Duplicate filename candidates ==="
+          find Sources/AmaniUI -type f \
+            \( -name '* 2.swift' \
+            -o -iname '*copy*.swift' \
+            -o -iname '*backup*.swift' \) \
+            -print
+          echo "=== ContainerV2 definitions ==="
+          grep -Rn \
+            'class ContainerV2ViewController' \
+            Sources/AmaniUI || true
+          echo "=== Podspec source files ==="
+          ruby -e '
+            files = Dir.glob("Sources/AmaniUI/**/*.{h,m,swift}")
+            files.sort.each { |f| puts f }
+            puts "Total: #{files.count}"
+          '
+          echo "=== CocoaPods subspec selections ==="
+          pod ipc spec AmaniUI.podspec | ruby -rjson -e '
+            data = JSON.parse(STDIN.read)
+            data.fetch("subspecs", []).each do |subspec|
+              puts "#{subspec["name"]}: #{subspec["source_files"].inspect}"
+              puts "  exclude_files: #{subspec["exclude_files"].inspect}"
+            end
+          '
       - name: Set up Ruby
         uses: ruby/setup-ruby@v1
         with:
           ruby-version: '3.2'
       - name: Install CocoaPods
         run: gem install cocoapods -v 1.16.2 --no-document
-      - name: Check CocoaPods
-        run: pod --version
       - name: Lint Core only
+        shell: bash
         run: |
           set -eo pipefail
           pod lib lint AmaniUI.podspec \
@@ -108,6 +165,7 @@ jobs:
             --allow-warnings \
             --verbose 2>&1 | tee core-lint.log
       - name: Lint SpeechVerifier
+        shell: bash
         run: |
           set -eo pipefail
           pod lib lint AmaniUI.podspec \
@@ -123,17 +181,25 @@ jobs:
           name: cocoapods-lint-prepare
           path: '*-lint.log'
           if-no-files-found: ignore
-
   create-release-pr:
     name: Create Release Branch & PR
     needs: [unit-tests, cocoapods-validation]
-    if: ${{ inputs.dry_run != true }}
+    if: inputs.dry_run != true
     runs-on: ubuntu-latest
     permissions:
       contents: write
       pull-requests: write
       issues: write
     steps:
+      - name: Require release automation PAT
+        shell: bash
+        env:
+          RELEASE_AUTOMATION_PAT: ${{ secrets.RELEASE_AUTOMATION_PAT }}
+        run: |
+          if [[ -z "$RELEASE_AUTOMATION_PAT" ]]; then
+            echo "::error::Set RELEASE_AUTOMATION_PAT secret so release PR creation triggers Verify workflow."
+            exit 1
+          fi
       - name: Validate version
         id: version
         shell: bash
@@ -141,94 +207,88 @@ jobs:
           RAW_VERSION: ${{ inputs.version }}
         run: |
           set -euo pipefail
-          VERSION=$(printf '%s' "$RAW_VERSION" | sed -E 's/^(release:[[:space:]]*v?|v)//I' | xargs)
+          VERSION="${RAW_VERSION#v}"
           if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9][a-zA-Z0-9._-]*)?$ ]]; then
             echo "::error::Invalid release version: $VERSION"
             exit 1
           fi
           echo "value=$VERSION" >> "$GITHUB_OUTPUT"
-      - name: Checkout main
+      - name: Checkout selected branch
         uses: actions/checkout@v4
         with:
-          ref: main
+          ref: ${{ github.ref_name }}
           fetch-depth: 0
-          token: ${{ secrets.GITHUB_TOKEN }}
-      - name: Verify Swift source files
+          persist-credentials: true
+          token: ${{ secrets.RELEASE_AUTOMATION_PAT }}
+      - name: Verify branch still points to validated commit
         shell: bash
         run: |
-        set -euo pipefail
-
-        echo "=== Current commit ==="
-        git rev-parse HEAD
-
-        echo "=== Current branch ==="
-        git branch -a
-
-        echo "=== Required Swift files ==="
-
-        for file in \
-          UIVersion.swift \
-          UIStyle.swift \
-          ContainerV2ViewController.swift
-        do
-          echo "Checking $file"
-
-          matches=$(git ls-files \
-            "Sources/**/$file")
-
-          if [ -z "$matches" ]; then
-            echo "::error::$file not tracked by Git"
+          set -euo pipefail
+          REMOTE_SHA=$(git ls-remote origin "refs/heads/${SOURCE_BRANCH}" | cut -f1)
+          if [[ -z "$REMOTE_SHA" || "$REMOTE_SHA" != "$GITHUB_SHA" ]]; then
+            echo "::error::Source branch changed after validation. Run workflow again."
             exit 1
           fi
-
-          echo "$matches"
-        done
-
-        echo "=== Xcode project validation ==="
-        plutil -lint \
-          Sources/AmaniUI.xcodeproj/project.pbxproj
+          git fetch origin "${MAIN_BRANCH}" --no-tags
+          if [[ "$SOURCE_BRANCH" != "$MAIN_BRANCH" ]] && ! git merge-base --is-ancestor "origin/${MAIN_BRANCH}" HEAD; then
+            echo "::error::Selected branch is not up to date with main; merge or rebase main before release."
+            exit 1
+          fi
+      - name: Verify source files
+        shell: bash
+        run: |
+          set -euo pipefail
+          git rev-parse HEAD
+          for file in \
+            Sources/AmaniUI/UIVersion.swift \
+            Sources/AmaniUI/Common/Styles/UIStyle.swift \
+            Sources/AmaniUI/Modules/ContainerVC/ContainerV2ViewController.swift; do
+            test -f "$file" || { echo "::error file=$file::Missing source"; exit 1; }
+          done
+          test -f "${VERSION_BUMP_FILE}"
       - name: Create release branch and bump podspec
+        shell: bash
         env:
           VERSION: ${{ steps.version.outputs.value }}
-        shell: bash
         run: |
           set -euo pipefail
           if git ls-remote --exit-code --heads origin "release/${VERSION}" >/dev/null 2>&1; then
             echo "::error::Branch release/${VERSION} already exists"
             exit 1
           fi
-          test -f "${VERSION_BUMP_FILE}"
+          if git ls-remote --exit-code --tags origin "refs/tags/${VERSION}" >/dev/null 2>&1; then
+            echo "::error::Tag ${VERSION} already exists"
+            exit 1
+          fi
           git checkout -b "release/${VERSION}"
           python3 - <<'PY'
           import os, pathlib, re, sys
           path = pathlib.Path(os.environ['VERSION_BUMP_FILE'])
           version = os.environ['VERSION']
           text = path.read_text()
-          changed, count = re.subn(
+          updated, count = re.subn(
               r'''(s\.version\s*=\s*["'])[^"']+(["'])''',
               lambda m: m.group(1) + version + m.group(2),
               text, count=1
           )
           if count != 1:
               sys.exit('Could not locate podspec version')
-          path.write_text(changed)
+          if updated == text:
+              sys.exit(f'Podspec already at {version}; use a new release version or a different release path')
+          path.write_text(updated)
           PY
           git config user.name 'github-actions[bot]'
           git config user.email 'github-actions[bot]@users.noreply.github.com'
           git add "${VERSION_BUMP_FILE}"
-          if git diff --cached --quiet; then
-            echo "::error::Podspec version is already ${VERSION}; use a new version"
-            exit 1
-          fi
           git commit -m "chore(release): bump version to ${VERSION}"
           git push origin "release/${VERSION}"
       - name: Create release PR
+        shell: bash
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ secrets.RELEASE_AUTOMATION_PAT }}
           VERSION: ${{ steps.version.outputs.value }}
           RELEASE_NOTES: ${{ inputs.release_notes }}
           MEASURE_SIZE: ${{ inputs.measure_size }}
-        shell: bash
         run: |
           set -euo pipefail
           {
@@ -241,12 +301,11 @@ jobs:
           if [[ "$MEASURE_SIZE" == 'true' ]]; then labels+=(--label measure-size); fi
           gh pr create --base main --head "release/${VERSION}" \
             --title "release: ${VERSION}" --body-file /tmp/pr-body.md "${labels[@]}"
-
   dry-run-notice:
     name: Dry Run — Validation Only
     needs: [unit-tests, cocoapods-validation]
-    if: ${{ inputs.dry_run == true }}
+    if: inputs.dry_run == true
     runs-on: ubuntu-latest
     steps:
-      - run: echo '::notice title=Dry Run::Unit tests and both CocoaPods subspecs passed.'
-
+      - name: Summary
+        run: echo '::notice title=Dry Run::Unit tests and both CocoaPods subspecs passed.'
