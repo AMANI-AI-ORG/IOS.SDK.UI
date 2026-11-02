@@ -119,17 +119,18 @@ class EmailOTPView: UIView {
     withDocument document: DocumentVersion?
   ) {
     emailInput.setDelegate(delegate: self)
-    
+    // `document` is already the resolved DocumentVersion for this OTP step, and carries its own
+    // invalidEmailError — no need to re-derive it via a hardcoded stepConfig array index.
+    let invalidEmailMessage = document?.invalidEmailError
+
     emailInput.textPublisher
       .assign(to: \.email, on: viewModel)
       .store(in: &cancellables)
-    
+
     viewModel.isEmailValidPublisher
       .sink(receiveValue: { [weak self] isValidEmail in
         if !isValidEmail {
-            let message = self?.appConfig?.stepConfig?[1].documents?[0].versions?[0].invalidEmailError
-            print(message)
-            self?.emailInput.showError(message: message ?? "This email Address is wrong")
+            self?.emailInput.showError(message: invalidEmailMessage ?? "This email Address is wrong")
           
         } else {
           self?.emailInput.hideError()

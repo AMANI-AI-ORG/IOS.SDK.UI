@@ -53,7 +53,8 @@ class QuestionnaireViewController: BaseViewController {
     self.questionnaireViewModel.setRuleID(stepVM.getRuleModel().id!)
     self.stepVM = stepVM
     DispatchQueue.main.async {
-      self.title = stepVM.documents.first?.versions?.first?.steps?.first?.captureTitle ?? "Questionnaire"
+      let gc = try? Amani.sharedInstance.appConfig().getApplicationConfig().generalconfigs
+      self.title = gc?.mainTitleText ?? "Questionnaire"
     }
   }
   

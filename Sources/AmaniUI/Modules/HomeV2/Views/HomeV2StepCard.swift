@@ -187,6 +187,8 @@ final class HomeV2StepCard: UIView {
         let inactiveSurface = fontColor.withAlphaComponent(0.07)
         let inactiveBorder = fontColor.withAlphaComponent(0.18)
         let inactiveBadge = fontColor.withAlphaComponent(0.12)
+        // Rejected-state border/icon use the dedicated error color, not the brand accent.
+        let errorColor = hextoUIColor(hexString: gc?.errorIconColor ?? gc?.primaryButtonBackgroundColor ?? "#C0395A")
 
         // Active cards always use the brand accent (primaryButtonBackgroundColor).
         // Terminal-state cards (approved/rejected/pending/processing) use the per-step
@@ -216,7 +218,7 @@ final class HomeV2StepCard: UIView {
             cardView.backgroundColor = step.buttonColor.withAlphaComponent(0.07)
         case .rejected:
             cardView.layer.borderWidth = style.cardBorderWidth
-            cardView.layer.borderColor = accentColor.cgColor
+            cardView.layer.borderColor = errorColor.cgColor
             cardView.backgroundColor = statusColor.withAlphaComponent(0.07)
         case .processing:
             cardView.layer.borderWidth = style.cardBorderWidth
@@ -280,28 +282,32 @@ final class HomeV2StepCard: UIView {
 
         // Subtitle — reuse existing buttonText config keys for terminal states
         let time = estimatedTime(for: step)
+        let startLabel = gc?.v2StepStartHereLabel ?? "Start here"
+        let upNextLabel = gc?.v2StepUpNextLabel ?? "Up next"
         switch state {
         case .active:
-            let startLabel = gc?.v2StepStartHereLabel ?? "Start here"
-            let upNextLabel = gc?.v2StepUpNextLabel ?? "Up next"
             subtitleLabel.text = hasProgress ? "\(upNextLabel) · \(time)" : "\(startLabel) · \(time)"
             subtitleLabel.textColor = mutedColor
         case .completed:
-            subtitleLabel.text = gc?.v2ApprovedBadgeText ?? step.stepConfig.buttonText?.approved ?? "Verified"
+            // No GeneralConfig override here — matches Android, which reads only the per-step text.
+            subtitleLabel.text = step.stepConfig.buttonText?.approved ?? "Verified"
             subtitleLabel.textColor = mutedColor
         case .pendingReview:
             subtitleLabel.text = step.stepConfig.buttonText?.pendingReview ?? "Under review"
             subtitleLabel.textColor = mutedColor
         case .rejected:
-            let isProfileInfoStep = step.documents.contains { $0.id == "IB" }
-            if isProfileInfoStep, let rejectedText = gc?.v2StepRejectedText {
-                subtitleLabel.text = rejectedText
+            // v2StepRejectedText moved to ProfileInfoView's inline form error (matches Android);
+            // this card always shows the generic rejected/auto-rejected button text now.
+            if step.status == .AUTOMATICALLY_REJECTED {
+                subtitleLabel.text = step.stepConfig.buttonText?.autoRejected ?? "Rejected · Action needed"
             } else {
                 subtitleLabel.text = step.stepConfig.buttonText?.rejected ?? "Rejected · Action needed"
             }
             subtitleLabel.textColor = mutedColor
         case .locked:
-            subtitleLabel.text = time
+            // Same "Start here"/"Up next" label as active — matches Android, which labels locked
+            // steps the same way rather than showing duration alone.
+            subtitleLabel.text = hasProgress ? "\(upNextLabel) · \(time)" : "\(startLabel) · \(time)"
             subtitleLabel.textColor = mutedColor
         case .processing:
             subtitleLabel.text = step.stepConfig.buttonText?.processing ?? "Processing..."
@@ -345,7 +351,7 @@ final class HomeV2StepCard: UIView {
             errorTitleLabel.text = firstVersion?.v2StepRejectionTitle ?? gc?.v2StepRejectionTitle ?? gc?.v2StepRejectionFallbackTitle ?? "Verification could not be completed"
             errorTitleLabel.textColor = fontColor
 
-            errorMessageLabel.text = firstVersion?.v2StepRejectionDescription ?? gc?.v2StepRejectionDescription ?? gc?.v2StepRejectionFallbackDescription ?? "Your submission could not be accepted. Please try again to continue."
+            errorMessageLabel.text = step.backendErrorMessage ?? firstVersion?.v2StepRejectionDescription ?? gc?.v2StepRejectionDescription ?? gc?.v2StepRejectionFallbackDescription ?? "Your submission could not be accepted. Please try again to continue."
             errorMessageLabel.textColor = fontColor.withAlphaComponent(0.6)
         } else {
             errorCard.isHidden = true

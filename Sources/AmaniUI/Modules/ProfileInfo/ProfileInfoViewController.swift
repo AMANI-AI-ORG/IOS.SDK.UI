@@ -14,6 +14,7 @@ class ProfileInfoViewController: KeyboardAvoidanceViewController {
   let profileInfoViewModel = ProfileInfoViewModel()
   private var handler: (() -> Void)? = nil
   private var docVersion: DocumentVersion?
+  private var isStepRejected: Bool = false
   
   override func viewWillDisappear(_ animated: Bool) {
     super.viewWillDisappear(animated)
@@ -30,6 +31,7 @@ class ProfileInfoViewController: KeyboardAvoidanceViewController {
       
       title = docVersion?.steps?.first?.captureTitle
       profileInfoView = ProfileInfoView()
+      profileInfoView.isStepRejected = isStepRejected
       profileInfoView.appConfig = appConfig
       profileInfoView.bind(withViewModel: profileInfoViewModel, withDocument: docVersion)
     
@@ -59,6 +61,7 @@ class ProfileInfoViewController: KeyboardAvoidanceViewController {
   func bind(with stepModel: KYCStepViewModel) {
     self.docVersion = stepModel.documents.first?.versions?.first
     self.profileInfoViewModel.setRuleID(stepModel.getRuleModel().id!)
+    self.isStepRejected = stepModel.status == .REJECTED || stepModel.status == .AUTOMATICALLY_REJECTED
   }
 
 }

@@ -125,7 +125,7 @@ jobs:
           echo 'Checking Mobile SDK repository API response...'
           response_file="$(mktemp)"
           trap 'rm -f "$response_file"' EXIT
-          http_status="$(curl --location --max-redirs 5 --silent --show-error --output "$response_file" --write-out '%{http_code}' \
+          http_status="$(curl --silent --show-error --output "$response_file" --write-out '%{http_code}' \
             -H "Authorization: Bearer ${SPECS_PAT}" \
             -H 'Accept: application/vnd.github+json' \
             -H 'X-GitHub-Api-Version: 2022-11-28' \
@@ -342,7 +342,9 @@ jobs:
     needs: publish
     if: >-
       needs.publish.result == 'success' &&
-      needs.publish.outputs.measure_size == 'true'
+      needs.publish.outputs.is_prerelease != 'true' &&
+      needs.publish.outputs.measure_size == 'true' &&
+      github.event_name == 'pull_request' 
     permissions:
       contents: write
       pull-requests: write

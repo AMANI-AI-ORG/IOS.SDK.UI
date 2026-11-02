@@ -1,9 +1,10 @@
 name: '① Release · Prepare'
+
 on:
   workflow_dispatch:
     inputs:
       version:
-        description: 'Release version (e.g. 1.4.0)'
+        description: 'Release version (e.g. 1.4.8)'
         required: true
         type: string
       release_notes:
@@ -20,8 +21,10 @@ on:
         required: false
         default: false
         type: boolean
+
 permissions:
   contents: read
+
 env:
   MAIN_BRANCH: main
   SOURCE_BRANCH: ${{ github.ref_name }}
@@ -115,31 +118,38 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
           echo "=== GitHub event ==="
           echo "Event: $GITHUB_EVENT_NAME"
           echo "Ref: $GITHUB_REF"
           echo "SHA: $GITHUB_SHA"
+
           echo "=== Current commit ==="
           git rev-parse HEAD
           git log -1 --oneline
+
           echo "=== Working tree ==="
           git status --short
+
           echo "=== Duplicate filename candidates ==="
           find Sources/AmaniUI -type f \
             \( -name '* 2.swift' \
             -o -iname '*copy*.swift' \
             -o -iname '*backup*.swift' \) \
             -print
+
           echo "=== ContainerV2 definitions ==="
           grep -Rn \
             'class ContainerV2ViewController' \
             Sources/AmaniUI || true
+
           echo "=== Podspec source files ==="
           ruby -e '
             files = Dir.glob("Sources/AmaniUI/**/*.{h,m,swift}")
             files.sort.each { |f| puts f }
             puts "Total: #{files.count}"
           '
+
           echo "=== CocoaPods subspec selections ==="
           pod ipc spec AmaniUI.podspec | ruby -rjson -e '
             data = JSON.parse(STDIN.read)
@@ -309,3 +319,4 @@ jobs:
     steps:
       - name: Summary
         run: echo '::notice title=Dry Run::Unit tests and both CocoaPods subspecs passed.'
+

@@ -12,7 +12,13 @@
 
   },
   "testTargets" : [
-
+    {
+      "target" : {
+        "containerPath" : "container:AmaniUI.xcodeproj",
+        "identifier" : "9197F92F2F990C72005C1088",
+        "name" : "AmaniUnitTests"
+      }
+    }
   ],
   "version" : 1
 }
