@@ -31,7 +31,7 @@ Pod::Spec.new do |s|
       'AmaniUI' => ['Sources/AmaniUI/**/*.{xib,storyboard,xcassets,xcprivacy}']
     }
     core.dependency 'lottie-ios', '~> 4.5.0'
-    core.dependency 'AmaniSDK', '~> 3.7.9'
+    core.dependency 'AmaniSDK', '~> 3.7.10'
   end
 
   s.subspec 'SpeechVerifier' do |speech|
