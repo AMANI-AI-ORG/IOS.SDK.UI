@@ -27,7 +27,7 @@ let package = Package(
     .package(
       name: "AmaniSDK",
       url: "https://github.com/AMANI-AI-ORG/AmaniSDK-iOS",
-      from: "3.7.9"
+      from: "3.7.10"
     ),
     .package(
       name: "AmaniRepo",
