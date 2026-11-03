@@ -348,6 +348,7 @@ jobs:
     permissions:
       contents: write
       pull-requests: write
+      issues: write
     uses: ./.github/workflows/release-measure.yml
     with:
       version_label: ${{ needs.publish.outputs.version }}
