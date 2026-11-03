@@ -56,6 +56,8 @@
 		910E533C308772BE00C1DD08 /* HomeV2ViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 910E5338308772BE00C1DD08 /* HomeV2ViewController.swift */; };
 		911EC4D82F9B9D1A000C80F9 /* TermsAndConditionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 911EC4D52F9B9D1A000C80F9 /* TermsAndConditionsView.swift */; };
 		911EC4D92F9B9D1A000C80F9 /* TermsAndConditionsViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 911EC4D62F9B9D1A000C80F9 /* TermsAndConditionsViewController.swift */; };
+		915C0B813098E21A003626D9 /* CameraDocumentHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 915C0B803098E21A003626D9 /* CameraDocumentHandler.swift */; };
+		915C0B833098E243003626D9 /* DocumentSourceSelectionViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = 915C0B823098E243003626D9 /* DocumentSourceSelectionViewController.swift */; };
 		9197F9342F990C72005C1088 /* AmaniUI.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C544FEE328C2303700C0B406 /* AmaniUI.framework */; };
 		C523DEF72B3A740B00F68E32 /* CheckSMSViewController.swift in Sources */ = {isa = PBXBuildFile; fileRef = C523DEF62B3A740B00F68E32 /* CheckSMSViewController.swift */; };
 		C523DEFA2B3A745F00F68E32 /* CheckSMSView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C523DEF92B3A745F00F68E32 /* CheckSMSView.swift */; };
@@ -176,6 +178,8 @@
 		910E5338308772BE00C1DD08 /* HomeV2ViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HomeV2ViewController.swift; sourceTree = "<group>"; };
 		911EC4D52F9B9D1A000C80F9 /* TermsAndConditionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsAndConditionsView.swift; sourceTree = "<group>"; };
 		911EC4D62F9B9D1A000C80F9 /* TermsAndConditionsViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TermsAndConditionsViewController.swift; sourceTree = "<group>"; };
+		915C0B803098E21A003626D9 /* CameraDocumentHandler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraDocumentHandler.swift; sourceTree = "<group>"; };
+		915C0B823098E243003626D9 /* DocumentSourceSelectionViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DocumentSourceSelectionViewController.swift; sourceTree = "<group>"; };
 		9197F9302F990C72005C1088 /* AmaniUnitTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = AmaniUnitTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		C523DEF62B3A740B00F68E32 /* CheckSMSViewController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckSMSViewController.swift; sourceTree = "<group>"; };
 		C523DEF92B3A745F00F68E32 /* CheckSMSView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckSMSView.swift; sourceTree = "<group>"; };
@@ -375,6 +379,7 @@
 		910E530830876C8D00C1DD08 /* PhotoLibrary */ = {
 			isa = PBXGroup;
 			children = (
+				915C0B823098E243003626D9 /* DocumentSourceSelectionViewController.swift */,
 				910E530730876C8D00C1DD08 /* DocumentUploadInfoViewController.swift */,
 			);
 			path = PhotoLibrary;
@@ -722,6 +727,7 @@
 		C5A06F7029127C28009520AF /* Handlers */ = {
 			isa = PBXGroup;
 			children = (
+				915C0B803098E21A003626D9 /* CameraDocumentHandler.swift */,
 				487E4A782D78701C00C07190 /* AddressHandler.swift */,
 				C5A06F7129127C47009520AF /* IdHandler.swift */,
 				C5A06F752913ED9E009520AF /* SelfieHandler.swift */,
@@ -1018,6 +1024,7 @@
 				C53C474F28C7718300FA10B6 /* UIViewExtensions.swift in Sources */,
 				C539A5C329093DB4003386F8 /* AlertDialougeUtility.swift in Sources */,
 				C523DF002B3BF75A00F68E32 /* AmaniErrorExtensions.swift in Sources */,
+				915C0B813098E21A003626D9 /* CameraDocumentHandler.swift in Sources */,
 				C5FD51342B39BD2D0057DB87 /* RoundedTextInput.swift in Sources */,
 				910E530030876BB100C1DD08 /* GalleryDocumentHandler.swift in Sources */,
 				C52F144F28F5AE3D00D7A5A6 /* VersionViewController.swift in Sources */,
@@ -1043,6 +1050,7 @@
 				185A2BFF2BBD64AE00855F77 /* Country.swift in Sources */,
 				C561694E2B84CDE200050A8D /* ProfileInfoViewController.swift in Sources */,
 				C56169442B84CD8400050A8D /* QuestionnaireHeaderView.swift in Sources */,
+				915C0B833098E243003626D9 /* DocumentSourceSelectionViewController.swift in Sources */,
 				C5984DD728F9B35000DA64B3 /* UINavigationControllerExtensions.swift in Sources */,
 				C539A5C9290FE9F9003386F8 /* SuccessViewController.swift in Sources */,
 				C56169432B84CD8400050A8D /* SingleAnswerButton.swift in Sources */,
